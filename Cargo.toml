@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "./services/registry",
+    "./services/discovery"
+]
+resolver = "2"

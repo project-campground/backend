@@ -1,0 +1,7 @@
+[default.db]
+host = "ws://localhost"
+port = 8000
+user = "example"
+password = "example"
+database = "registry"
+namespace = "example.com"
