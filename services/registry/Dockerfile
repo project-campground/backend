@@ -12,5 +12,5 @@ COPY --from=builder /usr/local/cargo/bin/app /usr/local/bin/app
 VOLUME /tmp
 
 # Run
-EXPOSE 4793
+EXPOSE 3984
 CMD ["app"]
