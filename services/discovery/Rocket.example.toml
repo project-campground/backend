@@ -1,0 +1,10 @@
+[default]
+port = 3989
+
+[default.surreal]
+host = "ws://localhost"
+port = 8000
+user = "example"
+password = "example"
+database = "registry"
+namespace = "example.com"
