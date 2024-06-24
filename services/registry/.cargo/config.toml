@@ -1,2 +1,2 @@
 [env]
-ROCKET_ENV = "development-registry"
+ROCKET_CONFIG = { value="Rocket.toml", relative = true }
