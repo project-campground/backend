@@ -1,6 +1,7 @@
 use surreal_bb8::temp::{config::Config, runtime_with_config::SurrealConnectionManager};
-use surrealdb::opt::auth::Root;
 use surrealdb_migrations::MigrationRunner;
+use surrealdb::opt::auth::Root;
+use include_dir::include_dir;
 use surreal_bb8::bb8::Pool;
 use thiserror::Error;
 
@@ -22,12 +23,10 @@ enum ProgramError {
 #[rocket::main]
 async fn main() -> Result<(), ProgramError> {
     let rocket = rocket::build()
-        .mount("/", routes![])
-        .launch()
-        .await?;
+        .mount("/", routes![]);
     let figment = rocket.figment();
 
-    let db_config: config::DBConfig = figment.extract_inner("db").expect("custom");
+    let db_config: config::DBConfig = figment.extract_inner("surreal").expect("host");
 
     let sur_mgr = SurrealConnectionManager::new(
         Config::new()
@@ -42,10 +41,13 @@ async fn main() -> Result<(), ProgramError> {
     let connection = pool.get().await.expect("pool error");
     connection.use_ns(&db_config.namespace).use_db(&db_config.database).await?;
 
-    MigrationRunner::new(&connection)
+    let _ = MigrationRunner::new(&connection)
+        .load_files(&include_dir!("$CARGO_MANIFEST_DIR/db"))
         .up()
-        .await
-        .expect("Failed to apply migrations");
+        .await;
+        //.expect("Failed to apply migrations");
+
+    rocket.launch().await?;
 
     Ok(())
 }

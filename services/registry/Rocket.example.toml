@@ -1,4 +1,7 @@
-[default.db]
+[default]
+port = 3984
+
+[default.surreal]
 host = "ws://localhost"
 port = 8000
 user = "example"

@@ -1,0 +1,2 @@
+[env]
+ROCKET_ENV = "development-registry"
