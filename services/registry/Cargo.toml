@@ -6,9 +6,19 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rocket = "0.5.1"
+did-method-plc = { version = "*", path = "../../libs/did-method-plc" }
+reqwest = { version = "0.12.5", features = ["json"] }
 surrealdb-migrations = "1.5.0"
-surrealdb = "1.5.3"
-thiserror = "1.0.61"
+did-method-key = "0.2.2"
+serde_json = "1.0.118"
 surreal_bb8 = "0.1.0"
 include_dir = "0.7.3"
+thiserror = "1.0.61"
+surrealdb = "1.5.3"
+did-web = "0.2.2"
+serde = "1.0.203"
+didkit = "0.6.0"
+rocket = "0.5.1"
+hmac = "0.12.1"
+sha2 = "0.10.8"
+jwt = "0.16.0"

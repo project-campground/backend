@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "./services/registry",
-    "./services/discovery"
+    "./services/discovery",
+    "./libs/did-method-plc"
 ]
 resolver = "2"
