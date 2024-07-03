@@ -5,7 +5,7 @@ authors = ["Team Campground"]
 edition = "2021"
 keywords = ["ssi", "did"]
 categories = ["web-programming::http-client"]
-description = "did:web DID method, using the ssi crate"
+description = "did:plc DID method, using the ssi crate"
 repository = "https://github.com/Project-Campground/backend/"
 homepage = "https://github.com/Project-Campground/backend/tree/main/libs/did-method-plc/"
 
