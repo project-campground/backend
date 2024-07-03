@@ -155,3 +155,62 @@ impl Keypair for K256Keypair {
         public_key.verify(msg, &sig).is_ok()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_p256() {        
+        let mut keypair = P256Keypair::generate();
+        let msg = b"hello world";
+        let sig = keypair.sign(msg).unwrap();
+        assert!(keypair.verify(msg, sig));
+    }
+
+    #[test]
+    fn test_p256_from_private_key() {
+        let sk = P256Keypair::generate().private_key().unwrap();
+        let mut keypair = P256Keypair::from_private_key(sk.to_string());
+        let msg = b"hello world";
+        let sig = keypair.sign(msg).unwrap();
+        assert!(keypair.verify(msg, sig));
+    }
+
+    #[test]
+    fn test_p256_from_public_key() {
+        let mut sk: P256Keypair = P256Keypair::generate();
+        let pk = sk.public_key();
+        let keypair = P256Keypair::from_public_key(pk.to_string());
+        let msg = b"hello world";
+        let sig = sk.sign(msg).unwrap();
+        assert!(keypair.verify(msg, sig));
+    }
+
+    #[test]
+    fn test_k256() {
+        let mut keypair = K256Keypair::generate();
+        let msg = b"hello world";
+        let sig = keypair.sign(msg).unwrap();
+        assert!(keypair.verify(msg, sig));
+    }
+
+    #[test]
+    fn test_k256_from_private_key() {
+        let sk = K256Keypair::generate().private_key().unwrap();
+        let mut keypair = K256Keypair::from_private_key(sk.to_string());
+        let msg = b"hello world";
+        let sig = keypair.sign(msg).unwrap();
+        assert!(keypair.verify(msg, sig));
+    }
+
+    #[test]
+    fn test_k256_from_public_key() {
+        let mut sk = K256Keypair::generate();
+        let pk = sk.public_key();
+        let keypair = K256Keypair::from_public_key(pk.to_string());
+        let msg = b"hello world";
+        let sig = sk.sign(msg).unwrap();
+        assert!(keypair.verify(msg, sig));
+    }
+}
