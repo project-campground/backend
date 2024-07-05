@@ -201,28 +201,6 @@ impl SignedPLCOperation {
                 },
                 _ => continue,
             }
-
-            // if key.starts_with("zDn") {
-            //     // P-256
-            //     let point =
-            //         p256::EncodedPoint::from_bytes(&data[4..35])?;
-            //     let pk = p256::ecdsa::VerifyingKey::from_encoded_point(&point)?;
-            //     let sig = p256::ecdsa::Signature::from_bytes(self.sig.as_bytes().into())?;
-            //     if pk.verify(&dag, &sig).is_ok() {
-            //         return Ok(true);
-            //     }
-            // } else if key.starts_with("zQ3s") {
-            //     // Secp256k1
-            //     let point =
-            //         k256::EncodedPoint::from_bytes(&data[2..35])?;
-            //     let vk = k256::ecdsa::VerifyingKey::from_encoded_point(&point)?;
-            //     let sig = k256::ecdsa::Signature::from_bytes(self.sig.as_bytes().into())?;
-            //     if vk.verify(&dag, &sig).is_ok() {
-            //         return Ok(true);
-            //     }
-            // } else {
-            //     continue;
-            // }
         }
         Ok(false)
     }
