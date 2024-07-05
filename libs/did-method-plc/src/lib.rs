@@ -1,12 +1,13 @@
 extern crate thiserror;
 
-use async_trait::async_trait;
+use operation::{SignedPLCOperation, UnsignedPLCOperation};
 use didkit::{
     DIDMethod, DIDResolver, Document, DocumentMetadata, ResolutionInputMetadata, ResolutionMetadata,
 };
+use async_trait::async_trait;
 
-pub mod keypair;
 pub mod operation;
+mod multicodec;
 
 pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 pub const DEFAULT_HOST: &str = "https://plc.directory";
@@ -16,8 +17,35 @@ pub enum Error {
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 
-    #[error("Keypair error: {0}")]
-    Keypair(#[from] keypair::KeypairError),
+    #[error("Serde error: {0}")]
+    Serde(#[from] serde_json::Error),
+
+    #[error("DAG-CBOR error: {0}")]
+    DagCbor(String),
+
+    #[error("Operation is unsigned")]
+    UnsignedOperation,
+
+    #[error("Invalid key")]
+    InvalidKey,
+
+    #[error("Multibase error")]
+    Multibase(#[from] multibase::Error),
+
+    #[error("ECDSA signature error: {0}")]
+    Signature(#[from] ecdsa::signature::Error),
+
+    #[error("Sec1 error: {0}")]
+    Sec1(#[from] sec1::Error),
+
+    #[error("Hex error")]
+    Hex(#[from] hex::FromHexError),
+
+    #[error("Multicodec error: {0}")]
+    Multicodec(#[from] multicodec::Error),
+
+    #[error("Base64 decode error: {0}")]
+    Base64Decode(#[from] base64::DecodeError),
 }
 
 /// did:plc Method
