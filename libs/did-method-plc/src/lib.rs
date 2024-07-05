@@ -68,6 +68,96 @@ impl DIDPLC {
             client,
         }
     }
+
+    pub async fn get_log(&self, did: &str) -> Result<Vec<SignedPLCOperation>, Error> {
+        let res = self
+            .client
+            .get(format!("{}/{}/log", self.host, did))
+            .send()
+            .await?;
+
+        let body: String = res.text().await?;
+        let mut operations: Vec<SignedPLCOperation> = vec![];
+        let json: Vec<serde_json::Value> = serde_json::from_str(&body)?;
+
+        for op in json {
+            let op_object = op.as_object().unwrap();
+            let mut op_unsigned = op_object.clone();
+            op_unsigned.remove("sig");
+            let operation: SignedPLCOperation = SignedPLCOperation {
+                unsigned: serde_json::from_value::<UnsignedPLCOperation>(operation::normalize_op(op_unsigned.clone().into())).unwrap(),
+                sig: op_object.get("sig").unwrap().as_str().unwrap().to_string(),
+            };
+            operations.push(operation);
+        }
+
+        Ok(operations)
+    }
+
+    pub async fn get_audit_log(&self, did: &str) -> Result<Vec<SignedPLCOperation>, Error> {
+        let res = self
+            .client
+            .get(format!("{}/{}/log/audit", self.host, did))
+            .send()
+            .await?;
+
+        let body: String = res.text().await?;
+        let mut operations: Vec<SignedPLCOperation> = vec![];
+        let json: Vec<serde_json::Value> = serde_json::from_str(&body)?;
+
+        for op in json {
+            let op_object = op.as_object().unwrap();
+            let mut op_unsigned = op_object.clone();
+            op_unsigned.remove("sig");
+            let operation: SignedPLCOperation = SignedPLCOperation {
+                unsigned: serde_json::from_value::<UnsignedPLCOperation>(operation::normalize_op(op_unsigned.clone().into())).unwrap(),
+                sig: op_object.get("sig").unwrap().as_str().unwrap().to_string(),
+            };
+            operations.push(operation);
+        }
+
+        Ok(operations)
+    }
+
+    pub async fn get_last_log(&self, did: &str) -> Result<SignedPLCOperation, Error> {
+        let res = self
+            .client
+            .get(format!("{}/{}/log/last", self.host, did))
+            .send()
+            .await?;
+
+        let body: String = res.text().await?;
+        let op: serde_json::Value = serde_json::from_str(&body)?;
+        let op_object = op.as_object().unwrap();
+        let mut op_unsigned = op_object.clone();
+        op_unsigned.remove("sig");
+        let operation: SignedPLCOperation = SignedPLCOperation {
+            unsigned: serde_json::from_value::<UnsignedPLCOperation>(operation::normalize_op(op_unsigned.clone().into())).unwrap(),
+            sig: op_object.get("sig").unwrap().as_str().unwrap().to_string(),
+        };
+
+        Ok(operation)
+    }
+
+    pub async fn get_current_state(&self, did: &str) -> Result<SignedPLCOperation, Error> {
+        let res = self
+            .client
+            .get(format!("{}/{}/data", self.host, did))
+            .send()
+            .await?;
+
+        let body: String = res.text().await?;
+        let op: serde_json::Value = serde_json::from_str(&body)?;
+        let op_object = op.as_object().unwrap();
+        let mut op_unsigned = op_object.clone();
+        op_unsigned.remove("sig");
+        let operation: SignedPLCOperation = SignedPLCOperation {
+            unsigned: serde_json::from_value::<UnsignedPLCOperation>(operation::normalize_op(op_unsigned.clone().into())).unwrap(),
+            sig: op_object.get("sig").unwrap().as_str().unwrap().to_string(),
+        };
+
+        Ok(operation)
+    }
 }
 
 impl Default for DIDPLC {
