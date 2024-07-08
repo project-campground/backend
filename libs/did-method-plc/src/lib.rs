@@ -46,6 +46,12 @@ pub enum Error {
 
     #[error("Base64 decode error: {0}")]
     Base64Decode(#[from] base64::DecodeError),
+
+    #[error("Invalid operation type: {0}")]
+    InvalidOperationType(String),
+
+    #[error("ECDSA elliptic curve error: {0}")]
+    ECDSAEllipticCurve(#[from] ecdsa::elliptic_curve::Error),
 }
 
 /// did:plc Method
