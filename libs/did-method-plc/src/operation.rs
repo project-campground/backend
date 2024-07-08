@@ -1,7 +1,8 @@
 use multihash_codetable::{Code, MultihashDigest};
 use ecdsa::signature::{SignerMut, Verifier};
-use serde::{Deserialize, Serialize};
-use crate::multicodec::MultiEncoded;
+use serde::{Deserialize, Serialize, Serializer};
+use crate::{multicodec::MultiEncoded, util::op_from_json};
+use crate::util::normalize_op;
 use std::collections::HashMap;
 use sha2::{Digest, Sha256};
 use base32::Alphabet;
@@ -51,12 +52,99 @@ impl<'de> Deserialize<'de> for PLCOperationType {
     }
 }
 
+pub trait UnsignedOperation {
+    fn to_json(&self) -> String;
+    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error>;
+}
+
+pub trait SignedOperation {
+    fn to_json(&self) -> String;
+    fn to_cid(&self) -> Result<String, crate::Error>;
+    fn to_did(&self) -> Result<String, crate::Error>;
+    fn verify_sig(&self) -> Result<bool, crate::Error>;
+}
+
+pub enum PLCOperation {
+    UnsignedGenesis(UnsignedGenesisOperation),
+    SignedGenesis(SignedGenesisOperation),
+    UnsignedPLC(UnsignedPLCOperation),
+    SignedPLC(SignedPLCOperation),
+}
+
+impl Serialize for PLCOperation {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        match self {
+            Self::UnsignedGenesis(op) => op.serialize(serializer),
+            Self::SignedGenesis(op) => op.serialize(serializer),
+            Self::UnsignedPLC(op) => op.serialize(serializer),
+            Self::SignedPLC(op) => op.serialize(serializer),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for PLCOperation {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>
+    {
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let json = match serde_json::to_string(&value) {
+            Ok(json) => json,
+            Err(e) => return Err(serde::de::Error::custom(e)),
+        };
+        let op = match op_from_json(json.as_str()) {
+            Ok(op) => op,
+            Err(e) => return Err(serde::de::Error::custom(e)),
+        };
+        Ok(op)
+    }
+}
+
+impl Into<UnsignedGenesisOperation> for PLCOperation {
+    fn into(self) -> UnsignedGenesisOperation {
+        match self {
+            Self::UnsignedGenesis(op) => op,
+            _ => panic!("Not a UnsignedGenesisOperation"),
+        }
+    }
+}
+
+impl Into<SignedGenesisOperation> for PLCOperation {
+    fn into(self) -> SignedGenesisOperation {
+        match self {
+            Self::SignedGenesis(op) => op,
+            _ => panic!("Not a SignedGenesisOperation"),
+        }
+    }
+}
+
+impl Into<UnsignedPLCOperation> for PLCOperation {
+    fn into(self) -> UnsignedPLCOperation {
+        match self {
+            Self::UnsignedPLC(op) => op,
+            _ => panic!("Not a UnsignedPLCOperation"),
+        }
+    }
+}
+
+impl Into<SignedPLCOperation> for PLCOperation {
+    fn into(self) -> SignedPLCOperation {
+        match self {
+            Self::SignedPLC(op) => op,
+            _ => panic!("Not a SignedPLCOperation"),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Service {
     #[serde(rename = "type")]
-    type_: String,
-    endpoint: String,
+    pub type_: String,
+    pub endpoint: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -79,8 +167,28 @@ pub struct SignedPLCOperation {
     pub sig: String,
 }
 
-impl UnsignedPLCOperation {
-    pub fn to_json(&self) -> String {
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct UnsignedGenesisOperation {
+    #[serde(rename = "type")]
+    type_: String,
+    pub signing_key: String,
+    pub recovery_key: String,
+    pub handle: String,
+    pub service: String,
+    pub prev: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct SignedGenesisOperation {
+    #[serde(flatten)]
+    pub unsigned: UnsignedGenesisOperation,
+    pub sig: String,
+}
+
+impl UnsignedOperation for UnsignedPLCOperation {
+    fn to_json(&self) -> String {
         let value = serde_json::to_value(self).unwrap();
         match self.type_ {
             PLCOperationType::Operation => serde_json::to_string(&value).unwrap(),
@@ -99,7 +207,7 @@ impl UnsignedPLCOperation {
         }
     }
 
-    pub fn to_signed(&self, key: &str) -> Result<SignedPLCOperation, crate::Error> {
+    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error> {
         let (_base, data) = multibase::decode(key)?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
@@ -128,6 +236,40 @@ impl UnsignedPLCOperation {
     }
 }
 
+impl UnsignedOperation for UnsignedGenesisOperation {
+    fn to_json(&self) -> String {
+        serde_json::to_string(&self).unwrap()
+    }
+
+    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error> {
+        let (_base, data) = multibase::decode(key)?;
+        let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
+
+        if key.starts_with("zDn") {
+            // P-256
+            let mut sk = p256::ecdsa::SigningKey::from_slice(data.as_slice()).unwrap();
+            let sig: p256::ecdsa::Signature = sk.sign(&dag.as_slice());
+            let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+            let sig = engine.encode(sig.to_bytes());
+            return Ok(SignedGenesisOperation {
+                unsigned: self.clone(),
+                sig,
+            });
+        } else if key.starts_with("zQ3s") {
+            // Secp256k1
+            let mut sk = k256::ecdsa::SigningKey::from_slice(data.as_slice()).unwrap();
+            let sig: k256::ecdsa::Signature = sk.sign(&dag.as_slice());
+            let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+            let sig = engine.encode(sig.to_bytes());
+            return Ok(SignedGenesisOperation {
+                unsigned: self.clone(),
+                sig,
+            });
+        }
+        Err(crate::Error::InvalidKey)
+    }
+}
+
 impl SignedPLCOperation {
     pub fn from_json(json: &str) -> Result<Self, crate::Error> {
         let raw: serde_json::Value = serde_json::from_str(json)?;
@@ -142,12 +284,14 @@ impl SignedPLCOperation {
         let unsigned: UnsignedPLCOperation = serde_json::from_value(raw.clone())?;
         Ok(Self { unsigned, sig })
     }
+}
 
-    pub fn to_json(&self) -> String {
+impl SignedOperation for SignedPLCOperation {
+    fn to_json(&self) -> String {
         serde_json::to_string(&self).unwrap()
     }
 
-    pub fn to_cid(&self) -> Result<String, crate::Error> {
+    fn to_cid(&self) -> Result<String, crate::Error> {
         let dag = match serde_ipld_dagcbor::to_vec(&self) {
             Ok(dag) => dag,
             Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
@@ -157,7 +301,7 @@ impl SignedPLCOperation {
         Ok(cid.to_string())
     }
 
-    pub fn to_did(&self) -> Result<String, crate::Error> {
+    fn to_did(&self) -> Result<String, crate::Error> {
         let dag = match serde_ipld_dagcbor::to_vec(&self) {
             Ok(dag) => dag,
             Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
@@ -167,7 +311,7 @@ impl SignedPLCOperation {
         Ok(format!("did:plc:{}", b32[0..24].to_string()))
     }
 
-    pub fn verify_sig(&self) -> Result<bool, crate::Error> {
+    fn verify_sig(&self) -> Result<bool, crate::Error> {
         let dag = match serde_ipld_dagcbor::to_vec(&self.unsigned) {
             Ok(dag) => dag,
             Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
@@ -206,114 +350,84 @@ impl SignedPLCOperation {
     }
 }
 
-fn assure_at_prefix(s: &str) -> String {
-    if s.starts_with("at://") {
-        s.to_string()
-    } else {
-        format!("at://{}", s)
+impl SignedGenesisOperation {
+    pub fn from_json(json: &str) -> Result<Self, crate::Error> {
+        let raw: serde_json::Value = serde_json::from_str(json)?;
+        let mut raw = raw.as_object().unwrap().to_owned();
+        let sig = match raw.get("sig") {
+            Some(serde_json::Value::String(s)) => s.clone(),
+            _ => return Err(crate::Error::UnsignedOperation),
+        };
+        raw.remove("sig");
+
+        let unsigned: UnsignedGenesisOperation = serde_json::from_value(serde_json::to_value(raw.clone())?)?;
+        Ok(Self { unsigned, sig })
     }
 }
 
-fn assure_http(s: &str) -> String {
-    if s.starts_with("http://") || s.starts_with("https://") {
-        s.to_string()
-    } else {
-        format!("https://{}", s)
+impl SignedOperation for SignedGenesisOperation {
+    fn to_json(&self) -> String {
+        serde_json::to_string(&self).unwrap()
     }
-}
 
-pub fn normalize_op(json: serde_json::Value) -> serde_json::Value {
-    let json = json.as_object().unwrap().clone();
-    let mut normalized_json = serde_json::Map::new();
+    fn to_cid(&self) -> Result<String, crate::Error> {
+        let dag = match serde_ipld_dagcbor::to_vec(&self) {
+            Ok(dag) => dag,
+            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
+        };
+        let result = Code::Sha2_256.digest(&dag.as_slice());
+        let cid = Cid::new_v1(0x71, result);
+        Ok(cid.to_string())
+    }
 
-    if json.get("type").unwrap() == "create" {
-        // This is a legacy genesis operation format
-        let mut rotation_keys: Vec<String> = vec![];
-        let mut verification_methods: HashMap<String, String> = HashMap::new();
-        let mut also_known_as: Vec<String> = vec![];
-        let mut services: HashMap<String, Service> = HashMap::new();
+    fn to_did(&self) -> Result<String, crate::Error> {
+        let dag = match serde_ipld_dagcbor::to_vec(&self) {
+            Ok(dag) => dag,
+            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
+        };
+        let hashed = Sha256::digest(dag.as_slice());
+        let b32 = base32::encode(Alphabet::Rfc4648Lower { padding: false }, hashed.as_slice());
+        Ok(format!("did:plc:{}", b32[0..24].to_string()))
+    }
 
-        if !json.get("recoveryKey").unwrap().is_null() {
-            rotation_keys.push(json.get("recoveryKey").unwrap().to_string());
-        }
-        if !json.get("signingKey").unwrap().is_null() {
-            let key = json.get("signingKey").unwrap().to_string();
-            rotation_keys.push(key.clone());
-            verification_methods.insert("atproto".to_string(), key);
-        }
-        if !json.get("handle").unwrap().is_null() {
-            also_known_as.push(assure_at_prefix(
-                json.get("handle").unwrap().as_str().unwrap(),
-            ));
-        }
-        if !json.get("service").unwrap().is_null() {
-            services.insert(
-                "atproto_pds".to_string(),
-                Service {
-                    type_: "AtprotoPersonalDataServer".to_string(),
-                    endpoint: assure_http(
-                        json.get("service")
-                            .unwrap()
-                            .get("endpoint")
-                            .unwrap()
-                            .as_str()
-                            .unwrap(),
-                    ),
+    fn verify_sig(&self) -> Result<bool, crate::Error> {
+        let dag = match serde_ipld_dagcbor::to_vec(&self.unsigned) {
+            Ok(dag) => dag,
+            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
+        };
+        let dag = dag.as_slice();
+
+        let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let decoded_sig = engine.decode(self.sig.as_bytes())?;
+
+        let rotation_keys = [&self.unsigned.recovery_key, &self.unsigned.signing_key];
+        for key in rotation_keys {
+            let key = key.split_at(8).1;
+            let (_base, data) = multibase::decode(key)?;
+            let decoded_result = MultiEncoded::new(data.as_slice())?;
+
+            match decoded_result.codec() {
+                0xe7 => {
+                    // Secp256k1
+                    let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(decoded_result.data())?;
+                    let sig = k256::ecdsa::Signature::from_slice(decoded_sig.as_slice().into())?;
+                    if vk.verify(dag, &sig).is_ok() {
+                        return Ok(true);
+                    }
                 },
-            );
+                0x1200 => {
+                    // P-256
+                    let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(decoded_result.data())?;
+                    let sig = p256::ecdsa::Signature::from_slice(decoded_sig.as_slice().into())?;
+                    if vk.verify(dag, &sig).is_ok() {
+                        return Ok(true);
+                    }
+                },
+                _ => continue,
+            }
         }
-        normalized_json.insert(
-            "type".to_string(),
-            serde_json::Value::String("plc_operation".to_string()),
-        );
-        normalized_json.insert("prev".to_string(), serde_json::Value::Null);
-        normalized_json.insert(
-            "rotationKeys".to_string(),
-            serde_json::Value::Array(Vec::from_iter(
-                rotation_keys
-                    .into_iter()
-                    .map(|s| serde_json::Value::String(s)),
-            )),
-        );
-        normalized_json.insert(
-            "verificationMethods".to_string(),
-            serde_json::to_value(verification_methods).unwrap(),
-        );
-        normalized_json.insert(
-            "alsoKnownAs".to_string(),
-            serde_json::Value::Array(Vec::from_iter(
-                also_known_as
-                    .into_iter()
-                    .map(|s| serde_json::Value::String(s)),
-            )),
-        );
-    } else {
-        for (key, value) in json.iter() {
-            normalized_json.insert(key.clone(), value.clone());
-        }
+        Ok(false)
     }
-
-    if !normalized_json.get("alsoKnownAs").unwrap().is_null() {
-        let mut also_known_as = vec![];
-        for value in normalized_json
-            .get("alsoKnownAs")
-            .unwrap()
-            .as_array()
-            .unwrap()
-        {
-            also_known_as.push(assure_at_prefix(value.as_str().unwrap()));
-        }
-        normalized_json.insert(
-            "alsoKnownAs".to_string(),
-            serde_json::Value::Array(Vec::from_iter(
-                also_known_as
-                    .into_iter()
-                    .map(|s| serde_json::Value::String(s)),
-            )),
-        );
-    }
-
-    serde_json::to_value(normalized_json).unwrap()
 }
 
 #[cfg(test)]
