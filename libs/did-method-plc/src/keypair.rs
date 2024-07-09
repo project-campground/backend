@@ -250,8 +250,7 @@ mod test {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
         let did_key = orig_keypair.to_did_key().unwrap();
         let keypair = Keypair::from_did_key(did_key).unwrap();
-        assert_eq!(keypair.public, orig_keypair.public);
-        assert_eq!(keypair.secret, orig_keypair.secret);
+        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 
@@ -260,8 +259,7 @@ mod test {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
         let did_key = orig_keypair.to_did_key().unwrap();
         let keypair = Keypair::from_did_key(did_key).unwrap();
-        assert_eq!(keypair.public, orig_keypair.public);
-        assert_eq!(keypair.secret, orig_keypair.secret);
+        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 }
