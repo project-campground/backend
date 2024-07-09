@@ -1,11 +1,14 @@
 extern crate thiserror;
 
+use std::collections::HashMap;
+
 use didkit::{
     DIDMethod, DIDResolver, Document, DocumentMetadata, ResolutionInputMetadata, ResolutionMetadata,
+    ssi::did::{DIDMethodTransaction, DIDMethodError}
 };
 use async_trait::async_trait;
-use operation::{PLCOperation, PLCOperationType, UnsignedPLCOperation};
-use util::op_from_json;
+use operation::{PLCOperation, PLCOperationType, Service, UnsignedPLCOperation};
+use util::{assure_at_prefix, assure_http, op_from_json};
 
 pub mod operation;
 pub mod keypair;
@@ -156,6 +159,43 @@ impl DIDMethod for DIDPLC {
 
     fn to_resolver(&self) -> &dyn DIDResolver {
         self
+    }
+
+    fn create(&self, _create: didkit::DIDCreate) -> Result<DIDMethodTransaction, DIDMethodError> {
+        let rotation_keys = _create.options.get("rotationKeys").unwrap();
+        let validation_key = _create.options.get("validationKey").unwrap();
+        let handle = _create.options.get("handle").unwrap();
+        let service = _create.options.get("service").unwrap();
+
+        let rotation_keys: Vec<Keypair> = rotation_keys.as_array().unwrap().into_iter().map(|v| Keypair::from_value(v.clone()).unwrap()).collect();
+        let validation_key = Keypair::from_value(validation_key.clone()).unwrap();
+        let handle = handle.as_str().unwrap();
+        let service = service.as_str().unwrap();
+
+        let op = UnsignedPLCOperation {
+            type_: PLCOperationType::Operation,
+            rotation_keys: rotation_keys.into_iter().map(|v| v.to_did_key().unwrap()).collect(),
+            verification_methods: {
+                let mut map = HashMap::new();
+                map.insert("atproto".to_string(), validation_key.to_did_key().unwrap());
+                map
+            },
+            also_known_as: vec![assure_at_prefix(handle)],
+            services: {
+                let mut map = HashMap::new();
+                map.insert("atproto_pds".to_string(), Service {
+                    type_: "AtprotoData".to_string(),
+                    endpoint: assure_http(service),
+                });
+                map
+            },
+            prev: None,
+        };
+
+        Ok(DIDMethodTransaction {
+            did_method: "create".to_string(),
+            value: serde_json::to_value(&op).unwrap(),
+        })
     }
 }
 
