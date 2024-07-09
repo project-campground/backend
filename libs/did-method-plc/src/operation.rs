@@ -1,12 +1,12 @@
 use multihash_codetable::{Code, MultihashDigest};
-use ecdsa::signature::{SignerMut, Verifier};
 use serde::{Deserialize, Serialize, Serializer};
-use crate::{multicodec::MultiEncoded, util::op_from_json};
+use crate::util::op_from_json;
 use crate::util::normalize_op;
 use std::collections::HashMap;
 use sha2::{Digest, Sha256};
 use base32::Alphabet;
 use base64::Engine;
+use crate::Keypair;
 use cid::Cid;
 
 #[derive(Clone)]
@@ -208,31 +208,24 @@ impl UnsignedOperation for UnsignedPLCOperation {
     }
 
     fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error> {
-        let (_base, data) = multibase::decode(key)?;
+        let keypair = Keypair::from_private_key(key.to_string())?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
-        if key.starts_with("zDn") {
-            // P-256
-            let mut sk = p256::ecdsa::SigningKey::from_slice(data.as_slice()).unwrap();
-            let sig: p256::ecdsa::Signature = sk.sign(&dag.as_slice());
-            let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
-            let sig = engine.encode(sig.to_bytes());
-            return Ok(SignedPLCOperation {
-                unsigned: self.clone(),
-                sig,
-            });
-        } else if key.starts_with("zQ3s") {
-            // Secp256k1
-            let mut sk = k256::ecdsa::SigningKey::from_slice(data.as_slice()).unwrap();
-            let sig: k256::ecdsa::Signature = sk.sign(&dag.as_slice());
-            let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
-            let sig = engine.encode(sig.to_bytes());
-            return Ok(SignedPLCOperation {
-                unsigned: self.clone(),
-                sig,
-            });
-        }
-        Err(crate::Error::InvalidKey)
+        let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let sig = engine.encode(keypair.sign(&dag.as_slice())?);
+
+        Ok(SignedPLCOperation {
+            unsigned: self.clone(),
+            sig,
+        })
+    }
+}
+
+impl UnsignedGenesisOperation {
+    pub fn normalize(&self) -> Result<PLCOperation, crate::Error> {
+        let op = serde_json::to_value(self)?;
+        let normalized = normalize_op(op);
+        Ok(PLCOperation::UnsignedPLC(serde_json::from_value::<UnsignedPLCOperation>(normalized)?))
     }
 }
 
@@ -242,31 +235,16 @@ impl UnsignedOperation for UnsignedGenesisOperation {
     }
 
     fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error> {
-        let (_base, data) = multibase::decode(key)?;
+        let keypair = Keypair::from_private_key(key.to_string())?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
-        if key.starts_with("zDn") {
-            // P-256
-            let mut sk = p256::ecdsa::SigningKey::from_slice(data.as_slice()).unwrap();
-            let sig: p256::ecdsa::Signature = sk.sign(&dag.as_slice());
-            let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
-            let sig = engine.encode(sig.to_bytes());
-            return Ok(SignedGenesisOperation {
-                unsigned: self.clone(),
-                sig,
-            });
-        } else if key.starts_with("zQ3s") {
-            // Secp256k1
-            let mut sk = k256::ecdsa::SigningKey::from_slice(data.as_slice()).unwrap();
-            let sig: k256::ecdsa::Signature = sk.sign(&dag.as_slice());
-            let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
-            let sig = engine.encode(sig.to_bytes());
-            return Ok(SignedGenesisOperation {
-                unsigned: self.clone(),
-                sig,
-            });
-        }
-        Err(crate::Error::InvalidKey)
+        let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let sig = engine.encode(keypair.sign(&dag.as_slice())?);
+
+        Ok(SignedGenesisOperation {
+            unsigned: self.clone(),
+            sig,
+        })
     }
 }
 
@@ -322,28 +300,10 @@ impl SignedOperation for SignedPLCOperation {
         let decoded_sig = engine.decode(self.sig.as_bytes())?;
 
         for key in &self.unsigned.rotation_keys {
-            let key = key.split_at(8).1;
-            let (_base, data) = multibase::decode(key)?;
-            let decoded_result = MultiEncoded::new(data.as_slice())?;
+            let keypair = Keypair::from_did_key(key.to_string())?;
 
-            match decoded_result.codec() {
-                0xe7 => {
-                    // Secp256k1
-                    let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(decoded_result.data())?;
-                    let sig = k256::ecdsa::Signature::from_slice(decoded_sig.as_slice().into())?;
-                    if vk.verify(dag, &sig).is_ok() {
-                        return Ok(true);
-                    }
-                },
-                0x1200 => {
-                    // P-256
-                    let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(decoded_result.data())?;
-                    let sig = p256::ecdsa::Signature::from_slice(decoded_sig.as_slice().into())?;
-                    if vk.verify(dag, &sig).is_ok() {
-                        return Ok(true);
-                    }
-                },
-                _ => continue,
+            if keypair.verify(dag, &decoded_sig)? {
+                return Ok(true);
             }
         }
         Ok(false)
@@ -362,6 +322,12 @@ impl SignedGenesisOperation {
 
         let unsigned: UnsignedGenesisOperation = serde_json::from_value(serde_json::to_value(raw.clone())?)?;
         Ok(Self { unsigned, sig })
+    }
+
+    pub fn normalize(&self) -> Result<PLCOperation, crate::Error> {
+        let op = serde_json::to_value(self)?;
+        let normalized = normalize_op(op);
+        Ok(PLCOperation::SignedPLC(serde_json::from_value::<SignedPLCOperation>(normalized)?))
     }
 }
 
@@ -402,28 +368,10 @@ impl SignedOperation for SignedGenesisOperation {
 
         let rotation_keys = [&self.unsigned.recovery_key, &self.unsigned.signing_key];
         for key in rotation_keys {
-            let key = key.split_at(8).1;
-            let (_base, data) = multibase::decode(key)?;
-            let decoded_result = MultiEncoded::new(data.as_slice())?;
+            let keypair = Keypair::from_did_key(key.to_string())?;
 
-            match decoded_result.codec() {
-                0xe7 => {
-                    // Secp256k1
-                    let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(decoded_result.data())?;
-                    let sig = k256::ecdsa::Signature::from_slice(decoded_sig.as_slice().into())?;
-                    if vk.verify(dag, &sig).is_ok() {
-                        return Ok(true);
-                    }
-                },
-                0x1200 => {
-                    // P-256
-                    let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(decoded_result.data())?;
-                    let sig = p256::ecdsa::Signature::from_slice(decoded_sig.as_slice().into())?;
-                    if vk.verify(dag, &sig).is_ok() {
-                        return Ok(true);
-                    }
-                },
-                _ => continue,
+            if keypair.verify(dag, &decoded_sig)? {
+                return Ok(true);
             }
         }
         Ok(false)
@@ -444,10 +392,62 @@ mod tests {
         let op: SignedPLCOperation = SignedPLCOperation::from_json(TEST_OP_JSON).unwrap();
         let json = op.to_json();
 
-        println!("{}", json);
-        println!("{}", TEST_OP_JSON);
+        let object = serde_json::from_str::<serde_json::Value>(&json)
+            .unwrap();
+        let object = object.as_object()
+            .unwrap();
 
-        assert!(json == TEST_OP_JSON.to_string());
+        assert!(object.contains_key("sig"));
+        assert!(object.contains_key("prev"));
+        assert!(object.contains_key("type"));
+        assert!(object.contains_key("services"));
+        assert!(object.contains_key("alsoKnownAs"));
+        assert!(object.contains_key("rotationKeys"));
+        assert!(object.contains_key("verificationMethods"));
+        assert!(object.get("type").unwrap() == "plc_operation");
+
+        // Validate structure of rotationKeys
+        let rotation_keys = object.get("rotationKeys").unwrap().as_array().unwrap();
+        assert!(rotation_keys.len() == 2);
+        for key in rotation_keys {
+            assert!(key.is_string());
+            match Keypair::from_did_key(key.as_str().unwrap().to_string()) {
+                Ok(_) => {}
+                Err(e) => panic!("{}", e),
+            }
+        }
+
+        // Validate structure of verificationMethods
+        let verification_methods = object.get("verificationMethods").unwrap().as_object().unwrap();
+        assert!(verification_methods.len() == 1);
+        assert!(verification_methods.contains_key("atproto"));
+        for (key, value) in verification_methods {
+            assert!(value.is_string());
+            if key == "atproto" {
+                match Keypair::from_did_key(value.as_str().unwrap().to_string()) {
+                    Ok(_) => {}
+                    Err(e) => panic!("{}", e),
+                }
+            }
+        }
+
+        // Validate structure of alsoKnownAs
+        let also_known_as = object.get("alsoKnownAs").unwrap().as_array().unwrap();
+        assert!(also_known_as.len() == 1);
+        assert!(also_known_as[0].is_string());
+        assert!(also_known_as[0].as_str().unwrap().starts_with("at://"));
+        assert!(also_known_as[0].as_str().unwrap() == "at://bsky.app");
+
+        // Validate structure of services
+        let services = object.get("services").unwrap().as_object().unwrap();
+        assert!(services.len() == 1);
+        assert!(services.contains_key("atproto_pds"));
+        let service = services.get("atproto_pds").unwrap().as_object().unwrap();
+        assert!(service.len() == 2);
+        assert!(service.contains_key("type"));
+        assert!(service.contains_key("endpoint"));
+        assert!(service.get("type").unwrap() == "AtprotoPersonalDataServer");
+        assert!(service.get("endpoint").unwrap().as_str().unwrap().starts_with("https://"));
     }
 
     #[actix_rt::test]
