@@ -213,10 +213,9 @@ impl DIDMethod for DIDPLC {
                     .await {
                         Ok(res) => {
                             if res.status().is_success() {
-                                match res.json().await {
-                                    Ok(json) => Ok(json),
-                                    Err(e) => Err(DIDMethodError::Other(e.into())),
-                                }
+                                return serde_json::to_value(HashMap::from([
+                                    ("did".to_string(), did.to_string())
+                                ])).map_err(|e| DIDMethodError::Other(e.into()));
                             } else {
                                 let status = res.status();
                                 let text = &res.text().await;
@@ -296,10 +295,9 @@ impl DIDMethod for DIDPLC {
                             .await {
                                 Ok(res) => {
                                     if res.status().is_success() {
-                                        match res.json().await {
-                                            Ok(json) => Ok(json),
-                                            Err(e) => Err(DIDMethodError::Other(PLCError::Update(e.to_string()).into())),
-                                        }
+                                        return serde_json::to_value(HashMap::from([
+                                            ("did".to_string(), did.to_string())
+                                        ])).map_err(|e| DIDMethodError::Other(e.into()));
                                     } else {
                                         Err(DIDMethodError::Other(PLCError::Create(res.status().as_u16()).into()))
                                     }
@@ -344,10 +342,9 @@ impl DIDMethod for DIDPLC {
                                     .await {
                                         Ok(res) => {
                                             if res.status().is_success() {
-                                                match res.json().await {
-                                                    Ok(json) => Ok(json),
-                                                    Err(e) => Err(DIDMethodError::Other(e.into())),
-                                                }
+                                                return serde_json::to_value(HashMap::from([
+                                                    ("did".to_string(), did.to_string())
+                                                ])).map_err(|e| DIDMethodError::Other(e.into()));
                                             } else {
                                                 Err(DIDMethodError::Other(PLCError::Create(res.status().as_u16()).into()))
                                             }
@@ -391,10 +388,9 @@ impl DIDMethod for DIDPLC {
                                     .await {
                                         Ok(res) => {
                                             if res.status().is_success() {
-                                                match res.json().await {
-                                                    Ok(json) => Ok(json),
-                                                    Err(e) => Err(DIDMethodError::Other(PLCError::Recover(e.to_string()).into())),
-                                                }
+                                                return serde_json::to_value(HashMap::from([
+                                                    ("did".to_string(), did.to_string())
+                                                ])).map_err(|e| DIDMethodError::Other(e.into()));
                                             } else {
                                                 Err(DIDMethodError::Other(PLCError::Recover(res.text().await.unwrap()).into()))
                                             }
