@@ -13,12 +13,14 @@ use util::{assure_at_prefix, assure_http, op_from_json};
 pub mod operation;
 pub mod keypair;
 mod multicodec;
+pub mod audit;
 mod util;
 
 pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 pub const DEFAULT_HOST: &str = "https://plc.directory";
 
 pub use keypair::{Keypair, BlessedAlgorithm};
+pub use audit::{AuditLog, DIDAuditLogs};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -101,7 +103,7 @@ impl DIDPLC {
         Ok(operations)
     }
 
-    pub async fn get_audit_log(&self, did: &str) -> Result<Vec<PLCOperation>, Error> {
+    pub async fn get_audit_log(&self, did: &str) -> Result<DIDAuditLogs, Error> {
         let res = self
             .client
             .get(format!("{}/{}/log/audit", self.host, did))
@@ -109,14 +111,8 @@ impl DIDPLC {
             .await?;
 
         let body: String = res.text().await?;
-        let mut operations: Vec<PLCOperation> = vec![];
-        let json: Vec<serde_json::Value> = serde_json::from_str(&body)?;
 
-        for op in json {
-            operations.push(op_from_json(serde_json::to_string(&op)?.as_str())?);
-        }
-
-        Ok(operations)
+        Ok(DIDAuditLogs::from_json(&body)?)
     }
 
     pub async fn get_last_log(&self, did: &str) -> Result<PLCOperation, Error> {
