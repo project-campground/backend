@@ -6,5 +6,5 @@ Rust implementation of the [did:plc][] DID Method, based on the [ssi][] library.
 
 [MIT License](https://opensource.org/license/mit)
 
-[did:plc]: https://github.com/did-method-plc/did-method-plc#did-plc-method-didplc
+[did:plc]: https://web.plc.directory/spec/v0.1/did-plc
 [ssi]: https://github.com/spruceid/ssi/

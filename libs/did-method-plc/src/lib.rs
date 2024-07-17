@@ -90,7 +90,7 @@ pub enum PLCError {
 
 /// did:plc Method
 ///
-/// [Specification](https://github.com/did-method-plc/did-method-plc#did-plc-method-didplc)
+/// [Specification](https://web.plc.directory/spec/v0.1/did-plc)
 pub struct DIDPLC {
     host: String,
     client: reqwest::Client,
