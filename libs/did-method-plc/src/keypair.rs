@@ -1,6 +1,6 @@
 use crate::multicodec::MultiEncoded;
 use ecdsa::signature::{SignerMut, Verifier};
-use k256::elliptic_curve::sec1::ToEncodedPoint;
+use ecdsa::elliptic_curve::sec1::ToEncodedPoint;
 use serde::{Deserialize, Serialize};
 
 pub enum BlessedAlgorithm {
@@ -106,11 +106,12 @@ impl Keypair {
             },
             BlessedAlgorithm::K256 => {
                 let pk = k256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())?;
+                let vk = k256::ecdsa::VerifyingKey::from(pk);
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
                     [
                         algo.prefix().to_vec(),
-                        pk.to_encoded_point(true).as_bytes().to_vec()
+                        vk.to_sec1_bytes().to_vec()
                     ]
                     .concat()
                 );
@@ -216,6 +217,12 @@ impl Keypair {
                 // P-256
                 let mut sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice())?;
                 let sig: p256::ecdsa::Signature = sk.sign(&msg);
+                let sig = match sig.normalize_s() {
+                    Some(sig) => sig,
+                    None => {
+                        return Err(crate::Error::InvalidKey);
+                    },
+                };
                 Ok(sig.to_bytes().to_vec())
             },
             _ => Err(crate::Error::InvalidKey),
