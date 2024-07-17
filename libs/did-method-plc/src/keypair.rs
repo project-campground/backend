@@ -262,4 +262,22 @@ mod test {
         assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
+
+    #[test]
+    fn test_keypair_from_private_key_p256() {
+        let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
+        let private_key = orig_keypair.to_private_key().unwrap();
+        let keypair = Keypair::from_private_key(private_key).unwrap();
+        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
+        assert_eq!(keypair.codec, orig_keypair.codec);
+    }
+
+    #[test]
+    fn test_keypair_from_private_key_k256() {
+        let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
+        let private_key = orig_keypair.to_private_key().unwrap();
+        let keypair = Keypair::from_private_key(private_key).unwrap();
+        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
+        assert_eq!(keypair.codec, orig_keypair.codec);
+    }
 }
