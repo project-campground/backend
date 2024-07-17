@@ -164,7 +164,7 @@ impl Keypair {
                     ]
                     .concat()
                 );
-                Ok(format!("did:key:{}", key))
+                Ok(key)
             },
             BlessedAlgorithm::K256 => {
                 let sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice())?;
@@ -176,7 +176,7 @@ impl Keypair {
                     ]
                     .concat()
                 );
-                Ok(format!("did:key:{}", key))
+                Ok(key)
             },
         }
     }
