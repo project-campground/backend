@@ -16,20 +16,26 @@ pub enum PLCOperationType {
 }
 
 impl PLCOperationType {
-    fn to_string(&self) -> &str {
+    pub fn to_string(&self) -> &str {
         match self {
             Self::Operation => "plc_operation",
             Self::Tombstone => "plc_tombstone",
         }
     }
 
-    fn from_string(s: &str) -> Option<Self> {
+    pub fn from_string(s: &str) -> Option<Self> {
         match s {
             "plc_operation" => Some(Self::Operation),
             "plc_tombstone" => Some(Self::Tombstone),
             "create" => Some(Self::Operation),
             _ => None,
         }
+    }
+}
+
+impl PartialEq for PLCOperationType {
+    fn eq(&self, other: &Self) -> bool {
+        self.to_string() == other.to_string()
     }
 }
 
@@ -61,9 +67,10 @@ pub trait SignedOperation {
     fn to_json(&self) -> String;
     fn to_cid(&self) -> Result<String, crate::Error>;
     fn to_did(&self) -> Result<String, crate::Error>;
-    fn verify_sig(&self) -> Result<bool, crate::Error>;
+    fn verify_sig(&self, rotation_keys: Option<Vec<String>>) -> Result<(bool, Option<String>), crate::Error>;
 }
 
+#[derive(Clone)]
 pub enum PLCOperation {
     UnsignedGenesis(UnsignedGenesisOperation),
     SignedGenesis(SignedGenesisOperation),
@@ -171,7 +178,7 @@ pub struct SignedPLCOperation {
 #[serde(rename_all = "camelCase")]
 pub struct UnsignedGenesisOperation {
     #[serde(rename = "type")]
-    type_: String,
+    pub type_: String,
     pub signing_key: String,
     pub recovery_key: String,
     pub handle: String,
@@ -207,7 +214,8 @@ impl UnsignedOperation for UnsignedPLCOperation {
         }
     }
 
-    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error> {
+    #[allow(refining_impl_trait)]
+    fn to_signed(&self, key: &str) -> Result<SignedPLCOperation, crate::Error> {
         let keypair = Keypair::from_private_key(key.to_string())?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
@@ -234,7 +242,8 @@ impl UnsignedOperation for UnsignedGenesisOperation {
         serde_json::to_string(&self).unwrap()
     }
 
-    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error> {
+    #[allow(refining_impl_trait)]
+    fn to_signed(&self, key: &str) -> Result<SignedGenesisOperation, crate::Error> {
         let keypair = Keypair::from_private_key(key.to_string())?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
@@ -289,7 +298,7 @@ impl SignedOperation for SignedPLCOperation {
         Ok(format!("did:plc:{}", b32[0..24].to_string()))
     }
 
-    fn verify_sig(&self) -> Result<bool, crate::Error> {
+    fn verify_sig(&self, rotation_keys: Option<Vec<String>>) -> Result<(bool, Option<String>), crate::Error> {
         let dag = match serde_ipld_dagcbor::to_vec(&self.unsigned) {
             Ok(dag) => dag,
             Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
@@ -299,14 +308,19 @@ impl SignedOperation for SignedPLCOperation {
         let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
         let decoded_sig = engine.decode(self.sig.as_bytes())?;
 
-        for key in &self.unsigned.rotation_keys {
+        let rotation_keys = match rotation_keys {
+            Some(keys) => keys.clone(),
+            None => self.unsigned.rotation_keys.clone(),
+        };
+
+        for key in rotation_keys {
             let keypair = Keypair::from_did_key(key.to_string())?;
 
             if keypair.verify(dag, &decoded_sig)? {
-                return Ok(true);
+                return Ok((true, Some(key.to_string())));
             }
         }
-        Ok(false)
+        Ok((false, None))
     }
 }
 
@@ -356,7 +370,7 @@ impl SignedOperation for SignedGenesisOperation {
         Ok(format!("did:plc:{}", b32[0..24].to_string()))
     }
 
-    fn verify_sig(&self) -> Result<bool, crate::Error> {
+    fn verify_sig(&self, rotation_keys: Option<Vec<String>>) -> Result<(bool, Option<String>), crate::Error> {
         let dag = match serde_ipld_dagcbor::to_vec(&self.unsigned) {
             Ok(dag) => dag,
             Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
@@ -366,20 +380,25 @@ impl SignedOperation for SignedGenesisOperation {
         let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
         let decoded_sig = engine.decode(self.sig.as_bytes())?;
 
-        let rotation_keys = [&self.unsigned.recovery_key, &self.unsigned.signing_key];
+        let rotation_keys = match rotation_keys {
+            Some(keys) => keys.clone(),
+            None => [self.unsigned.recovery_key.clone(), self.unsigned.signing_key.clone()].to_vec(),
+        };
         for key in rotation_keys {
             let keypair = Keypair::from_did_key(key.to_string())?;
 
             if keypair.verify(dag, &decoded_sig)? {
-                return Ok(true);
+                return Ok((true, Some(key.to_string())));
             }
         }
-        Ok(false)
+        Ok((false, None))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::BlessedAlgorithm;
+
     use super::*;
 
     const TEST_OP_JSON: &str = "{\"sig\":\"8Wj9Cf74dZFNKx7oucZSHbBDFOMJ3xx9lkvj5rT9xMErssWYl1D9n4PeGC0mNml7xDG7uoQqZ1JWoApGADUgXg\",\"prev\":\"bafyreiexwziulimyiw3qlhpwr2zljk5jtzdp2bgqbgoxuemjsf5a6tan3a\",\"type\":\"plc_operation\",\"services\":{\"atproto_pds\":{\"type\":\"AtprotoPersonalDataServer\",\"endpoint\":\"https://puffball.us-east.host.bsky.network\"}},\"alsoKnownAs\":[\"at://bsky.app\"],\"rotationKeys\":[\"did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg\",\"did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK\"],\"verificationMethods\":{\"atproto\":\"did:key:zQ3shQo6TF2moaqMTrUZEM1jeuYRQXeHEx4evX9751y2qPqRA\"}}";
@@ -469,7 +488,39 @@ mod tests {
     #[actix_rt::test]
     async fn test_verify_sig() {
         let op: SignedPLCOperation = SignedPLCOperation::from_json(TEST_OP_JSON).unwrap();
+        let (valid, key) = op.verify_sig(None).unwrap();
 
-        assert!(op.verify_sig().unwrap());
+        assert!(valid);
+        assert!(key.unwrap() == "did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK".to_string());
+    }
+
+    #[actix_rt::test]
+    async fn test_to_signed() {
+        let signing_key = Keypair::generate(BlessedAlgorithm::P256);
+        let recovery_key = Keypair::generate(BlessedAlgorithm::P256);
+        let validation_key = Keypair::generate(BlessedAlgorithm::P256);
+
+        let op = UnsignedPLCOperation {
+            prev: None,
+            type_: PLCOperationType::Operation,
+            services: HashMap::from([
+                ("atproto_pds".to_string(), Service {
+                    type_: "AtprotoPersonalDataServer".to_string(),
+                    endpoint: "https://example.test".to_string(),
+                }),
+            ]),
+            also_known_as: vec!["at://example.test".to_string()],
+            rotation_keys: vec![
+                recovery_key.to_did_key().unwrap(),
+                signing_key.to_did_key().unwrap(),
+            ],
+            verification_methods: HashMap::from([
+                ("atproto".to_string(), validation_key.to_did_key().unwrap()),
+            ]),
+        };
+        let signed = op.to_signed(signing_key.to_private_key().unwrap().as_str()).unwrap();
+        let (valid, key) = signed.verify_sig(None).unwrap();
+        assert!(valid);
+        assert!(key.unwrap() == signing_key.to_did_key().unwrap());
     }
 }
