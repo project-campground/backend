@@ -185,5 +185,18 @@ mod tests {
     fn test_did_audit_log_from_json() {
         let audit_logs = DIDAuditLogs::from_json(TEST_AUDIT_LOG).unwrap();
         assert_eq!(audit_logs.0.len(), 4);
+        assert_eq!(audit_logs.last().unwrap().cid, "bafyreifn4pkect7nymne3sxkdg7tn7534msyxcjkshmzqtijmn3enyxm3q");
+
+        match &audit_logs.last().unwrap().operation {
+            PLCOperation::SignedPLC(op) => {
+                assert_eq!(op.unsigned.type_, PLCOperationType::Operation);
+            }
+            _ => {
+                unreachable!()
+            }
+        }
+
+        assert_eq!(audit_logs.last().unwrap().nullified, false);
+        assert_eq!(audit_logs.last().unwrap().created_at, NaiveDateTime::parse_from_str("2023-11-09T21:49:10.793Z", "%Y-%m-%dT%H:%M:%S%.fZ").unwrap());
     }
 }
