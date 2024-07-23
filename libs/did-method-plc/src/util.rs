@@ -109,13 +109,17 @@ pub fn normalize_op(json: serde_json::Value) -> serde_json::Value {
                     .map(|s| serde_json::Value::String(s)),
             )),
         );
+        normalized_json.insert(
+            "services".to_string(),
+            serde_json::to_value(services).unwrap(),
+        );
     } else {
         for (key, value) in json.iter() {
             normalized_json.insert(key.clone(), value.clone());
         }
     }
 
-    if !normalized_json.get("alsoKnownAs").unwrap().is_null() {
+    if normalized_json.get("alsoKnownAs").is_some() && !normalized_json.get("alsoKnownAs").unwrap().is_null() {
         let mut also_known_as = vec![];
         for value in normalized_json
             .get("alsoKnownAs")
