@@ -71,7 +71,7 @@ impl Keypair {
         Ok(keypair)
     }
 
-    pub fn from_did_key(key: String) -> Result<Self, PLCError> {
+    pub fn from_did_key(key: &str) -> Result<Self, PLCError> {
         if !key.starts_with("did:key:") {
             return Err(PLCError::InvalidKey);
         }
@@ -121,7 +121,7 @@ impl Keypair {
         }
     }
 
-    pub fn from_private_key(key: String) -> Result<Self, PLCError> {
+    pub fn from_private_key(key: &str) -> Result<Self, PLCError> {
         let (_base, data) = multibase::decode(key).map_err(|_| PLCError::InvalidKey)?;
         let decoded_result = MultiEncoded::new(data.as_slice()).map_err(|_| PLCError::InvalidKey)?;
 
@@ -257,7 +257,7 @@ mod test {
     fn test_keypair_from_did_key_p256() {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
         let did_key = orig_keypair.to_did_key().unwrap();
-        let keypair = Keypair::from_did_key(did_key).unwrap();
+        let keypair = Keypair::from_did_key(&did_key).unwrap();
         assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
@@ -266,14 +266,14 @@ mod test {
     fn test_keypair_from_did_key_k256() {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
         let did_key = orig_keypair.to_did_key().unwrap();
-        let keypair = Keypair::from_did_key(did_key).unwrap();
+        let keypair = Keypair::from_did_key(&did_key).unwrap();
         assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 
     #[test]
     fn test_keypair_to_did_key() {
-        let keypair = Keypair::from_did_key("did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg".to_string());
+        let keypair = Keypair::from_did_key("did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg");
         assert!(keypair.is_ok());
         assert_eq!(keypair.unwrap().to_did_key().unwrap(), "did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg");
     }
@@ -282,7 +282,7 @@ mod test {
     fn test_keypair_from_private_key_p256() {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
         let private_key = orig_keypair.to_private_key().unwrap();
-        let keypair = Keypair::from_private_key(private_key).unwrap();
+        let keypair = Keypair::from_private_key(&private_key).unwrap();
         assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
@@ -291,7 +291,7 @@ mod test {
     fn test_keypair_from_private_key_k256() {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
         let private_key = orig_keypair.to_private_key().unwrap();
-        let keypair = Keypair::from_private_key(private_key).unwrap();
+        let keypair = Keypair::from_private_key(&private_key).unwrap();
         assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
@@ -300,7 +300,7 @@ mod test {
     fn test_keypair_to_private_key_p256() {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
         let private_key = orig_keypair.to_private_key().unwrap();
-        let keypair = Keypair::from_private_key(private_key).unwrap();
+        let keypair = Keypair::from_private_key(&private_key).unwrap();
         assert_eq!(orig_keypair.secret.unwrap(), keypair.secret.unwrap());
     }
 
@@ -308,7 +308,7 @@ mod test {
     fn test_keypair_to_private_key_k256() {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
         let private_key = orig_keypair.to_private_key().unwrap();
-        let keypair = Keypair::from_private_key(private_key).unwrap();
+        let keypair = Keypair::from_private_key(&private_key).unwrap();
         assert_eq!(orig_keypair.secret.unwrap(), keypair.secret.unwrap());
     }
 }
