@@ -19,7 +19,7 @@ pub const USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PK
 pub const DEFAULT_HOST: &str = "https://plc.directory";
 
 pub use audit::{AuditLog, DIDAuditLogs};
-
+pub use error::PLCError;
 pub use keypair::{BlessedAlgorithm, Keypair};
 pub enum Error {
     #[error("Reqwest error: {0}")]
@@ -107,7 +107,7 @@ impl DIDPLC {
         }
     }
 
-    pub async fn get_log(&self, did: &str) -> Result<Vec<PLCOperation>, Error> {
+    pub async fn get_log(&self, did: &str) -> Result<Vec<PLCOperation>, PLCError> {
         let res = self
             .client
             .get(format!("{}/{}/log", self.host, did))
@@ -116,28 +116,43 @@ impl DIDPLC {
 
         let body: String = res.text().await?;
         let mut operations: Vec<PLCOperation> = vec![];
-        let json: Vec<serde_json::Value> = serde_json::from_str(&body)?;
+        let json: Vec<serde_json::Value> =
+            serde_json::from_str(&body).map_err(|e| PLCError::Other(e.into()))?;
 
         for op in json {
-            operations.push(op_from_json(serde_json::to_string(&op)?.as_str())?);
+            operations.push(
+                op_from_json(
+                    serde_json::to_string(&op)
+                        .map_err(|e| PLCError::Other(e.into()))?
+                        .as_str(),
+                )
+                .map_err(|e| PLCError::Other(e.into()))?,
+            );
         }
 
         Ok(operations)
     }
 
-    pub async fn get_audit_log(&self, did: &str) -> Result<DIDAuditLogs, Error> {
+    pub async fn get_audit_log(&self, did: &str) -> Result<DIDAuditLogs, PLCError> {
         let res = self
             .client
             .get(format!("{}/{}/log/audit", self.host, did))
             .send()
             .await?;
 
+        if !res.status().is_success() {
+            return Err(PLCError::Http(
+                res.status().as_u16(),
+                res.text().await.unwrap_or_default(),
+            ));
+        }
+
         let body: String = res.text().await?;
 
-        Ok(DIDAuditLogs::from_json(&body)?)
+        Ok(DIDAuditLogs::from_json(&body).map_err(|e| PLCError::Other(e.into()))?)
     }
 
-    pub async fn get_last_log(&self, did: &str) -> Result<PLCOperation, Error> {
+    pub async fn get_last_log(&self, did: &str) -> Result<PLCOperation, PLCError> {
         let res = self
             .client
             .get(format!("{}/{}/log/last", self.host, did))
@@ -145,12 +160,17 @@ impl DIDPLC {
             .await?;
 
         let body: String = res.text().await?;
-        let op: serde_json::Value = serde_json::from_str(&body)?;
+        let op: serde_json::Value =
+            serde_json::from_str(&body).map_err(|e| PLCError::Other(e.into()))?;
 
-        Ok(op_from_json(serde_json::to_string(&op)?.as_str())?)
+        Ok(op_from_json(
+            serde_json::to_string(&op)
+                .map_err(|e| PLCError::Other(e.into()))?
+                .as_str(),
+        )?)
     }
 
-    pub async fn get_current_state(&self, did: &str) -> Result<PLCOperation, Error> {
+    pub async fn get_current_state(&self, did: &str) -> Result<PLCOperation, PLCError> {
         let res = self
             .client
             .get(format!("{}/{}/data", self.host, did))
@@ -158,9 +178,14 @@ impl DIDPLC {
             .await?;
 
         let body: String = res.text().await?;
-        let op: serde_json::Value = serde_json::from_str(&body)?;
+        let op: serde_json::Value =
+            serde_json::from_str(&body).map_err(|e| PLCError::Other(e.into()))?;
 
-        Ok(op_from_json(serde_json::to_string(&op)?.as_str())?)
+        Ok(op_from_json(
+            serde_json::to_string(&op)
+                .map_err(|e| PLCError::Other(e.into()))?
+                .as_str(),
+        )?)
     }
 }
 
@@ -227,11 +252,7 @@ impl DIDResolver for DIDPLC {
                 };
 
                 match Document::from_json(text.as_str()) {
-                    Ok(document) => (
-                        ResolutionMetadata::default(),
-                        Some(document),
-                        None,
-                    ),
+                    Ok(document) => (ResolutionMetadata::default(), Some(document), None),
                     Err(err) => (
                         ResolutionMetadata::from_error(&format!(
                             "Unable to parse DID document: {:?}",
@@ -248,10 +269,7 @@ impl DIDResolver for DIDPLC {
                 None,
             ),
             _ => (
-                ResolutionMetadata::from_error(&format!(
-                    "Failed to resolve DID: {}",
-                    res.status()
-                )),
+                ResolutionMetadata::from_error(&format!("Failed to resolve DID: {}", res.status())),
                 None,
                 None,
             ),
@@ -271,7 +289,9 @@ mod tests {
     async fn test_didplc_resolve() {
         let didplc = DIDPLC::default();
         let did = "did:plc:ui5pgpumwvufhfnnz52c4lyl";
-        let (res_metadata, document, _) = didplc.resolve(did, &ResolutionInputMetadata::default()).await;
+        let (res_metadata, document, _) = didplc
+            .resolve(did, &ResolutionInputMetadata::default())
+            .await;
 
         assert!(res_metadata.error.is_none());
         assert!(document.is_some());

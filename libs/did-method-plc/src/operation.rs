@@ -1,13 +1,14 @@
-use multihash_codetable::{Code, MultihashDigest};
-use serde::{Deserialize, Serialize, Serializer};
-use crate::util::op_from_json;
 use crate::util::normalize_op;
-use std::collections::HashMap;
-use sha2::{Digest, Sha256};
+use crate::util::op_from_json;
+use crate::Keypair;
+use crate::PLCError;
 use base32::Alphabet;
 use base64::Engine;
-use crate::Keypair;
 use cid::Cid;
+use multihash_codetable::{Code, MultihashDigest};
+use serde::{Deserialize, Serialize, Serializer};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub enum PLCOperationType {
@@ -60,14 +61,17 @@ impl<'de> Deserialize<'de> for PLCOperationType {
 
 pub trait UnsignedOperation {
     fn to_json(&self) -> String;
-    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, crate::Error>;
+    fn to_signed(&self, key: &str) -> Result<impl SignedOperation, PLCError>;
 }
 
 pub trait SignedOperation {
     fn to_json(&self) -> String;
-    fn to_cid(&self) -> Result<String, crate::Error>;
-    fn to_did(&self) -> Result<String, crate::Error>;
-    fn verify_sig(&self, rotation_keys: Option<Vec<String>>) -> Result<(bool, Option<String>), crate::Error>;
+    fn to_cid(&self) -> Result<String, PLCError>;
+    fn to_did(&self) -> Result<String, PLCError>;
+    fn verify_sig(
+        &self,
+        rotation_keys: Option<Vec<String>>,
+    ) -> Result<(bool, Option<String>), PLCError>;
 }
 
 #[derive(Clone)]
@@ -80,8 +84,8 @@ pub enum PLCOperation {
 
 impl Serialize for PLCOperation {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         match self {
             Self::UnsignedGenesis(op) => op.serialize(serializer),
@@ -94,8 +98,8 @@ impl Serialize for PLCOperation {
 
 impl<'de> Deserialize<'de> for PLCOperation {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: serde::Deserializer<'de>
+    where
+        D: serde::Deserializer<'de>,
     {
         let value = serde_json::Value::deserialize(deserializer)?;
         let json = match serde_json::to_string(&value) {
@@ -215,7 +219,7 @@ impl UnsignedOperation for UnsignedPLCOperation {
     }
 
     #[allow(refining_impl_trait)]
-    fn to_signed(&self, key: &str) -> Result<SignedPLCOperation, crate::Error> {
+    fn to_signed(&self, key: &str) -> Result<SignedPLCOperation, PLCError> {
         let keypair = Keypair::from_private_key(key.to_string())?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
@@ -230,10 +234,13 @@ impl UnsignedOperation for UnsignedPLCOperation {
 }
 
 impl UnsignedGenesisOperation {
-    pub fn normalize(&self) -> Result<PLCOperation, crate::Error> {
-        let op = serde_json::to_value(self)?;
+    pub fn normalize(&self) -> Result<PLCOperation, PLCError> {
+        let op = serde_json::to_value(self).map_err(|e| PLCError::Other(e.into()))?;
         let normalized = normalize_op(op);
-        Ok(PLCOperation::UnsignedPLC(serde_json::from_value::<UnsignedPLCOperation>(normalized)?))
+        Ok(PLCOperation::UnsignedPLC(
+            serde_json::from_value::<UnsignedPLCOperation>(normalized)
+                .map_err(|e| PLCError::Other(e.into()))?,
+        ))
     }
 }
 
@@ -243,7 +250,7 @@ impl UnsignedOperation for UnsignedGenesisOperation {
     }
 
     #[allow(refining_impl_trait)]
-    fn to_signed(&self, key: &str) -> Result<SignedGenesisOperation, crate::Error> {
+    fn to_signed(&self, key: &str) -> Result<SignedGenesisOperation, PLCError> {
         let keypair = Keypair::from_private_key(key.to_string())?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
@@ -258,17 +265,17 @@ impl UnsignedOperation for UnsignedGenesisOperation {
 }
 
 impl SignedPLCOperation {
-    pub fn from_json(json: &str) -> Result<Self, crate::Error> {
-        let raw: serde_json::Value = serde_json::from_str(json)?;
+    pub fn from_json(json: &str) -> Result<Self, PLCError> {
+        let raw: serde_json::Value = serde_json::from_str(json).map_err(|e| PLCError::Other(e.into()))?;
         let mut raw = raw.as_object().unwrap().to_owned();
         let sig = match raw.get("sig") {
             Some(serde_json::Value::String(s)) => s.clone(),
-            _ => return Err(crate::Error::UnsignedOperation),
+            _ => return Err(PLCError::InvalidSignature),
         };
         raw.remove("sig");
-        let raw = normalize_op(serde_json::to_value(raw.clone())?);
+        let raw = normalize_op(serde_json::to_value(raw.clone()).map_err(|e| PLCError::Other(e.into()))?);
 
-        let unsigned: UnsignedPLCOperation = serde_json::from_value(raw.clone())?;
+        let unsigned: UnsignedPLCOperation = serde_json::from_value(raw.clone()).map_err(|e| PLCError::Other(e.into()))?;
         Ok(Self { unsigned, sig })
     }
 }
@@ -278,35 +285,32 @@ impl SignedOperation for SignedPLCOperation {
         serde_json::to_string(&self).unwrap()
     }
 
-    fn to_cid(&self) -> Result<String, crate::Error> {
-        let dag = match serde_ipld_dagcbor::to_vec(&self) {
-            Ok(dag) => dag,
-            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
-        };
+    fn to_cid(&self) -> Result<String, PLCError> {
+        let dag = serde_ipld_dagcbor::to_vec(&self).map_err(|e| PLCError::Other(e.into()))?;
         let result = Code::Sha2_256.digest(&dag.as_slice());
         let cid = Cid::new_v1(0x71, result);
         Ok(cid.to_string())
     }
 
-    fn to_did(&self) -> Result<String, crate::Error> {
-        let dag = match serde_ipld_dagcbor::to_vec(&self) {
-            Ok(dag) => dag,
-            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
-        };
+    fn to_did(&self) -> Result<String, PLCError> {
+        let dag = serde_ipld_dagcbor::to_vec(&self).map_err(|e| PLCError::Other(e.into()))?;
         let hashed = Sha256::digest(dag.as_slice());
         let b32 = base32::encode(Alphabet::Rfc4648Lower { padding: false }, hashed.as_slice());
         Ok(format!("did:plc:{}", b32[0..24].to_string()))
     }
 
-    fn verify_sig(&self, rotation_keys: Option<Vec<String>>) -> Result<(bool, Option<String>), crate::Error> {
-        let dag = match serde_ipld_dagcbor::to_vec(&self.unsigned) {
-            Ok(dag) => dag,
-            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
-        };
+    fn verify_sig(
+        &self,
+        rotation_keys: Option<Vec<String>>,
+    ) -> Result<(bool, Option<String>), PLCError> {
+        let dag =
+            serde_ipld_dagcbor::to_vec(&self.unsigned).map_err(|e| PLCError::Other(e.into()))?;
         let dag = dag.as_slice();
 
         let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
-        let decoded_sig = engine.decode(self.sig.as_bytes())?;
+        let decoded_sig = engine
+            .decode(self.sig.as_bytes())
+            .map_err(|_| PLCError::InvalidSignature)?;
 
         let rotation_keys = match rotation_keys {
             Some(keys) => keys.clone(),
@@ -314,9 +318,13 @@ impl SignedOperation for SignedPLCOperation {
         };
 
         for key in rotation_keys {
-            let keypair = Keypair::from_did_key(key.to_string())?;
+            let keypair =
+                Keypair::from_did_key(key.to_string()).map_err(|_| PLCError::InvalidOperation)?;
 
-            if keypair.verify(dag, &decoded_sig)? {
+            if keypair
+                .verify(dag, &decoded_sig)
+                .map_err(|e| PLCError::Other(e.into()))?
+            {
                 return Ok((true, Some(key.to_string())));
             }
         }
@@ -325,23 +333,30 @@ impl SignedOperation for SignedPLCOperation {
 }
 
 impl SignedGenesisOperation {
-    pub fn from_json(json: &str) -> Result<Self, crate::Error> {
-        let raw: serde_json::Value = serde_json::from_str(json)?;
+    pub fn from_json(json: &str) -> Result<Self, PLCError> {
+        let raw: serde_json::Value =
+            serde_json::from_str(json).map_err(|e| PLCError::Other(e.into()))?;
         let mut raw = raw.as_object().unwrap().to_owned();
         let sig = match raw.get("sig") {
             Some(serde_json::Value::String(s)) => s.clone(),
-            _ => return Err(crate::Error::UnsignedOperation),
+            _ => return Err(PLCError::InvalidSignature),
         };
         raw.remove("sig");
 
-        let unsigned: UnsignedGenesisOperation = serde_json::from_value(serde_json::to_value(raw.clone())?)?;
+        let unsigned: UnsignedGenesisOperation = serde_json::from_value(
+            serde_json::to_value(raw.clone()).map_err(|e| PLCError::Other(e.into()))?,
+        )
+        .map_err(|e| PLCError::Other(e.into()))?;
         Ok(Self { unsigned, sig })
     }
 
-    pub fn normalize(&self) -> Result<PLCOperation, crate::Error> {
-        let op = serde_json::to_value(self)?;
+    pub fn normalize(&self) -> Result<PLCOperation, PLCError> {
+        let op = serde_json::to_value(self).map_err(|e| PLCError::Other(e.into()))?;
         let normalized = normalize_op(op);
-        Ok(PLCOperation::SignedPLC(serde_json::from_value::<SignedPLCOperation>(normalized)?))
+        Ok(PLCOperation::SignedPLC(
+            serde_json::from_value::<SignedPLCOperation>(normalized)
+                .map_err(|e| PLCError::Other(e.into()))?,
+        ))
     }
 }
 
@@ -350,44 +365,49 @@ impl SignedOperation for SignedGenesisOperation {
         serde_json::to_string(&self).unwrap()
     }
 
-    fn to_cid(&self) -> Result<String, crate::Error> {
-        let dag = match serde_ipld_dagcbor::to_vec(&self) {
-            Ok(dag) => dag,
-            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
-        };
+    fn to_cid(&self) -> Result<String, PLCError> {
+        let dag = serde_ipld_dagcbor::to_vec(&self).map_err(|e| PLCError::Other(e.into()))?;
         let result = Code::Sha2_256.digest(&dag.as_slice());
         let cid = Cid::new_v1(0x71, result);
         Ok(cid.to_string())
     }
 
-    fn to_did(&self) -> Result<String, crate::Error> {
-        let dag = match serde_ipld_dagcbor::to_vec(&self) {
-            Ok(dag) => dag,
-            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
-        };
+    fn to_did(&self) -> Result<String, PLCError> {
+        let dag = serde_ipld_dagcbor::to_vec(&self).map_err(|e| PLCError::Other(e.into()))?;
         let hashed = Sha256::digest(dag.as_slice());
         let b32 = base32::encode(Alphabet::Rfc4648Lower { padding: false }, hashed.as_slice());
         Ok(format!("did:plc:{}", b32[0..24].to_string()))
     }
 
-    fn verify_sig(&self, rotation_keys: Option<Vec<String>>) -> Result<(bool, Option<String>), crate::Error> {
-        let dag = match serde_ipld_dagcbor::to_vec(&self.unsigned) {
-            Ok(dag) => dag,
-            Err(e) => return Err(crate::Error::DagCbor(e.to_string())),
-        };
+    fn verify_sig(
+        &self,
+        rotation_keys: Option<Vec<String>>,
+    ) -> Result<(bool, Option<String>), PLCError> {
+        let dag =
+            serde_ipld_dagcbor::to_vec(&self.unsigned).map_err(|e| PLCError::Other(e.into()))?;
         let dag = dag.as_slice();
 
         let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
-        let decoded_sig = engine.decode(self.sig.as_bytes())?;
+        let decoded_sig = engine
+            .decode(self.sig.as_bytes())
+            .map_err(|_| PLCError::InvalidSignature)?;
 
         let rotation_keys = match rotation_keys {
             Some(keys) => keys.clone(),
-            None => [self.unsigned.recovery_key.clone(), self.unsigned.signing_key.clone()].to_vec(),
+            None => [
+                self.unsigned.recovery_key.clone(),
+                self.unsigned.signing_key.clone(),
+            ]
+            .to_vec(),
         };
         for key in rotation_keys {
-            let keypair = Keypair::from_did_key(key.to_string())?;
+            let keypair =
+                Keypair::from_did_key(key.to_string()).map_err(|_| PLCError::InvalidOperation)?;
 
-            if keypair.verify(dag, &decoded_sig)? {
+            if keypair
+                .verify(dag, &decoded_sig)
+                .map_err(|e| PLCError::Other(e.into()))?
+            {
                 return Ok((true, Some(key.to_string())));
             }
         }

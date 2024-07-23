@@ -1,4 +1,5 @@
 use crate::multicodec::MultiEncoded;
+use crate::PLCError;
 use ecdsa::signature::{SignerMut, Verifier};
 use ecdsa::elliptic_curve::sec1::ToEncodedPoint;
 use serde::{Deserialize, Serialize};
@@ -65,18 +66,18 @@ impl Keypair {
         }
     }
 
-    pub fn from_value(value: serde_json::Value) -> Result<Self, crate::Error> {
-        let keypair: Keypair = serde_json::from_value(value)?;
+    pub fn from_value(value: serde_json::Value) -> Result<Self, PLCError> {
+        let keypair: Keypair = serde_json::from_value(value).map_err(|e| PLCError::Other(e.into()))?;
         Ok(keypair)
     }
 
-    pub fn from_did_key(key: String) -> Result<Self, crate::Error> {
+    pub fn from_did_key(key: String) -> Result<Self, PLCError> {
         if !key.starts_with("did:key:") {
-            return Err(crate::Error::InvalidKey);
+            return Err(PLCError::InvalidKey);
         }
         let key = key.split_at(8).1;
-        let (_base, data) = multibase::decode(key)?;
-        let decoded_result = MultiEncoded::new(data.as_slice())?;
+        let (_base, data) = multibase::decode(key).map_err(|_| PLCError::InvalidKey)?;
+        let decoded_result = MultiEncoded::new(data.as_slice()).map_err(|_| PLCError::InvalidKey)?;
 
         Ok(Keypair {
             public: Some(decoded_result.data().to_vec()),
@@ -85,15 +86,15 @@ impl Keypair {
         })
     }
 
-    pub fn to_did_key(&self) -> Result<String, crate::Error> {
+    pub fn to_did_key(&self) -> Result<String, PLCError> {
         if self.public.is_none() {
-            return Err(crate::Error::InvalidKey);
+            return Err(PLCError::InvalidKey);
         }
         let algo = BlessedAlgorithm::from(self.codec);
 
         match algo {
             BlessedAlgorithm::P256 => {
-                let pk = p256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())?;
+                let pk = p256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
                     [
@@ -105,7 +106,7 @@ impl Keypair {
                 Ok(format!("did:key:{}", key))
             },
             BlessedAlgorithm::K256 => {
-                let pk = k256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())?;
+                let pk = k256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
                 let vk = k256::ecdsa::VerifyingKey::from(pk);
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
@@ -120,14 +121,14 @@ impl Keypair {
         }
     }
 
-    pub fn from_private_key(key: String) -> Result<Self, crate::Error> {
-        let (_base, data) = multibase::decode(key)?;
-        let decoded_result = MultiEncoded::new(data.as_slice())?;
+    pub fn from_private_key(key: String) -> Result<Self, PLCError> {
+        let (_base, data) = multibase::decode(key).map_err(|_| PLCError::InvalidKey)?;
+        let decoded_result = MultiEncoded::new(data.as_slice()).map_err(|_| PLCError::InvalidKey)?;
 
         match decoded_result.codec() {
             0xe7 => {
                 // Secp256k1
-                let sk = k256::ecdsa::SigningKey::from_slice(decoded_result.data().into())?;
+                let sk = k256::ecdsa::SigningKey::from_slice(decoded_result.data().into()).map_err(|_| PLCError::InvalidKey)?;
                 let vk = sk.verifying_key();
                 Ok(Keypair {
                     public: Some(vk.to_sec1_bytes().to_vec()),
@@ -137,7 +138,7 @@ impl Keypair {
             },
             0x1200 => {
                 // P-256
-                let sk = p256::ecdsa::SigningKey::from_slice(decoded_result.data().into())?;
+                let sk = p256::ecdsa::SigningKey::from_slice(decoded_result.data().into()).map_err(|_| PLCError::InvalidKey)?;
                 let vk = sk.verifying_key();
                 Ok(Keypair {
                     public: Some(vk.to_sec1_bytes().to_vec()),
@@ -145,18 +146,18 @@ impl Keypair {
                     codec: decoded_result.codec(),
                 })
             },
-            _ => Err(crate::Error::InvalidKey),
+            _ => Err(PLCError::InvalidKey),
         }
     }
 
-    pub fn to_private_key(&self) -> Result<String, crate::Error> {
+    pub fn to_private_key(&self) -> Result<String, PLCError> {
         if self.secret.is_none() {
-            return Err(crate::Error::InvalidKey);
+            return Err(PLCError::InvalidKey);
         }
         let algo = BlessedAlgorithm::from(self.codec);
         match algo {
             BlessedAlgorithm::P256 => {
-                let sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice())?;
+                let sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
                     [
@@ -168,7 +169,7 @@ impl Keypair {
                 Ok(key)
             },
             BlessedAlgorithm::K256 => {
-                let sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice())?;
+                let sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
                     [
@@ -182,20 +183,20 @@ impl Keypair {
         }
     }
 
-    pub fn verify(&self, msg: &[u8], sig: &[u8]) -> Result<bool, crate::Error> {
+    pub fn verify(&self, msg: &[u8], sig: &[u8]) -> Result<bool, PLCError> {
         match self.codec {
             0xe7 => {
                 // Secp256k1
-                let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())?;
-                let sig = k256::ecdsa::Signature::from_slice(sig.into())?;
+                let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
+                let sig = k256::ecdsa::Signature::from_slice(sig.into()).map_err(|_| PLCError::InvalidSignature)?;
                 if vk.verify(&msg, &sig).is_ok() {
                     return Ok(true);
                 }
             },
             0x1200 => {
                 // P-256
-                let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())?;
-                let sig = p256::ecdsa::Signature::from_slice(sig.into())?;
+                let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
+                let sig = p256::ecdsa::Signature::from_slice(sig.into()).map_err(|_| PLCError::InvalidSignature)?;
                 if vk.verify(&msg, &sig).is_ok() {
                     return Ok(true);
                 }
@@ -205,27 +206,27 @@ impl Keypair {
         Ok(false)
     }
 
-    pub fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, crate::Error> {
+    pub fn sign(&self, msg: &[u8]) -> Result<Vec<u8>, PLCError> {
         match self.codec {
             0xe7 => {
                 // Secp256k1
-                let mut sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice())?;
+                let mut sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
                 let sig: k256::ecdsa::Signature = sk.sign(&msg);
                 Ok(sig.to_bytes().to_vec())
             },
             0x1200 => {
                 // P-256
-                let mut sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice())?;
+                let mut sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
                 let sig: p256::ecdsa::Signature = sk.sign(&msg);
                 let sig = match sig.normalize_s() {
                     Some(sig) => sig,
                     None => {
-                        return Err(crate::Error::InvalidKey);
+                        return Err(PLCError::InvalidKey);
                     },
                 };
                 Ok(sig.to_bytes().to_vec())
             },
-            _ => Err(crate::Error::InvalidKey),
+            _ => Err(PLCError::InvalidKey),
         }
     }
 }

@@ -1,17 +1,14 @@
 use std::collections::HashMap;
-use crate::operation::{
-    Service,
-    PLCOperation,
-    SignedGenesisOperation,
-    SignedPLCOperation,
-};
+use crate::{operation::{
+    PLCOperation, Service, SignedGenesisOperation, SignedPLCOperation
+}, PLCError};
 
-pub fn op_from_json(s: &str) -> Result<PLCOperation, crate::Error> {
+pub fn op_from_json(s: &str) -> Result<PLCOperation, PLCError> {
     let json: serde_json::Value = serde_json::from_str(s).unwrap();
     let op = json.as_object().unwrap().clone();
 
     if op.get("sig").is_none() {
-        return Err(crate::Error::UnsignedOperation)
+        return Err(PLCError::InvalidSignature)
     }
 
     match op.get("type").unwrap().as_str().unwrap() {
@@ -27,7 +24,7 @@ pub fn op_from_json(s: &str) -> Result<PLCOperation, crate::Error> {
             let op = SignedGenesisOperation::from_json(s)?;
             Ok(PLCOperation::SignedGenesis(op))
         },
-        t => Err(crate::Error::InvalidOperationType(t.into()))
+        _ => Err(PLCError::InvalidOperation)
     }
 }
 

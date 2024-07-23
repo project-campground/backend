@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
-use crate::{operation::PLCOperationType, util::op_from_json};
 use crate::operation::{SignedOperation, SignedPLCOperation};
+use crate::{operation::PLCOperationType, util::op_from_json};
+use crate::{PLCError, PLCOperation};
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::PLCOperation;
 
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -17,14 +17,16 @@ pub struct AuditLog {
 }
 
 impl AuditLog {
-    pub fn from_json(json: &str) -> Result<Self, crate::Error> {
-        let json: serde_json::Value = serde_json::from_str(json)?;
-        let op = op_from_json(&serde_json::to_string(json.get("operation").unwrap())?)?;
+    pub fn from_json(json: &str) -> Result<Self, PLCError> {
+        let json: serde_json::Value =
+            serde_json::from_str(json).map_err(|e| PLCError::Other(e.into()))?;
+        let op = op_from_json(
+            &serde_json::to_string(json.get("operation").unwrap())
+                .map_err(|e| PLCError::Other(e.into()))?,
+        )?;
         Ok(AuditLog {
             cid: json.get("cid").unwrap().as_str().unwrap().to_string(),
-            created_at: DateTime::<Utc>::from_str(
-                json.get("createdAt").unwrap().as_str().unwrap(),
-            )
+            created_at: DateTime::<Utc>::from_str(json.get("createdAt").unwrap().as_str().unwrap())
                 .unwrap()
                 .naive_utc(),
             did: json.get("did").unwrap().as_str().unwrap().to_string(),
@@ -33,20 +35,12 @@ impl AuditLog {
         })
     }
 
-    pub fn type_(&self) -> PLCOperationType {
+    pub fn op_type(&self) -> PLCOperationType {
         match &self.operation {
-            PLCOperation::SignedGenesis(_) => {
-                PLCOperationType::Operation
-            }
-            PLCOperation::UnsignedGenesis(_) => {
-                PLCOperationType::Operation
-            }
-            PLCOperation::SignedPLC(op) => {
-                op.unsigned.type_.clone()
-            }
-            PLCOperation::UnsignedPLC(op) => {
-                op.type_.clone()
-            }
+            PLCOperation::SignedGenesis(_) => PLCOperationType::Operation,
+            PLCOperation::UnsignedGenesis(_) => PLCOperationType::Operation,
+            PLCOperation::SignedPLC(op) => op.unsigned.type_.clone(),
+            PLCOperation::UnsignedPLC(op) => op.type_.clone(),
         }
     }
 }
@@ -55,8 +49,9 @@ impl AuditLog {
 pub struct DIDAuditLogs(Vec<AuditLog>);
 
 impl DIDAuditLogs {
-    pub fn from_json(json: &str) -> Result<Self, crate::Error> {
-        let json: serde_json::Value = serde_json::from_str(json)?;
+    pub fn from_json(json: &str) -> Result<Self, PLCError> {
+        let json: serde_json::Value =
+            serde_json::from_str(json).map_err(|e| PLCError::Other(e.into()))?;
         let logs = json
             .as_array()
             .unwrap()
@@ -66,39 +61,47 @@ impl DIDAuditLogs {
         Ok(Self(logs))
     }
 
-    pub fn assure_valid(&self, proposed: SignedPLCOperation) -> Result<bool, crate::PLCError> {
+    pub fn get_latest(&self) -> Result<String, PLCError> {
+        let last_op = self.0.last();
+        if last_op.is_none() {
+            return Err(PLCError::MisorderedOperation);
+        }
+        let mut last_op = last_op.unwrap();
+        if last_op.op_type() == PLCOperationType::Tombstone {
+            if self.0.len() == 1 {
+                return Err(PLCError::InvalidOperation);
+            }
+            last_op = &self.0[self.0.len() - 2];
+        }
+        Ok(last_op.cid.clone())
+    }
+
+    pub fn assure_valid(&self, proposed: SignedPLCOperation) -> Result<bool, PLCError> {
         let cid = match &proposed.unsigned.prev {
             Some(cid) => cid,
-            None => return Err(crate::PLCError::MisorderedOperation),
+            None => return Err(PLCError::MisorderedOperation),
         };
-        let index_of_prev = self
-            .0
-            .iter()
-            .position(|log| log.cid == cid.to_string());
+        let index_of_prev = self.0.iter().position(|log| log.cid == cid.to_string());
 
         if index_of_prev.is_none() {
-            return Err(crate::PLCError::MisorderedOperation);
+            return Err(PLCError::MisorderedOperation);
         }
 
         let ops_in_history = self.0[0..index_of_prev.unwrap()].to_vec();
-        let nullified = self.0[index_of_prev.unwrap()..self.0.len()-1].to_vec();
+        let nullified = self.0[index_of_prev.unwrap()..self.0.len() - 1].to_vec();
 
         let last_op = ops_in_history.last();
         if last_op.is_none() {
-            return Err(crate::PLCError::MisorderedOperation);
+            return Err(PLCError::MisorderedOperation);
         }
         let last_op = last_op.unwrap();
-        if last_op.type_() == PLCOperationType::Tombstone {
-            return Err(crate::PLCError::MisorderedOperation);
+        if last_op.op_type() == PLCOperationType::Tombstone {
+            return Err(PLCError::MisorderedOperation);
         }
 
         let last_op_normalized: SignedPLCOperation = match &last_op.operation {
-            PLCOperation::SignedGenesis(op) => {
-                op.normalize().unwrap().into()
-            }
-            PLCOperation::SignedPLC(op) => {
-                op.clone()
-            }
+            PLCOperation::SignedGenesis(op) => op.normalize().unwrap().into(),
+            PLCOperation::SignedPLC(op) => op.clone(),
             _ => {
                 unreachable!()
             }
@@ -112,7 +115,7 @@ impl DIDAuditLogs {
                     return Ok(true);
                 }
                 Err(_) => {
-                    return Err(crate::PLCError::InvalidSignature);
+                    return Err(PLCError::InvalidSignature);
                 }
             }
         }
@@ -121,12 +124,12 @@ impl DIDAuditLogs {
         let (_, disputed_key) = match last_op_normalized.verify_sig(None) {
             Ok(result) => {
                 if !result.0 {
-                    return Err(crate::PLCError::InvalidSignature);
+                    return Err(PLCError::InvalidSignature);
                 }
                 result
             }
             Err(_) => {
-                return Err(crate::PLCError::InvalidSignature);
+                return Err(PLCError::InvalidSignature);
             }
         };
         let disputed_key = disputed_key.unwrap();
@@ -147,11 +150,11 @@ impl DIDAuditLogs {
         match proposed.verify_sig(Some(more_powerful_keys)) {
             Ok(result) => {
                 if !result.0 {
-                    return Err(crate::PLCError::InvalidSignature);
+                    return Err(PLCError::InvalidSignature);
                 }
             }
             Err(_) => {
-                return Err(crate::PLCError::InvalidSignature);
+                return Err(PLCError::InvalidSignature);
             }
         }
 
@@ -160,11 +163,11 @@ impl DIDAuditLogs {
             let local = Local::now().naive_utc();
             let time_lapsed = local - first_nullified.created_at;
             if time_lapsed.num_seconds() > RECOVERY_WINDOW {
-                return Err(crate::PLCError::LateRecovery);
+                return Err(PLCError::LateRecovery);
             }
         }
 
-        return Ok(true)
+        return Ok(true);
     }
 
     pub fn last(&self) -> Option<&AuditLog> {
