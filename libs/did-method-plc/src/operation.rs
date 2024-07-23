@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum PLCOperationType {
     Operation,
     Tombstone,
@@ -159,6 +159,13 @@ pub struct Service {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+struct TombstoneOperation {
+    #[serde(rename = "type")]
+    pub type_: String,
+    pub prev: String,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UnsignedPLCOperation {
     #[serde(rename = "type")]
@@ -237,8 +244,17 @@ impl UnsignedOperation for UnsignedPLCOperation {
 
     #[allow(refining_impl_trait)]
     fn to_signed(&self, key: &str) -> Result<SignedPLCOperation, PLCError> {
-        let keypair = Keypair::from_private_key(key.to_string())?;
-        let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
+        let keypair = Keypair::from_private_key(key)?;
+        let dag = match self.type_ {
+            PLCOperationType::Operation => serde_ipld_dagcbor::to_vec(&self).unwrap(),
+            PLCOperationType::Tombstone => {
+                let tombstone = TombstoneOperation {
+                    type_: "plc_tombstone".to_string(),
+                    prev: self.prev.clone().unwrap(),
+                };
+                serde_ipld_dagcbor::to_vec(&tombstone).unwrap()
+            }
+        };
 
         let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
         let sig = engine.encode(keypair.sign(&dag.as_slice())?);
