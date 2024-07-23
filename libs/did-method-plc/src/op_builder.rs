@@ -87,20 +87,23 @@ impl<'a, 'k> OperationBuilder<'a, 'k> {
     }
 
     pub async fn build(&mut self, op_type: PLCOperationType) -> Result<SignedPLCOperation, PLCError> {
-        if self.services.get("atproto_pds").is_none() {
-            return Err(PLCError::InvalidOperation)
-        }
-        if self.key.is_none() {
-            return Err(PLCError::InvalidOperation)
-        }
-        if self.rotation_keys.len() < 2 {
-            return Err(PLCError::InvalidOperation)
-        }
-        if self.also_known_as.len() < 1 {
-            return Err(PLCError::InvalidOperation)
-        }
-        if self.verification_methods.get("atproto").is_none() {
-            return Err(PLCError::InvalidOperation)
+        if op_type == PLCOperationType::Operation {
+            // These fields only apply to operations, not tombstone operations
+            if self.services.get("atproto_pds").is_none() {
+                return Err(PLCError::InvalidOperation)
+            }
+            if self.key.is_none() {
+                return Err(PLCError::InvalidOperation)
+            }
+            if self.rotation_keys.len() < 2 {
+                return Err(PLCError::InvalidOperation)
+            }
+            if self.also_known_as.len() < 1 {
+                return Err(PLCError::InvalidOperation)
+            }
+            if self.verification_methods.get("atproto").is_none() {
+                return Err(PLCError::InvalidOperation)
+            }
         }
         if self.did.is_some() {
             // Not a genesis op
