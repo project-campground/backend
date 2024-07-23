@@ -241,11 +241,16 @@ impl DIDResolver for DIDPLC {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use operation::PLCOperationType;
 
     use super::*;
 
     const PLC_HOST: &str = "https://plc.directory"; // "http://localhost:2894";
+
+    // TODO: Create a test for DIDPLC.get_log
+    // TODO: Create a test for DIDPLC.get_audit_log
+    // TODO: Create a test for DIDPLC.get_last_log
+    // TODO: Create a test for DIDPLC.get_current_state
 
     #[actix_rt::test]
     async fn test_didplc_resolve() {
@@ -262,9 +267,85 @@ mod tests {
     #[actix_rt::test]
     async fn test_didplc_operations() {
         let didplc = DIDPLC::new(PLC_HOST);
-        let recovery_key = Keypair::generate(BlessedAlgorithm::P256);
-        let signing_key = Keypair::generate(BlessedAlgorithm::P256);
-        let verification_key = Keypair::generate(BlessedAlgorithm::P256);
-        // TODO: Rewrite this test for the new operation builder
+        let recovery_key = Keypair::generate(BlessedAlgorithm::K256);
+        let signing_key = Keypair::generate(BlessedAlgorithm::K256);
+        let verification_key = Keypair::generate(BlessedAlgorithm::K256);
+
+        let create_op = OperationBuilder::new(&didplc)
+            .with_key(&signing_key)
+            .with_validation_key(&verification_key)
+            .add_rotation_key(&recovery_key)
+            .add_rotation_key(&signing_key)
+            .with_handle("example.test".to_owned())
+            .with_pds("example.test".to_owned())
+            .build(PLCOperationType::Operation)
+            .await;
+
+        assert!(create_op.is_ok(), "Failed to build create op: {:?}", create_op.err());
+        let create_op = create_op.unwrap();
+        let did = &create_op.to_did().expect("Failed to turn op to DID");
+
+        let create_res = didplc.execute_op(did, &create_op).await;
+
+        assert!(create_res.is_ok(), "Failed to execute create op: {:?}", create_res.err());
+        let create_res = create_res.unwrap();
+
+        assert!(create_res.status == 200, "Failed to execute create op: status = {}, body = {:?}", create_res.status, create_res.body);
+        assert!(&create_res.did == did, "Failed to execute create op: did = {}, expected = {}", create_res.did, did);
+
+        let update_op = OperationBuilder::for_did(&didplc, did.clone())
+            .with_key(&signing_key)
+            .with_validation_key(&verification_key)
+            .add_rotation_key(&recovery_key)
+            .add_rotation_key(&signing_key)
+            .with_handle("touma.example.test".to_owned())
+            .with_pds("example.test".to_owned())
+            .build(PLCOperationType::Operation)
+            .await;
+
+        assert!(update_op.is_ok(), "Failed to build update op: {:?}", update_op.err());
+        let update_op = update_op.unwrap();
+        let update_res = didplc.execute_op(did, &update_op).await;
+        assert!(update_res.is_ok(), "Failed to execute update op: {:?}", update_res.err());
+
+        let update_res = update_res.unwrap();
+        assert!(update_res.status == 200, "Failed to execute update op: status = {}, body = {:?}, json = {}", update_res.status, update_res.body, update_op.to_json());
+        assert!(&update_res.did == did, "Failed to execute update op: did = {}, expected = {}", update_res.did, did);
+
+        let deactivate_op = OperationBuilder::for_did(&didplc, did.clone())
+            .with_key(&signing_key)
+            .with_validation_key(&verification_key)
+            .add_rotation_key(&recovery_key)
+            .add_rotation_key(&signing_key)
+            .with_handle("touma.example.test".to_owned())
+            .with_pds("example.test".to_owned())
+            .build(PLCOperationType::Tombstone)
+            .await;
+        assert!(deactivate_op.is_ok(), "Failed to build deactivate op: {:?}", deactivate_op.err());
+        let deactivate_op = deactivate_op.unwrap();
+        let deactivate_res = didplc.execute_op(did, &deactivate_op).await;
+        assert!(deactivate_res.is_ok(), "Failed to execute deactivate op: {:?}, json = {}", deactivate_res.err(), deactivate_op.to_json());
+
+        let deactivate_res = deactivate_res.unwrap();
+        assert!(deactivate_res.status == 200, "Failed to execute deactivate op: status = {}, body = {:?}", deactivate_res.status, deactivate_res.body);
+        assert!(&deactivate_res.did == did, "Failed to execute deactivate op: did = {}, expected = {}", deactivate_res.did, did);
+
+        let recover_op = OperationBuilder::for_did(&didplc, did.clone())
+            .with_key(&recovery_key)
+            .with_validation_key(&verification_key)
+            .add_rotation_key(&recovery_key)
+            .add_rotation_key(&signing_key)
+            .with_handle("touma.example.test".to_owned())
+            .with_pds("example.test".to_owned())
+            .build(PLCOperationType::Operation)
+            .await;
+        assert!(recover_op.is_ok(), "Failed to build recover op: {:?}", recover_op.err());
+        let recover_op = recover_op.unwrap();
+        let recover_res = didplc.execute_op(did, &recover_op).await;
+        assert!(recover_res.is_ok(), "Failed to execute recover op: {:?}, json = {}", recover_res.err(), recover_op.to_json());
+
+        let recover_res = recover_res.unwrap();
+        assert!(recover_res.status == 200, "Failed to execute recover op: status = {}, body = {:?}", recover_res.status, recover_res.body);
+        assert!(&recover_res.did == did, "Failed to execute recover op: did = {}, expected = {}", recover_res.did, did);
     }
 }
