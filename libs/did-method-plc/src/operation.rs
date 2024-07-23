@@ -431,10 +431,8 @@ mod tests {
         let op: SignedPLCOperation = SignedPLCOperation::from_json(TEST_OP_JSON).unwrap();
         let json = op.to_json();
 
-        let object = serde_json::from_str::<serde_json::Value>(&json)
-            .unwrap();
-        let object = object.as_object()
-            .unwrap();
+        let object = serde_json::from_str::<serde_json::Value>(&json).unwrap();
+        let object = object.as_object().unwrap();
 
         assert!(object.contains_key("sig"));
         assert!(object.contains_key("prev"));
@@ -457,7 +455,11 @@ mod tests {
         }
 
         // Validate structure of verificationMethods
-        let verification_methods = object.get("verificationMethods").unwrap().as_object().unwrap();
+        let verification_methods = object
+            .get("verificationMethods")
+            .unwrap()
+            .as_object()
+            .unwrap();
         assert!(verification_methods.len() == 1);
         assert!(verification_methods.contains_key("atproto"));
         for (key, value) in verification_methods {
@@ -486,7 +488,12 @@ mod tests {
         assert!(service.contains_key("type"));
         assert!(service.contains_key("endpoint"));
         assert!(service.get("type").unwrap() == "AtprotoPersonalDataServer");
-        assert!(service.get("endpoint").unwrap().as_str().unwrap().starts_with("https://"));
+        assert!(service
+            .get("endpoint")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .starts_with("https://"));
     }
 
     #[actix_rt::test]
@@ -511,7 +518,9 @@ mod tests {
         let (valid, key) = op.verify_sig(None).unwrap();
 
         assert!(valid);
-        assert!(key.unwrap() == "did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK".to_string());
+        assert!(
+            key.unwrap() == "did:key:zQ3shpKnbdPx3g3CmPf5cRVTPe1HtSwVn5ish3wSnDPQCbLJK".to_string()
+        );
     }
 
     #[actix_rt::test]
@@ -523,22 +532,26 @@ mod tests {
         let op = UnsignedPLCOperation {
             prev: None,
             type_: PLCOperationType::Operation,
-            services: HashMap::from([
-                ("atproto_pds".to_string(), Service {
+            services: HashMap::from([(
+                "atproto_pds".to_string(),
+                Service {
                     type_: "AtprotoPersonalDataServer".to_string(),
                     endpoint: "https://example.test".to_string(),
-                }),
-            ]),
+                },
+            )]),
             also_known_as: vec!["at://example.test".to_string()],
             rotation_keys: vec![
                 recovery_key.to_did_key().unwrap(),
                 signing_key.to_did_key().unwrap(),
             ],
-            verification_methods: HashMap::from([
-                ("atproto".to_string(), validation_key.to_did_key().unwrap()),
-            ]),
+            verification_methods: HashMap::from([(
+                "atproto".to_string(),
+                validation_key.to_did_key().unwrap(),
+            )]),
         };
-        let signed = op.to_signed(signing_key.to_private_key().unwrap().as_str()).unwrap();
+        let signed = op
+            .to_signed(signing_key.to_private_key().unwrap().as_str())
+            .unwrap();
         let (valid, key) = signed.verify_sig(None).unwrap();
         assert!(valid);
         assert!(key.unwrap() == signing_key.to_did_key().unwrap());
