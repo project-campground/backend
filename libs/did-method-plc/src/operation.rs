@@ -315,7 +315,25 @@ impl SignedPLCOperation {
 
 impl SignedOperation for SignedPLCOperation {
     fn to_json(&self) -> String {
-        serde_json::to_string(&self).unwrap()
+        match self.unsigned.type_ {
+            PLCOperationType::Operation => serde_json::to_string(&self).unwrap(),
+            PLCOperationType::Tombstone => {
+                let mut map = serde_json::Map::new();
+                map.insert(
+                    "type".to_string(),
+                    serde_json::Value::String("plc_tombstone".to_string()),
+                );
+                map.insert(
+                    "prev".to_string(),
+                    serde_json::Value::String(self.unsigned.prev.clone().unwrap()),
+                );
+                map.insert(
+                    "sig".to_string(),
+                    serde_json::Value::String(self.sig.clone())
+                );
+                serde_json::to_string(&serde_json::Value::Object(map)).unwrap()
+            }
+        }
     }
 
     fn to_cid(&self) -> Result<String, PLCError> {
