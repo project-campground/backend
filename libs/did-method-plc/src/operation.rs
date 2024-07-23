@@ -284,7 +284,7 @@ impl UnsignedOperation for UnsignedGenesisOperation {
 
     #[allow(refining_impl_trait)]
     fn to_signed(&self, key: &str) -> Result<SignedGenesisOperation, PLCError> {
-        let keypair = Keypair::from_private_key(key.to_string())?;
+        let keypair = Keypair::from_private_key(key)?;
         let dag = serde_ipld_dagcbor::to_vec(&self).unwrap();
 
         let engine = base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -352,7 +352,7 @@ impl SignedOperation for SignedPLCOperation {
 
         for key in rotation_keys {
             let keypair =
-                Keypair::from_did_key(key.to_string()).map_err(|_| PLCError::InvalidOperation)?;
+                Keypair::from_did_key(&key).map_err(|_| PLCError::InvalidOperation)?;
 
             if keypair
                 .verify(dag, &decoded_sig)
@@ -435,7 +435,7 @@ impl SignedOperation for SignedGenesisOperation {
         };
         for key in rotation_keys {
             let keypair =
-                Keypair::from_did_key(key.to_string()).map_err(|_| PLCError::InvalidOperation)?;
+                Keypair::from_did_key(&key).map_err(|_| PLCError::InvalidOperation)?;
 
             if keypair
                 .verify(dag, &decoded_sig)
@@ -481,7 +481,7 @@ mod tests {
         assert!(rotation_keys.len() == 2);
         for key in rotation_keys {
             assert!(key.is_string());
-            match Keypair::from_did_key(key.as_str().unwrap().to_string()) {
+            match Keypair::from_did_key(key.as_str().unwrap()) {
                 Ok(_) => {}
                 Err(e) => panic!("{}", e),
             }
@@ -498,7 +498,7 @@ mod tests {
         for (key, value) in verification_methods {
             assert!(value.is_string());
             if key == "atproto" {
-                match Keypair::from_did_key(value.as_str().unwrap().to_string()) {
+                match Keypair::from_did_key(value.as_str().unwrap()) {
                     Ok(_) => {}
                     Err(e) => panic!("{}", e),
                 }
