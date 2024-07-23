@@ -163,9 +163,13 @@ pub struct Service {
 pub struct UnsignedPLCOperation {
     #[serde(rename = "type")]
     pub type_: PLCOperationType,
+    #[serde(default)]
     pub rotation_keys: Vec<String>,
+    #[serde(default)]
     pub verification_methods: HashMap<String, String>,
+    #[serde(default)]
     pub also_known_as: Vec<String>,
+    #[serde(default)]
     pub services: HashMap<String, Service>,
     pub prev: Option<String>,
 }
@@ -196,6 +200,19 @@ pub struct SignedGenesisOperation {
     #[serde(flatten)]
     pub unsigned: UnsignedGenesisOperation,
     pub sig: String,
+}
+
+impl Default for UnsignedPLCOperation {
+    fn default() -> Self {
+        Self {
+            type_: PLCOperationType::Operation,
+            rotation_keys: Vec::new(),
+            verification_methods: HashMap::new(),
+            also_known_as: Vec::new(),
+            services: HashMap::new(),
+            prev: None,
+        }
+    }
 }
 
 impl UnsignedOperation for UnsignedPLCOperation {
