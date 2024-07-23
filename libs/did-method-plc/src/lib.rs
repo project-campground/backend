@@ -22,69 +22,6 @@ pub use audit::{AuditLog, DIDAuditLogs};
 pub use error::PLCError;
 pub use keypair::{BlessedAlgorithm, Keypair};
 pub enum Error {
-    #[error("Reqwest error: {0}")]
-    Reqwest(#[from] reqwest::Error),
-
-    #[error("Serde error: {0}")]
-    Serde(#[from] serde_json::Error),
-
-    #[error("DAG-CBOR error: {0}")]
-    DagCbor(String),
-
-    #[error("Operation is unsigned")]
-    UnsignedOperation,
-
-    #[error("Invalid key")]
-    InvalidKey,
-
-    #[error("Multibase error")]
-    Multibase(#[from] multibase::Error),
-
-    #[error("ECDSA signature error: {0}")]
-    Signature(#[from] ecdsa::signature::Error),
-
-    #[error("Sec1 error: {0}")]
-    Sec1(#[from] sec1::Error),
-
-    #[error("Hex error")]
-    Hex(#[from] hex::FromHexError),
-
-    #[error("Multicodec error: {0}")]
-    Multicodec(#[from] multicodec::Error),
-
-    #[error("Base64 decode error: {0}")]
-    Base64Decode(#[from] base64::DecodeError),
-
-    #[error("Invalid operation type: {0}")]
-    InvalidOperationType(String),
-
-    #[error("ECDSA elliptic curve error: {0}")]
-    ECDSAEllipticCurve(#[from] ecdsa::elliptic_curve::Error),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum PLCError {
-    #[error("Failed to create PLC: {0}")]
-    Create(u16),
-
-    #[error("Failed to deactivate PLC: {0}")]
-    Deactivated(String),
-
-    #[error("Failed to update PLC: {0}")]
-    Update(String),
-    
-    #[error("Failed to recover PLC: {0}")]
-    Recover(String),
-
-    #[error("Misordered operation")]
-    MisorderedOperation,
-
-    #[error("Recovery too late")]
-    LateRecovery,
-
-    #[error("Signature is invalid")]
-    InvalidSignature,
-}
 
 /// did:plc Method
 ///
