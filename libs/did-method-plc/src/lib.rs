@@ -5,7 +5,7 @@ use didkit::{
     DIDMethod, DIDResolver, Document, DocumentMetadata, ResolutionInputMetadata,
     ResolutionMetadata,
 };
-use operation::{PLCOperation, Service,};
+use operation::{PLCOperation, Service, SignedOperation, SignedPLCOperation};
 use util::op_from_json;
 
 mod audit;
@@ -23,6 +23,12 @@ pub use audit::{AuditLog, DIDAuditLogs};
 pub use error::PLCError;
 pub use keypair::{BlessedAlgorithm, Keypair};
 pub use op_builder::OperationBuilder;
+
+pub struct PLCOperationResult {
+    pub did: String,
+    pub status: u16,
+    pub body: String,
+}
 
 /// did:plc Method
 ///
@@ -43,6 +49,24 @@ impl DIDPLC {
             host: host.to_string(),
             client,
         }
+    }
+
+    pub async fn execute_op(&self, did: &str, op: &SignedPLCOperation) -> Result<PLCOperationResult, PLCError> {
+        let res = self
+            .client
+            .post(format!("{}/{}", self.host, did))
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(op.to_json())
+            .send()
+            .await?;
+
+        let status = res.status().as_u16();
+        let body: String = res.text().await?;
+        Ok(PLCOperationResult {
+            did: did.to_string(),
+            status: status,
+            body,
+        })
     }
 
     pub async fn get_log(&self, did: &str) -> Result<Vec<PLCOperation>, PLCError> {
