@@ -12,6 +12,7 @@ mod audit;
 mod error;
 mod keypair;
 mod multicodec;
+mod op_builder;
 pub mod operation;
 mod util;
 
@@ -21,7 +22,7 @@ pub const DEFAULT_HOST: &str = "https://plc.directory";
 pub use audit::{AuditLog, DIDAuditLogs};
 pub use error::PLCError;
 pub use keypair::{BlessedAlgorithm, Keypair};
-pub enum Error {
+pub use op_builder::OperationBuilder;
 
 /// did:plc Method
 ///
