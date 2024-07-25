@@ -5,7 +5,7 @@ use didkit::{
     DIDMethod, DIDResolver, Document, DocumentMetadata, ResolutionInputMetadata,
     ResolutionMetadata,
 };
-use operation::{PLCOperation, Service, SignedOperation, SignedPLCOperation};
+use operation::{PLCOperation, Service, SignedOperation, SignedPLCOperation, UnsignedPLCOperation};
 use util::op_from_json;
 
 mod audit;
@@ -140,14 +140,10 @@ impl DIDPLC {
             .await?;
 
         let body: String = res.text().await?;
-        let op: serde_json::Value =
-            serde_json::from_str(&body).map_err(|e| PLCError::Other(e.into()))?;
 
-        Ok(op_from_json(
-            serde_json::to_string(&op)
-                .map_err(|e| PLCError::Other(e.into()))?
-                .as_str(),
-        )?)
+        Ok(PLCOperation::UnsignedPLC(serde_json::from_str::<UnsignedPLCOperation>(&body)
+            .map_err(|e| PLCError::Other(e.into()))?
+        ))
     }
 }
 
