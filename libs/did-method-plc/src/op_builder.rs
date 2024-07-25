@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    operation::{PLCOperationType, SignedPLCOperation, UnsignedOperation, UnsignedPLCOperation},
+    operation::{PLCOperation, PLCOperationType, SignedPLCOperation, UnsignedOperation, UnsignedPLCOperation},
     util::{assure_at_prefix, assure_http},
     Keypair, PLCError, Service, DIDPLC,
 };
@@ -41,6 +41,25 @@ impl<'a, 'k> OperationBuilder<'a, 'k> {
             also_known_as: vec![],
             verification_methods: HashMap::new(),
             prev: None,
+        }
+    }
+
+    pub async fn from_did_state(plc: &'a DIDPLC, did: String) -> Result<Self, PLCError> {
+        let state = plc.get_current_state(&did).await?;
+        match state {
+            PLCOperation::UnsignedPLC(op) => {
+                Ok(OperationBuilder {
+                    plc,
+                    key: None,
+                    did: Some(did),
+                    rotation_keys: op.rotation_keys.clone(),
+                    services: op.services.clone(),
+                    also_known_as: op.also_known_as.clone(),
+                    verification_methods: op.verification_methods.clone(),
+                    prev: op.prev.clone(),
+                })
+            }
+            _ => unreachable!("PLC current state should always be an UnsignedPLC")
         }
     }
 
@@ -155,5 +174,13 @@ mod tests {
             .add_rotation_key(&signing_key);
         let op = builder.build(PLCOperationType::Operation).await;
         assert!(op.is_ok(), "Operation should build");
+    }
+
+    #[actix_rt::test]
+    async fn test_from_did_state() {
+        let plc = DIDPLC::new(PLC_HOST);
+        let did = "did:plc:z72i7hdynmk6r22z27h6tvur".to_string();
+        let builder = OperationBuilder::from_did_state(&plc, did).await;
+        assert!(builder.is_ok(), "Operation builder should create: {:?}", builder.err().unwrap());
     }
 }
