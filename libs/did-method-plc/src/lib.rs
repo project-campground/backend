@@ -296,9 +296,9 @@ mod tests {
     #[actix_rt::test]
     async fn test_didplc_operations() {
         let didplc = DIDPLC::new(PLC_HOST);
-        let recovery_key = Keypair::generate(BlessedAlgorithm::K256);
-        let signing_key = Keypair::generate(BlessedAlgorithm::K256);
-        let verification_key = Keypair::generate(BlessedAlgorithm::K256);
+        let recovery_key = Keypair::generate(BlessedAlgorithm::P256);
+        let signing_key = Keypair::generate(BlessedAlgorithm::P256);
+        let verification_key = Keypair::generate(BlessedAlgorithm::P256);
 
         let create_op = OperationBuilder::new(&didplc)
             .with_key(&signing_key)

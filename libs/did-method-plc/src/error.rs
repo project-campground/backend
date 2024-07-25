@@ -18,6 +18,9 @@ pub enum PLCError {
     #[error("Key is invalid")]
     InvalidKey,
 
+    #[error("Key is malformed")]
+    MalformedKey,
+
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 

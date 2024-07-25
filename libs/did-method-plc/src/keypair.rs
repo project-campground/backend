@@ -1,7 +1,7 @@
 use crate::multicodec::MultiEncoded;
 use crate::PLCError;
-use ecdsa::signature::{SignerMut, Verifier};
 use ecdsa::elliptic_curve::sec1::ToEncodedPoint;
+use ecdsa::signature::{SignerMut, Verifier};
 use serde::{Deserialize, Serialize};
 
 pub enum BlessedAlgorithm {
@@ -53,7 +53,7 @@ impl Keypair {
                     secret: Some(sk.to_bytes().to_vec()),
                     codec: algo.codec(),
                 }
-            },
+            }
             BlessedAlgorithm::K256 => {
                 let sk = k256::ecdsa::SigningKey::random(&mut rand::thread_rng());
                 let vk = sk.verifying_key();
@@ -62,12 +62,13 @@ impl Keypair {
                     secret: Some(sk.to_bytes().to_vec()),
                     codec: algo.codec(),
                 }
-            },
+            }
         }
     }
 
     pub fn from_value(value: serde_json::Value) -> Result<Self, PLCError> {
-        let keypair: Keypair = serde_json::from_value(value).map_err(|e| PLCError::Other(e.into()))?;
+        let keypair: Keypair =
+            serde_json::from_value(value).map_err(|e| PLCError::Other(e.into()))?;
         Ok(keypair)
     }
 
@@ -77,7 +78,8 @@ impl Keypair {
         }
         let key = key.split_at(8).1;
         let (_base, data) = multibase::decode(key).map_err(|_| PLCError::InvalidKey)?;
-        let decoded_result = MultiEncoded::new(data.as_slice()).map_err(|_| PLCError::InvalidKey)?;
+        let decoded_result =
+            MultiEncoded::new(data.as_slice()).map_err(|_| PLCError::InvalidKey)?;
 
         Ok(Keypair {
             public: Some(decoded_result.data().to_vec()),
@@ -94,59 +96,60 @@ impl Keypair {
 
         match algo {
             BlessedAlgorithm::P256 => {
-                let pk = p256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
+                let pk = p256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())
+                    .map_err(|e| PLCError::Other(e.into()))?;
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
                     [
                         algo.prefix().to_vec(),
-                        pk.to_encoded_point(true).as_bytes().to_vec()
+                        pk.to_encoded_point(true).as_bytes().to_vec(),
                     ]
-                    .concat()
+                    .concat(),
                 );
                 Ok(format!("did:key:{}", key))
-            },
+            }
             BlessedAlgorithm::K256 => {
-                let pk = k256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
+                let pk = k256::PublicKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice())
+                    .map_err(|e| PLCError::Other(e.into()))?;
                 let vk = k256::ecdsa::VerifyingKey::from(pk);
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
-                    [
-                        algo.prefix().to_vec(),
-                        vk.to_sec1_bytes().to_vec()
-                    ]
-                    .concat()
+                    [algo.prefix().to_vec(), vk.to_sec1_bytes().to_vec()].concat(),
                 );
                 Ok(format!("did:key:{}", key))
-            },
+            }
         }
     }
 
     pub fn from_private_key(key: &str) -> Result<Self, PLCError> {
-        let (_base, data) = multibase::decode(key).map_err(|_| PLCError::InvalidKey)?;
-        let decoded_result = MultiEncoded::new(data.as_slice()).map_err(|_| PLCError::InvalidKey)?;
+        let (_base, data) = multibase::decode(key).map_err(|e| PLCError::Other(e.into()))?;
+        let decoded_result =
+            MultiEncoded::new(data.as_slice()).map_err(|e| PLCError::Other(e.into()))?;
 
         match decoded_result.codec() {
             0xe7 => {
                 // Secp256k1
-                let sk = k256::ecdsa::SigningKey::from_slice(decoded_result.data().into()).map_err(|_| PLCError::InvalidKey)?;
+                let sk = k256::ecdsa::SigningKey::from_bytes(decoded_result.data().into())
+                    .map_err(|e| PLCError::Other(e.into()))?;
                 let vk = sk.verifying_key();
                 Ok(Keypair {
                     public: Some(vk.to_sec1_bytes().to_vec()),
                     secret: Some(decoded_result.data().to_vec()),
                     codec: decoded_result.codec(),
                 })
-            },
+            }
             0x1200 => {
                 // P-256
-                let sk = p256::ecdsa::SigningKey::from_slice(decoded_result.data().into()).map_err(|_| PLCError::InvalidKey)?;
+                let sk = p256::ecdsa::SigningKey::from_bytes(decoded_result.data().into())
+                    .map_err(|e| PLCError::Other(e.into()))?;
                 let vk = sk.verifying_key();
                 Ok(Keypair {
                     public: Some(vk.to_sec1_bytes().to_vec()),
                     secret: Some(decoded_result.data().to_vec()),
                     codec: decoded_result.codec(),
                 })
-            },
-            _ => Err(PLCError::InvalidKey),
+            }
+            _ => Err(PLCError::MalformedKey),
         }
     }
 
@@ -157,29 +160,19 @@ impl Keypair {
         let algo = BlessedAlgorithm::from(self.codec);
         match algo {
             BlessedAlgorithm::P256 => {
-                let sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
-                    [
-                        algo.prefix().to_vec(),
-                        sk.to_bytes().to_vec()
-                    ]
-                    .concat()
+                    [algo.prefix().to_vec(), self.secret.clone().unwrap()].concat(),
                 );
                 Ok(key)
-            },
+            }
             BlessedAlgorithm::K256 => {
-                let sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|e| PLCError::Other(e.into()))?;
                 let key = multibase::encode(
                     multibase::Base::Base58Btc,
-                    [
-                        algo.prefix().to_vec(),
-                        sk.to_bytes().to_vec()
-                    ]
-                    .concat()
+                    [algo.prefix().to_vec(), self.secret.clone().unwrap()].concat(),
                 );
                 Ok(key)
-            },
+            }
         }
     }
 
@@ -187,20 +180,28 @@ impl Keypair {
         match self.codec {
             0xe7 => {
                 // Secp256k1
-                let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
-                let sig = k256::ecdsa::Signature::from_slice(sig.into()).map_err(|_| PLCError::InvalidSignature)?;
+                let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(
+                    self.public.as_ref().unwrap().as_slice(),
+                )
+                .map_err(|_| PLCError::InvalidKey)?;
+                let sig = k256::ecdsa::Signature::from_slice(sig.into())
+                    .map_err(|_| PLCError::InvalidSignature)?;
                 if vk.verify(&msg, &sig).is_ok() {
                     return Ok(true);
                 }
-            },
+            }
             0x1200 => {
                 // P-256
-                let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(self.public.as_ref().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
-                let sig = p256::ecdsa::Signature::from_slice(sig.into()).map_err(|_| PLCError::InvalidSignature)?;
+                let vk = p256::ecdsa::VerifyingKey::from_sec1_bytes(
+                    self.public.as_ref().unwrap().as_slice(),
+                )
+                .map_err(|_| PLCError::InvalidKey)?;
+                let sig = p256::ecdsa::Signature::from_slice(sig.into())
+                    .map_err(|_| PLCError::InvalidSignature)?;
                 if vk.verify(&msg, &sig).is_ok() {
                     return Ok(true);
                 }
-            },
+            }
             _ => (),
         }
         Ok(false)
@@ -210,22 +211,27 @@ impl Keypair {
         match self.codec {
             0xe7 => {
                 // Secp256k1
-                let mut sk = k256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
+                let mut sk = k256::ecdsa::SigningKey::from_bytes(
+                    self.secret.as_ref().unwrap().as_slice().into(),
+                )
+                .map_err(|e| PLCError::Other(e.into()))?;
                 let sig: k256::ecdsa::Signature = sk.sign(&msg);
                 Ok(sig.to_bytes().to_vec())
-            },
+            }
             0x1200 => {
                 // P-256
-                let mut sk = p256::ecdsa::SigningKey::from_slice(self.secret.clone().unwrap().as_slice()).map_err(|_| PLCError::InvalidKey)?;
+                let mut sk = p256::ecdsa::SigningKey::from_bytes(
+                    self.secret.as_ref().unwrap().as_slice().into(),
+                )
+                    .map_err(|e| PLCError::Other(e.into()))?;
                 let sig: p256::ecdsa::Signature = sk.sign(&msg);
-                let sig = match sig.normalize_s() {
-                    Some(sig) => sig,
+                match sig.normalize_s() {
+                    Some(sig) => Ok(sig.to_bytes().to_vec()),
                     None => {
-                        return Err(PLCError::InvalidKey);
-                    },
-                };
-                Ok(sig.to_bytes().to_vec())
-            },
+                        Ok(sig.to_bytes().to_vec())
+                    }
+                }
+            }
             _ => Err(PLCError::InvalidKey),
         }
     }
@@ -258,7 +264,10 @@ mod test {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
         let did_key = orig_keypair.to_did_key().unwrap();
         let keypair = Keypair::from_did_key(&did_key).unwrap();
-        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
+        assert_eq!(
+            keypair.to_did_key().unwrap(),
+            orig_keypair.to_did_key().unwrap()
+        );
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 
@@ -267,15 +276,22 @@ mod test {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
         let did_key = orig_keypair.to_did_key().unwrap();
         let keypair = Keypair::from_did_key(&did_key).unwrap();
-        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
+        assert_eq!(
+            keypair.to_did_key().unwrap(),
+            orig_keypair.to_did_key().unwrap()
+        );
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 
     #[test]
     fn test_keypair_to_did_key() {
-        let keypair = Keypair::from_did_key("did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg");
+        let keypair =
+            Keypair::from_did_key("did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg");
         assert!(keypair.is_ok());
-        assert_eq!(keypair.unwrap().to_did_key().unwrap(), "did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg");
+        assert_eq!(
+            keypair.unwrap().to_did_key().unwrap(),
+            "did:key:zQ3shhCGUqDKjStzuDxPkTxN6ujddP4RkEKJJouJGRRkaLGbg"
+        );
     }
 
     #[test]
@@ -283,7 +299,10 @@ mod test {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::P256);
         let private_key = orig_keypair.to_private_key().unwrap();
         let keypair = Keypair::from_private_key(&private_key).unwrap();
-        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
+        assert_eq!(
+            keypair.to_did_key().unwrap(),
+            orig_keypair.to_did_key().unwrap()
+        );
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 
@@ -292,7 +311,10 @@ mod test {
         let orig_keypair = Keypair::generate(BlessedAlgorithm::K256);
         let private_key = orig_keypair.to_private_key().unwrap();
         let keypair = Keypair::from_private_key(&private_key).unwrap();
-        assert_eq!(keypair.to_did_key().unwrap(), orig_keypair.to_did_key().unwrap());
+        assert_eq!(
+            keypair.to_did_key().unwrap(),
+            orig_keypair.to_did_key().unwrap()
+        );
         assert_eq!(keypair.codec, orig_keypair.codec);
     }
 
