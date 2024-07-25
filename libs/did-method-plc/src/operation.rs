@@ -34,6 +34,12 @@ impl PLCOperationType {
     }
 }
 
+impl Default for PLCOperationType {
+    fn default() -> Self {
+        Self::Operation
+    }
+}
+
 impl PartialEq for PLCOperationType {
     fn eq(&self, other: &Self) -> bool {
         self.to_string() == other.to_string()
@@ -169,6 +175,7 @@ struct TombstoneOperation {
 #[serde(rename_all = "camelCase")]
 pub struct UnsignedPLCOperation {
     #[serde(rename = "type")]
+    #[serde(default)]
     pub type_: PLCOperationType,
     #[serde(default)]
     pub rotation_keys: Vec<String>,
