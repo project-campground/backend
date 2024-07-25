@@ -243,11 +243,6 @@ mod tests {
 
     const PLC_HOST: &str = "https://plc.directory"; // "http://localhost:2894";
 
-    // TODO: Create a test for DIDPLC.get_log
-    // TODO: Create a test for DIDPLC.get_audit_log
-    // TODO: Create a test for DIDPLC.get_last_log
-    // TODO: Create a test for DIDPLC.get_current_state
-
     #[actix_rt::test]
     async fn test_didplc_resolve() {
         let didplc = DIDPLC::default();
@@ -258,6 +253,44 @@ mod tests {
 
         assert!(res_metadata.error.is_none());
         assert!(document.is_some());
+    }
+
+    #[actix_rt::test]
+    async fn test_didplc_get_log() {
+        let didplc = DIDPLC::default();
+        let did = "did:plc:ui5pgpumwvufhfnnz52c4lyl";
+        let log = didplc.get_log(did).await;
+
+        assert!(log.is_ok());
+        assert!(log.unwrap().len() > 0);
+    }
+
+    #[actix_rt::test]
+    async fn test_didplc_get_audit_log() {
+        let didplc = DIDPLC::default();
+        let did = "did:plc:ui5pgpumwvufhfnnz52c4lyl";
+        let log = didplc.get_audit_log(did).await;
+
+        assert!(log.is_ok());
+        assert!(log.unwrap().len() > 0);
+    }
+
+    #[actix_rt::test]
+    async fn test_didplc_get_last_log() {
+        let didplc = DIDPLC::default();
+        let did = "did:plc:ui5pgpumwvufhfnnz52c4lyl";
+        let log = didplc.get_last_log(did).await;
+
+        assert!(log.is_ok());
+    }
+
+    #[actix_rt::test]
+    async fn test_didplc_get_current_state() {
+        let didplc = DIDPLC::default();
+        let did = "did:plc:ui5pgpumwvufhfnnz52c4lyl";
+        let log = didplc.get_current_state(did).await;
+
+        assert!(log.is_ok());
     }
 
     #[actix_rt::test]

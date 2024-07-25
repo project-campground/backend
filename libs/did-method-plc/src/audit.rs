@@ -173,6 +173,10 @@ impl DIDAuditLogs {
     pub fn last(&self) -> Option<&AuditLog> {
         self.0.last()
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 #[cfg(test)]
