@@ -163,15 +163,19 @@ mod tests {
     #[actix_rt::test]
     async fn test_operation_builder() {
         let plc = DIDPLC::new(PLC_HOST);
-        let signing_key = Keypair::generate(crate::BlessedAlgorithm::P256);
-        let recovery_key = Keypair::generate(crate::BlessedAlgorithm::P256);
+    
+        let signing_key = Keypair::generate(crate::BlessedAlgorithm::K256);
+        let recovery_key = Keypair::generate(crate::BlessedAlgorithm::K256);
+        let validation_key = Keypair::generate(crate::BlessedAlgorithm::K256);
+    
         let mut builder = OperationBuilder::new(&plc);
-        builder.with_key(&signing_key)
-            .with_validation_key(&Keypair::generate(crate::BlessedAlgorithm::P256))
-            .with_handle("example.test".to_string())
-            .with_pds("https://example.test".to_string())
-            .add_rotation_key(&recovery_key)
-            .add_rotation_key(&signing_key);
+        builder.with_key(&signing_key);
+        builder.with_validation_key(&validation_key);
+        builder.with_handle("example.test".to_string());
+        builder.with_pds("https://example.test".to_string());
+        builder.add_rotation_key(&recovery_key);
+        builder.add_rotation_key(&signing_key);
+        
         let op = builder.build(PLCOperationType::Operation).await;
         assert!(op.is_ok(), "Operation should build");
     }
