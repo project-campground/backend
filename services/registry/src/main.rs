@@ -1,16 +1,20 @@
+use did_method_plc::DIDPLC;
 use surreal_bb8::temp::{config::Config, runtime_with_config::SurrealConnectionManager};
 use surrealdb_migrations::MigrationRunner;
 use surrealdb::opt::auth::Root;
 use include_dir::include_dir;
 use surreal_bb8::bb8::Pool;
 use thiserror::Error;
+use xrpc::{XRPCError, XRPCServer};
 
 #[macro_use] extern crate rocket;
 extern crate surrealdb_migrations;
 extern crate surrealdb;
 extern crate thiserror;
+extern crate jwt;
 
 pub mod config;
+pub mod xrpc;
 
 #[derive(Error, Debug)]
 enum ProgramError {
@@ -22,6 +26,21 @@ enum ProgramError {
 
 #[rocket::main]
 async fn main() -> Result<(), ProgramError> {
+    let didplc = DIDPLC::default();
+    let xrpc_server = XRPCServer::new(&didplc);
+
+    #[get("/xrpc/<nsid>")]
+    async fn xrpc_get(nsid: String) -> Result<String, XRPCError> {
+        // TODO: Implement
+        Err(XRPCError::NotImplemented)
+    }
+
+    #[post("/xrpc/<nsid>")]
+    async fn xrpc_post(nsid: String) -> Result<String, XRPCError> {
+        // TODO: Implement
+        Err(XRPCError::NotImplemented)
+    }
+
     let rocket = rocket::build()
         .mount("/", routes![]);
     let figment = rocket.figment();
