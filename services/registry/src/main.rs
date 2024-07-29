@@ -27,18 +27,18 @@ enum ProgramError {
 #[rocket::main]
 async fn main() -> Result<(), ProgramError> {
     let didplc = DIDPLC::default();
-    let xrpc_server = XRPCServer::new(&didplc);
+    let xrpc_server = XRPCServer::new();
 
     #[get("/xrpc/<nsid>")]
     async fn xrpc_get(nsid: String) -> Result<String, XRPCError> {
         // TODO: Implement
-        Err(XRPCError::NotImplemented)
+        Err(XRPCError::NotImplemented { message: "XRPC support is not implemented right now".to_owned() })
     }
 
     #[post("/xrpc/<nsid>")]
     async fn xrpc_post(nsid: String) -> Result<String, XRPCError> {
         // TODO: Implement
-        Err(XRPCError::NotImplemented)
+        Err(XRPCError::NotImplemented { message: "XRPC support is not implemented right now".to_owned() })
     }
 
     let rocket = rocket::build()

@@ -23,3 +23,9 @@ impl Default for DBConfig {
         }
     }
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct AuthConfig {
+    pub secret_key: Vec<u8>
+}
