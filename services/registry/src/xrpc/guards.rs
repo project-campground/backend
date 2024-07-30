@@ -1,5 +1,12 @@
 use rocket::{
-    http::Status, request::{FromRequest, Outcome}
+    data::{
+        FromData, ToByteUnit, Outcome as DataOutcome
+    },
+    http::Status,
+    request::{
+        FromRequest, Outcome
+    },
+    Data, Request
 };
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
@@ -53,24 +60,24 @@ impl<'r> FromRequest<'r> for Authenticated {
     }
 }
 
-pub struct ContentType(String);
+pub struct XRPCBody(String);
 
-impl ContentType {
-    pub fn content_type(&self) -> &str {
+impl XRPCBody {
+    pub fn body(&self) -> &str {
         &self.0
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for ContentType {
-    type Error = ();
+impl<'r> FromData<'r> for XRPCBody {
+    type Error = String;
 
-    async fn from_request(request: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
-        let content_type = request.content_type();
-        if content_type.is_none() {
-            return Outcome::Error((Status::UnsupportedMediaType, ()));
+    async fn from_data(_request: &'r Request<'_>, data: Data<'r>) -> DataOutcome<'r, Self> {
+        let body = data.open(128.kilobytes());
+        let body = body.into_string().await;
+        if body.is_err() {
+            return DataOutcome::Error((Status::BadRequest, "Invalid body".to_string()));
         }
-        let content_type = content_type.unwrap();
-        Outcome::Success(ContentType(content_type.to_string()))
+        DataOutcome::Success(XRPCBody(body.unwrap().to_string()))
     }
 }
