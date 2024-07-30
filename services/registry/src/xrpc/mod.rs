@@ -1,51 +1,9 @@
 use rocket::{http::{ContentType, Status}, response::Responder};
-use std::{collections::HashMap, future::Future, io::Cursor, pin::Pin};
-use did_method_plc::DIDPLC;
+use std::io::Cursor;
 use serde_json::json;
 
 pub mod guards;
 pub mod auth;
-
-pub struct XRPCServer<'a> {
-    methods: HashMap<(XRPCMethodType, &'a str), XRPCMethod>,
-}
-
-impl<'a> XRPCServer<'a> {
-    pub fn new() -> Self {
-        Self {
-            methods: HashMap::new(),
-        }
-    }
-
-    pub async fn execute_method(&self, method_type: XRPCMethodType, method_name: &str, payload: &XRPCPayload<'_>) -> Result<String, XRPCError> {
-        let method = self.methods.get(&(method_type, method_name));
-        if method.is_none() {
-            return Err(XRPCError::NotFound {
-                message: format!("Method {} not found", method_name),
-            });
-        }
-        let method = method.unwrap();
-        (method.handler)(payload).await
-    }
-}
-
-pub struct XRPCPayload<'p> {
-    pub plc: &'p DIDPLC,
-    pub method: XRPCMethodType,
-    pub params: HashMap<String, String>,
-    pub body: Option<String>,
-}
-
-pub struct XRPCMethod {
-    pub handler: fn(payload: &XRPCPayload) -> Pin<Box<dyn Future<Output = Result<String, XRPCError>>>>,
-    pub requires_auth: bool,
-}
-
-#[derive(PartialEq, Eq, Hash)]
-pub enum XRPCMethodType {
-    GET,
-    POST,
-}
 
 #[derive(thiserror::Error, Debug)]
 pub enum XRPCError {
@@ -154,10 +112,11 @@ impl XRPCError {
 #[rocket::async_trait]
 impl<'r> Responder<'r, 'static> for XRPCError {
     fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+        let json = self.to_json();
         rocket::Response::build()
             .status(self.status())
             .header(ContentType::JSON)
-            .sized_body(self.to_json().len(), Cursor::new(self.to_json()))
+            .sized_body(json.len(), Cursor::new(json))
             .ok()
     }
 }

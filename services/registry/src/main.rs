@@ -1,11 +1,10 @@
-use did_method_plc::DIDPLC;
 use surreal_bb8::temp::{config::Config, runtime_with_config::SurrealConnectionManager};
+use did_method_plc::DIDPLC;
 use surrealdb_migrations::MigrationRunner;
 use surrealdb::opt::auth::Root;
 use include_dir::include_dir;
 use surreal_bb8::bb8::Pool;
 use thiserror::Error;
-use xrpc::{XRPCError, XRPCServer};
 
 #[macro_use] extern crate rocket;
 extern crate surrealdb_migrations;
@@ -27,22 +26,10 @@ enum ProgramError {
 #[rocket::main]
 async fn main() -> Result<(), ProgramError> {
     let didplc = DIDPLC::default();
-    let xrpc_server = XRPCServer::new();
-
-    #[get("/xrpc/<nsid>")]
-    async fn xrpc_get(nsid: String) -> Result<String, XRPCError> {
-        // TODO: Implement
-        Err(XRPCError::NotImplemented { message: "XRPC support is not implemented right now".to_owned() })
-    }
-
-    #[post("/xrpc/<nsid>")]
-    async fn xrpc_post(nsid: String) -> Result<String, XRPCError> {
-        // TODO: Implement
-        Err(XRPCError::NotImplemented { message: "XRPC support is not implemented right now".to_owned() })
-    }
 
     let rocket = rocket::build()
-        .mount("/", routes![]);
+        .mount("/", routes![])
+        .manage(didplc);
     let figment = rocket.figment();
 
     let db_config: config::DBConfig = figment.extract_inner("surreal").expect("host");
