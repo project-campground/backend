@@ -1,7 +1,9 @@
 use crate::multicodec::MultiEncoded;
 use crate::PLCError;
+use base64::Engine;
 use ecdsa::elliptic_curve::sec1::ToEncodedPoint;
 use ecdsa::signature::{SignerMut, Verifier};
+use jwt::{SigningAlgorithm, VerifyingAlgorithm};
 use serde::{Deserialize, Serialize};
 
 pub enum BlessedAlgorithm {
@@ -234,6 +236,42 @@ impl Keypair {
             }
             _ => Err(PLCError::InvalidKey),
         }
+    }
+}
+
+impl SigningAlgorithm for Keypair {
+    fn sign(&self, header: &str, claims: &str) -> Result<String, jwt::Error> {
+        let mut msg = vec![];
+        msg.extend_from_slice(header.as_bytes());
+        msg.extend_from_slice(b".");
+        msg.extend_from_slice(claims.as_bytes());
+        let sig = self.sign(msg.as_slice()).map_err(|_| jwt::Error::InvalidSignature)?;
+        let engine = base64::engine::general_purpose::STANDARD;
+        Ok(engine.encode(sig))
+    }
+
+    fn algorithm_type(&self) -> jwt::AlgorithmType {
+        match BlessedAlgorithm::from(self.codec) {
+            BlessedAlgorithm::P256 => jwt::AlgorithmType::Es256,
+            BlessedAlgorithm::K256 => jwt::AlgorithmType::None
+        }
+    }
+}
+
+impl VerifyingAlgorithm for Keypair {
+    fn algorithm_type(&self) -> jwt::AlgorithmType {
+        match BlessedAlgorithm::from(self.codec) {
+            BlessedAlgorithm::P256 => jwt::AlgorithmType::Es256,
+            BlessedAlgorithm::K256 => jwt::AlgorithmType::None
+        }
+    }
+
+    fn verify_bytes(&self, header: &str, claims: &str, signature: &[u8]) -> Result<bool, jwt::Error> {
+        let mut msg = vec![];
+        msg.extend_from_slice(header.as_bytes());
+        msg.extend_from_slice(b".");
+        msg.extend_from_slice(claims.as_bytes());
+        self.verify(msg.as_slice(), signature).map_err(|_| jwt::Error::InvalidSignature)
     }
 }
 
