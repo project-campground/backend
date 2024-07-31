@@ -373,4 +373,17 @@ mod test {
         let keypair = Keypair::from_private_key(&private_key).unwrap();
         assert_eq!(orig_keypair.secret.unwrap(), keypair.secret.unwrap());
     }
+
+    #[test]
+    fn test_keypair_jwt() {
+        let keypair = Keypair::generate(BlessedAlgorithm::P256);
+        let header = "{\"alg\":\"ES256\",\"typ\":\"JWT\"}";
+        let claims = "{\"iss\":\"me\"}";
+        let sig = SigningAlgorithm::sign(&keypair, header, claims);
+        assert!(sig.is_ok(), "JWT should be signed correctly: {:?}", sig.err().unwrap());
+
+        let sig = sig.unwrap();
+        let res = keypair.verify_bytes(header, claims, sig.as_bytes());
+        assert!(res.is_ok(), "JWT sig should be valid: {:?}", res.err().unwrap());
+    }
 }
