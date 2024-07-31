@@ -1,18 +1,10 @@
+use crate::{config::AuthConfig, xrpc::auth::AuthToken};
+use did_method_plc::{Keypair, DIDPLC};
 use rocket::{
-    data::{
-        FromData, ToByteUnit, Outcome as DataOutcome
-    },
+    data::{FromData, Outcome as DataOutcome, ToByteUnit},
     http::Status,
-    request::{
-        FromRequest, Outcome
-    },
-    Data, Request
-};
-use hmac::{Hmac, Mac};
-use sha2::Sha256;
-use crate::{
-    config::AuthConfig,
-    xrpc::auth::{validate_token, TokenType}
+    request::{FromRequest, Outcome},
+    Data, Request, State,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -23,14 +15,16 @@ pub enum AuthError {
     Expired,
     #[error("Missing")]
     Missing,
+    #[error("Config is malformed")]
+    MalformedConfig,
     #[error("Internal error")]
-    Figment(#[from] rocket::figment::Error)
+    Figment(#[from] rocket::figment::Error),
 }
 
-pub struct Authenticated(String);
+pub struct Authenticated(AuthToken);
 
 impl Authenticated {
-    pub fn token(&self) -> &str {
+    pub fn token(&self) -> &AuthToken {
         &self.0
     }
 }
@@ -44,18 +38,27 @@ impl<'r> FromRequest<'r> for Authenticated {
             Ok(c) => c,
             Err(e) => return Outcome::Error((Status::InternalServerError, AuthError::Figment(e))),
         };
+        let plc: &State<DIDPLC> = request.rocket().state().unwrap();
         let token_str = request.headers().get_one("Authorization");
         if token_str.is_none() {
             return Outcome::Error((Status::Unauthorized, AuthError::Missing));
         }
         let token_str = token_str.unwrap();
         let token_str = token_str.strip_prefix("Bearer ").unwrap_or(token_str);
-        let key: Hmac<Sha256> = Hmac::new_from_slice(&config.secret_key).unwrap();
+        let key =
+            Keypair::from_private_key(&config.secret_key).map_err(|_| AuthError::MalformedConfig);
+        if key.is_err() {
+            return Outcome::Error((Status::InternalServerError, AuthError::MalformedConfig));
+        }
+        let key = key.unwrap();
 
-        let token = match validate_token(key, TokenType::Access, token_str.to_string()) {
-            Ok(did) => did,
-            Err(_) => return Outcome::Error((Status::Unauthorized, AuthError::Invalid)),
-        };
+        let token = AuthToken::from_token(plc, &key, token_str)
+            .await
+            .map_err(|_| AuthError::Invalid);
+        if token.is_err() {
+            return Outcome::Error((Status::Unauthorized, AuthError::Invalid));
+        }
+        let token = token.unwrap();
         Outcome::Success(Authenticated(token))
     }
 }
