@@ -267,11 +267,13 @@ impl VerifyingAlgorithm for Keypair {
     }
 
     fn verify_bytes(&self, header: &str, claims: &str, signature: &[u8]) -> Result<bool, jwt::Error> {
+        let engine = base64::engine::general_purpose::STANDARD;
+        let signature = engine.decode(signature).map_err(|_| jwt::Error::InvalidSignature)?;
         let mut msg = vec![];
         msg.extend_from_slice(header.as_bytes());
         msg.extend_from_slice(b".");
         msg.extend_from_slice(claims.as_bytes());
-        self.verify(msg.as_slice(), signature).map_err(|_| jwt::Error::InvalidSignature)
+        self.verify(msg.as_slice(), signature.as_slice()).map_err(|_| jwt::Error::InvalidSignature)
     }
 }
 
