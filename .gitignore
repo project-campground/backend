@@ -2,6 +2,9 @@
 .env
 .env.*
 
+# DB files
+.surrealdb
+
 # Config files
 Rocket.toml
 
