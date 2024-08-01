@@ -1,10 +1,11 @@
 use surreal_bb8::temp::{config::Config, runtime_with_config::SurrealConnectionManager};
-use did_method_plc::DIDPLC;
 use surrealdb_migrations::MigrationRunner;
 use surrealdb::opt::auth::Root;
 use include_dir::include_dir;
+use did_method_plc::DIDPLC;
 use surreal_bb8::bb8::Pool;
 use thiserror::Error;
+use did_web::DIDWeb;
 
 #[macro_use] extern crate rocket;
 extern crate surrealdb_migrations;
@@ -26,10 +27,12 @@ enum ProgramError {
 #[rocket::main]
 async fn main() -> Result<(), ProgramError> {
     let didplc = DIDPLC::default();
+    let didweb = DIDWeb {};
 
     let rocket = rocket::build()
         .mount("/", routes![])
-        .manage(didplc);
+        .manage(didplc)
+        .manage(didweb);
     let figment = rocket.figment();
 
     let db_config: config::DBConfig = figment.extract_inner("surreal").expect("host");

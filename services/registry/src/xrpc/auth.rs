@@ -1,7 +1,9 @@
 use chrono::{DateTime, Utc};
-use did_method_plc::{operation::PLCOperation, BlessedAlgorithm, Keypair, DIDPLC};
+use did_method_plc::{BlessedAlgorithm, Keypair, DIDPLC};
+use didkit::{ssi::did::VerificationMethod, DIDResolver, ResolutionInputMetadata};
 use jwt::{Claims, Header, SignWithKey, Token, VerifyWithKey};
 use std::collections::BTreeMap;
+use did_web::DIDWeb;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenType {
@@ -61,32 +63,82 @@ impl AuthToken {
             .map_err(|_| TokenError::Invalid)?)
     }
 
-    pub async fn from_token(plc: &DIDPLC, key: &Keypair, token: &str) -> Result<Self, TokenError> {
+    pub async fn from_token(plc: &DIDPLC, web: &DIDWeb, key: &Keypair, token: &str) -> Result<Self, TokenError> {
         let unverified: Token<Header, Claims, _> = jwt::Token::parse_unverified(token)?;
         let token_type = AuthToken::type_from_token(unverified.claims())?;
         match token_type {
             TokenType::Interservice => {
                 let issuer = unverified.claims().registered.issuer.as_ref().unwrap();
-                let (did, _labeler) = issuer.split_once("#").unwrap();
-                // TODO: Make this obtain the key from the DID document's #atproto_label verification method for the specified labeler
-                let op = plc
-                    .get_current_state(&did)
-                    .await
-                    .map_err(|_| TokenError::Invalid)?;
-                let key = match op {
-                    PLCOperation::SignedPLC(op) => Keypair::from_did_key(
-                        op.unsigned
-                            .verification_methods
-                            .get("atproto")
-                            .unwrap()
-                            .as_str(),
-                    )
-                    .map_err(|_| TokenError::Invalid)?,
-                    PLCOperation::SignedGenesis(op) => {
-                        Keypair::from_did_key(&op.unsigned.signing_key)
-                            .map_err(|_| TokenError::Invalid)?
+                let mut parts = issuer.split("#");
+                let did = parts.next().unwrap();
+                let service = parts.next();
+                
+                // TODO: Cache DID resolutions once caching has been implemented
+                let (_res_metadata, document, _) = 
+                    match did.split(":").collect::<Vec<&str>>()[1] {
+                        "plc" => plc.resolve(did, &ResolutionInputMetadata::default()).await,
+                        "web" => web.resolve(did, &ResolutionInputMetadata::default()).await,
+                        _ => return Err(TokenError::Invalid),
+                    };
+                if document.is_none() {
+                    return Err(TokenError::Invalid);
+                }
+                let document = document.unwrap();
+                let key = match service {
+                    Some(service) => {
+                        let labeler = match service {
+                            "atproto_labeler" => "atproto_label",
+                            s => s,
+                        };
+                        let method = document
+                            .verification_method
+                            .ok_or(TokenError::Invalid)?
+                            .into_iter()
+                            .find(|method|
+                                match method {
+                                    VerificationMethod::Map(map) => map.id == format!("#{0}", labeler),
+                                    _ => false,
+                                }
+                            )
+                            .ok_or(TokenError::Invalid)?;
+                        let key_multibase = match method {
+                            VerificationMethod::Map(map) => map.property_set
+                                .as_ref()
+                                .ok_or(TokenError::Invalid)?
+                                .get("publicKeyMultibase")
+                                .ok_or(TokenError::Invalid)?
+                                .as_str()
+                                .ok_or(TokenError::Invalid)?
+                                .to_string(),
+                            _ => return Err(TokenError::Invalid),
+                        };
+                        Keypair::from_did_key(&format!("did:key:{0}", key_multibase)).map_err(|_| TokenError::Invalid)?
+                    },
+                    None => {
+                        let method = document
+                            .verification_method
+                            .ok_or(TokenError::Invalid)?
+                            .into_iter()
+                            .find(|method|
+                                match method {
+                                    VerificationMethod::Map(map) => map.id == "#atproto",
+                                    _ => false,
+                                }
+                            )
+                            .ok_or(TokenError::Invalid)?;
+                        let key_multibase = match method {
+                            VerificationMethod::Map(map) => map.property_set
+                                .as_ref()
+                                .ok_or(TokenError::Invalid)?
+                                .get("publicKeyMultibase")
+                                .ok_or(TokenError::Invalid)?
+                                .as_str()
+                                .ok_or(TokenError::Invalid)?
+                                .to_string(),
+                            _ => return Err(TokenError::Invalid),
+                        };
+                        Keypair::from_did_key(&format!("did:key:{0}", key_multibase)).map_err(|_| TokenError::Invalid)?
                     }
-                    _ => return Err(TokenError::MalformedPLC),
                 };
 
                 let claims: BTreeMap<String, String> = token.verify_with_key(&key)?;

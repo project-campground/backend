@@ -1,5 +1,6 @@
 use crate::{config::AuthConfig, xrpc::auth::AuthToken};
 use did_method_plc::{Keypair, DIDPLC};
+use did_web::DIDWeb;
 use rocket::{
     data::{FromData, Outcome as DataOutcome, ToByteUnit},
     http::Status,
@@ -39,6 +40,7 @@ impl<'r> FromRequest<'r> for Authenticated {
             Err(e) => return Outcome::Error((Status::InternalServerError, AuthError::Figment(e))),
         };
         let plc: &State<DIDPLC> = request.rocket().state().unwrap();
+        let web: &State<DIDWeb> = request.rocket().state().unwrap();
         let token_str = request.headers().get_one("Authorization");
         if token_str.is_none() {
             return Outcome::Error((Status::Unauthorized, AuthError::Missing));
@@ -52,7 +54,7 @@ impl<'r> FromRequest<'r> for Authenticated {
         }
         let key = key.unwrap();
 
-        let token = AuthToken::from_token(plc, &key, token_str)
+        let token = AuthToken::from_token(plc, web, &key, token_str)
             .await
             .map_err(|_| AuthError::Invalid);
         if token.is_err() {
