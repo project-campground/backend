@@ -4,6 +4,7 @@ use serde_json::json;
 
 pub mod guards;
 pub mod auth;
+pub mod jwt;
 
 #[derive(thiserror::Error, Debug)]
 pub enum XRPCError {
