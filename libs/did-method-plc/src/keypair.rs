@@ -1,10 +1,12 @@
 use crate::multicodec::MultiEncoded;
 use crate::PLCError;
-use base64::Engine;
 use ecdsa::elliptic_curve::sec1::ToEncodedPoint;
 use ecdsa::signature::{SignerMut, Verifier};
-use jwt::{SigningAlgorithm, VerifyingAlgorithm};
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "jwt")]
+use jwt::{SigningAlgorithm, VerifyingAlgorithm};
+#[cfg(feature = "jwt")]
+use base64::Engine;
 
 pub enum BlessedAlgorithm {
     P256,
@@ -239,6 +241,7 @@ impl Keypair {
     }
 }
 
+#[cfg(feature = "jwt")]
 impl SigningAlgorithm for Keypair {
     fn sign(&self, header: &str, claims: &str) -> Result<String, jwt::Error> {
         let mut msg = vec![];
@@ -258,6 +261,7 @@ impl SigningAlgorithm for Keypair {
     }
 }
 
+#[cfg(feature = "jwt")]
 impl VerifyingAlgorithm for Keypair {
     fn algorithm_type(&self) -> jwt::AlgorithmType {
         match BlessedAlgorithm::from(self.codec) {
@@ -374,6 +378,7 @@ mod test {
         assert_eq!(orig_keypair.secret.unwrap(), keypair.secret.unwrap());
     }
 
+    #[cfg(feature = "jwt")]
     #[test]
     fn test_keypair_jwt() {
         let keypair = Keypair::generate(BlessedAlgorithm::P256);

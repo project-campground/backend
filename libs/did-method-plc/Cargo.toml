@@ -13,6 +13,7 @@ license = "MIT"
 [dependencies]
 multihash-codetable = { version = "0.1.3", features = ["sha2"] }
 reqwest = { version = "0.12.5", features = ["json"] }
+jwt = { version = "0.16.0", optional = true}
 serde_ipld_dagcbor = "0.6.1"
 unsigned-varint = "0.8.0"
 async-trait = "0.1.80"
@@ -33,8 +34,10 @@ k256 = "0.13.3"
 sec1 = "0.7.3"
 rand = "0.8.5"
 cid = "0.11.1"
-jwt = "0.16.0"
 hex = "0.4.3"
 
 [dev-dependencies]
 actix-rt = "2.10.0"
+
+[features]
+jwt = ["dep:jwt"]
