@@ -11,7 +11,6 @@ use did_web::DIDWeb;
 extern crate surrealdb_migrations;
 extern crate surrealdb;
 extern crate thiserror;
-extern crate jwt;
 
 pub mod config;
 pub mod xrpc;

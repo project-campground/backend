@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
-use did_method_plc::{BlessedAlgorithm, Keypair, DIDPLC};
+use did_method_plc::{Keypair, DIDPLC};
 use didkit::{ssi::did::VerificationMethod, DIDResolver, ResolutionInputMetadata};
-use jwt::{Claims, Header, SignWithKey, Token, VerifyWithKey};
-use std::collections::BTreeMap;
 use did_web::DIDWeb;
+
+use super::jwt::{JWTAlgorithm, JWT};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenType {
@@ -37,8 +37,6 @@ impl ToString for TokenType {
 pub enum TokenError {
     #[error("Invalid token")]
     Invalid,
-    #[error("JWT error: {0}")]
-    JWT(#[from] jwt::Error),
     #[error("Malformed PLC operation")]
     MalformedPLC,
     #[error("Invalid token type")]
@@ -54,21 +52,20 @@ pub struct AuthToken {
 }
 
 impl AuthToken {
-    fn type_from_token(claims: &Claims) -> Result<TokenType, TokenError> {
-        let registered = &claims.registered;
-        if claims.registered.issuer.is_some() && registered.audience.is_some() {
+    fn type_from_token(jwt: &JWT) -> Result<TokenType, TokenError> {
+        if jwt.audience.is_some() {
             return Ok(TokenType::Interservice);
         }
-        Ok(TokenType::try_from(registered.subject.as_ref().unwrap())
+        Ok(TokenType::try_from(jwt.subject.as_ref().unwrap())
             .map_err(|_| TokenError::Invalid)?)
     }
 
     pub async fn from_token(plc: &DIDPLC, web: &DIDWeb, key: &Keypair, token: &str) -> Result<Self, TokenError> {
-        let unverified: Token<Header, Claims, _> = jwt::Token::parse_unverified(token)?;
-        let token_type = AuthToken::type_from_token(unverified.claims())?;
+        let jwt = JWT::from_str(token).unwrap();
+        let token_type = AuthToken::type_from_token(&jwt)?;
         match token_type {
             TokenType::Interservice => {
-                let issuer = unverified.claims().registered.issuer.as_ref().unwrap();
+                let issuer = jwt.issuer.as_str();
                 let mut parts = issuer.split("#");
                 let did = parts.next().unwrap();
                 let service = parts.next();
@@ -141,21 +138,21 @@ impl AuthToken {
                     }
                 };
 
-                let claims: BTreeMap<String, String> = token.verify_with_key(&key)?;
+                jwt.verify(&key).map_err(|_| TokenError::Invalid)?;
                 Ok(Self {
                     token_type,
                     issuer: issuer.to_string(),
                     token: token.to_string(),
-                    expires: DateTime::from_timestamp(claims["exp"].parse().unwrap(), 0).unwrap(),
+                    expires: DateTime::from_timestamp(jwt.expiration_time.unwrap(), 0).unwrap(),
                 })
             }
             _ => {
-                let claims: BTreeMap<String, String> = token.verify_with_key(key)?;
+                jwt.verify(&key).map_err(|_| TokenError::Invalid)?;
                 Ok(Self {
                     token_type,
-                    issuer: claims["iss"].to_string(),
+                    issuer: jwt.issuer.clone(),
                     token: token.to_string(),
-                    expires: DateTime::from_timestamp(claims["exp"].parse().unwrap(), 0).unwrap(),
+                    expires: DateTime::from_timestamp(jwt.expiration_time.unwrap(), 0).unwrap(),
                 })
             }
         }
@@ -175,20 +172,19 @@ impl AuthToken {
             TokenType::Refresh => 60 * 60 * 24,
             _ => return Err(TokenError::InvalidTokenType),
         };
-        let alg = BlessedAlgorithm::from(key.codec);
-        let exp = (Utc::now().timestamp() + token_lifetime).to_string();
-        let mut claims = BTreeMap::new();
-        claims.insert(
-            "alg",
-            match alg {
-                BlessedAlgorithm::K256 => "ES256K",
-                BlessedAlgorithm::P256 => "ES256",
-            },
-        );
-        claims.insert("iss", did);
-        claims.insert("exp", &exp);
-
-        let token_str = claims.sign_with_key(key)?;
+        let mut jwt = JWT {
+            issuer: did.to_string(),
+            expiration_time: Some(Utc::now().timestamp() + token_lifetime),
+            subject: Some(token_type.to_string()),
+            audience: None,
+            algorithm: JWTAlgorithm::default(),
+            jwt_type: "JWT".to_owned(),
+            not_before: None,
+            issued_at: None,
+            signature: None,
+        };
+        let _ = jwt.sign(key);
+        let token_str = jwt.to_string();
         Ok(Self {
             token_type,
             token: token_str,
@@ -202,21 +198,19 @@ impl AuthToken {
         did: &str,
         service_did: &str,
     ) -> Result<Self, TokenError> {
-        let alg = BlessedAlgorithm::from(key.codec);
-        let exp = (Utc::now().timestamp() + 60).to_string();
-        let mut claims = BTreeMap::new();
-        claims.insert(
-            "alg",
-            match alg {
-                BlessedAlgorithm::K256 => "ES256K",
-                BlessedAlgorithm::P256 => "ES256",
-            },
-        );
-        claims.insert("iss", did);
-        claims.insert("exp", &exp);
-        claims.insert("aud", service_did);
-
-        let token_str = claims.sign_with_key(key)?;
+        let mut jwt = JWT {
+            issuer: did.to_string(),
+            expiration_time: Some(Utc::now().timestamp() + 60),
+            subject: None,
+            audience: Some(service_did.to_string()),
+            algorithm: JWTAlgorithm::default(),
+            jwt_type: "JWT".to_owned(),
+            not_before: None,
+            issued_at: None,
+            signature: None,
+        };
+        let _ = jwt.sign(key);
+        let token_str = jwt.to_string();
         Ok(Self {
             token_type: TokenType::Interservice,
             token: token_str,
