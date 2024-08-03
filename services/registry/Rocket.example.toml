@@ -8,3 +8,9 @@ user = "example"
 password = "example"
 database = "registry"
 namespace = "example.com"
+
+[default.auth]
+secret_key = ""
+
+[default.service]
+public_url = "example.com"

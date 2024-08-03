@@ -13,6 +13,7 @@ extern crate surrealdb;
 extern crate thiserror;
 
 pub mod config;
+mod well_known;
 pub mod xrpc;
 
 #[derive(Error, Debug)]
@@ -30,11 +31,19 @@ async fn main() -> Result<(), ProgramError> {
 
     let rocket = rocket::build()
         .mount("/", routes![])
+        .mount("/.well-known", well_known::routes())
         .manage(didplc)
         .manage(didweb);
     let figment = rocket.figment();
 
+    let auth_config: config::AuthConfig = figment.extract_inner("auth").expect("auth");
     let db_config: config::DBConfig = figment.extract_inner("surreal").expect("host");
+    let service_config: config::ServiceConfig = figment.extract_inner("service").expect("service");
+
+    let rocket = rocket
+        .manage(auth_config.clone())
+        .manage(db_config.clone())
+        .manage(service_config.clone());
 
     let sur_mgr = SurrealConnectionManager::new(
         Config::new()
