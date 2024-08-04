@@ -2,7 +2,7 @@ use surreal_bb8::temp::{config::Config, runtime_with_config::SurrealConnectionMa
 use surrealdb_migrations::MigrationRunner;
 use surrealdb::opt::auth::Root;
 use include_dir::include_dir;
-use did_method_plc::DIDPLC;
+use did_method_plc::{Keypair, DIDPLC};
 use surreal_bb8::bb8::Pool;
 use thiserror::Error;
 use did_web::DIDWeb;
@@ -36,9 +36,15 @@ async fn main() -> Result<(), ProgramError> {
         .manage(didweb);
     let figment = rocket.figment();
 
-    let auth_config: config::AuthConfig = figment.extract_inner("auth").expect("auth");
+    let mut auth_config: config::AuthConfig = figment.extract_inner("auth").expect("auth");
     let db_config: config::DBConfig = figment.extract_inner("surreal").expect("host");
     let service_config: config::ServiceConfig = figment.extract_inner("service").expect("service");
+
+    if auth_config.secret_key == "" {
+        println!("WARNING: No secret key provided, generating a new one. This is not secure in production!");
+        let key = Keypair::generate(did_method_plc::BlessedAlgorithm::K256);
+        auth_config.secret_key = key.to_private_key().unwrap();
+    }
 
     let rocket = rocket
         .manage(auth_config.clone())
