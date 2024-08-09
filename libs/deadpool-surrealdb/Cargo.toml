@@ -1,12 +1,12 @@
 [package]
 name = "deadpool-surrealdb"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Team Campground"]
 edition = "2021"
 description = "Dead simple async pool for surrealdb"
 keywords = ["async", "database", "pool", "surrealdb"]
 repository = "https://github.com/Project-Campground/backend/"
-homepage = "https://github.com/Project-Campground/backend/tree/main/libs/did-method-plc/"
+homepage = "https://github.com/Project-Campground/backend/tree/main/libs/deadpool-surrealdb/"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
