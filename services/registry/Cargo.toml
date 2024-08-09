@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+deadpool-surrealdb = { version = "*", path = "../../libs/deadpool-surrealdb" }
 did-method-plc = { version = "*", path = "../../libs/did-method-plc" }
 reqwest = { version = "0.12.5", features = ["json"] }
 surrealdb-migrations = "1.5.0"
