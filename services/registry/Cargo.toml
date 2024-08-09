@@ -10,11 +10,13 @@ deadpool-surrealdb = { version = "*", path = "../../libs/deadpool-surrealdb" }
 did-method-plc = { version = "*", path = "../../libs/did-method-plc" }
 reqwest = { version = "0.12.5", features = ["json"] }
 surrealdb-migrations = "1.5.0"
+rocket_db_pools = "0.2.0"
 did-method-key = "0.2.2"
 serde_json = "1.0.118"
 surreal_bb8 = "0.1.0"
 include_dir = "0.7.3"
 thiserror = "1.0.61"
+deadpool = "0.12.1"
 surrealdb = "1.5.3"
 did-web = "0.2.2"
 base64 = "0.22.1"

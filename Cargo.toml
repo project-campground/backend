@@ -2,6 +2,7 @@
 members = [
     "./services/registry",
     "./services/discovery",
-    "./libs/did-method-plc"
+    "./libs/did-method-plc",
+    "./libs/deadpool-surrealdb",
 ]
 resolver = "2"
