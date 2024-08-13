@@ -1,16 +1,19 @@
 [default]
 port = 3984
 
-[default.surreal]
-host = "ws://localhost"
-port = 8000
-user = "example"
-password = "example"
-database = "registry"
-namespace = "example.com"
-
 [default.auth]
 secret_key = ""
 
 [default.service]
 public_url = "example.com"
+did = "did:web:example.com"
+secret_key = ""
+
+[default.databases.registry]
+url = "ws://localhost"
+port = 8000
+credentials_type = "root"
+user = "example"
+password = "example"
+db = "registry"
+ns = "example.com"
