@@ -10,6 +10,7 @@ pub use models::*;
 
 #[derive(Database)]
 #[database("registry")]
+#[allow(missing_debug_implementations)]
 pub struct Registry(SurrealDBPool);
 
 #[allow(dead_code)]

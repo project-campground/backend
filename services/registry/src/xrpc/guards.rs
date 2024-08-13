@@ -22,6 +22,7 @@ pub enum AuthError {
     Figment(#[from] rocket::figment::Error),
 }
 
+#[derive(Debug)]
 pub struct Authenticated(AuthToken);
 
 impl Authenticated {
@@ -65,6 +66,7 @@ impl<'r> FromRequest<'r> for Authenticated {
     }
 }
 
+#[derive(Debug)]
 pub struct XRPCBody(String);
 
 impl XRPCBody {

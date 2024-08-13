@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use did_method_plc::{BlessedAlgorithm, Keypair};
 use base64::Engine;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Copy, Clone)]
 pub enum JWTError {
     #[error("Invalid JWT")]
     Invalid,
@@ -18,7 +18,7 @@ pub enum JWTError {
     NotYetValid,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum JWTAlgorithm {
     P256,
     K256,

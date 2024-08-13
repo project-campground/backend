@@ -5,7 +5,7 @@ use did_web::DIDWeb;
 
 use super::jwt::{JWTAlgorithm, JWT};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Copy)]
 pub enum TokenType {
     Access,
     Refresh,
@@ -33,7 +33,7 @@ impl ToString for TokenType {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Clone, Copy)]
 pub enum TokenError {
     #[error("Invalid token")]
     Invalid,
@@ -43,6 +43,7 @@ pub enum TokenError {
     InvalidTokenType,
 }
 
+#[derive(Debug)]
 pub struct AuthToken {
     token_type: TokenType,
     token: String,
