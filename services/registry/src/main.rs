@@ -52,6 +52,7 @@ use did_web::DIDWeb;
 
 pub mod config;
 mod well_known;
+mod repository;
 pub mod xrpc;
 mod database;
 mod internal;
