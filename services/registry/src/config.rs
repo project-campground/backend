@@ -20,9 +20,3 @@ pub struct ServiceConfig {
     pub did: String,
     pub secret_key: String,
 }
-
-impl ServiceConfig {
-    pub fn secret_key(&self) -> Keypair {
-        Keypair::from_private_key(&self.secret_key).unwrap()
-    }
-}
