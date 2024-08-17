@@ -40,6 +40,7 @@
 )]
 
 use internal::InternalStartup;
+use rand::Rng;
 use reqwest as _;
 
 use did_method_plc::{Keypair, DIDPLC};
@@ -91,8 +92,12 @@ pub fn init() -> Result<rocket::Rocket<rocket::Build>, ProgramError> {
 
     if service_config.secret_key == "" {
         println!("WARNING: No service secret key provided, generating a new one. This is not secure in production!");
-        let key = Keypair::generate(did_method_plc::BlessedAlgorithm::K256);
-        service_config.secret_key = key.to_private_key().unwrap();
+        let key = rand::thread_rng()
+            .sample_iter(&rand::distributions::Alphanumeric)
+            .take(32)
+            .map(char::from)
+            .collect::<String>();
+        service_config.secret_key = key;
     }
 
     let rocket = rocket
