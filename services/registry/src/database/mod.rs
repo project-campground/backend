@@ -1,3 +1,4 @@
+use rocket::http::Status;
 use rocket_db_pools::{Database, Connection};
 use surrealdb_migrations::MigrationRunner;
 use deadpool_surrealdb::SurrealDBPool;
@@ -7,6 +8,8 @@ mod models;
 
 #[allow(unused_imports)]
 pub use models::*;
+
+use crate::internal::InternalEndpoint;
 
 #[derive(Database)]
 #[database("registry")]
@@ -24,4 +27,17 @@ pub async fn migrate_db(db: &Connection<Registry>) -> bool {
         Ok(_) => true,
         Err(_) => false
     }
+}
+
+#[post("/migrate-db")]
+async fn migrate_db_route(db: Connection<Registry>, _auth: InternalEndpoint) -> Result<String, Status> {
+    if migrate_db(&db).await {
+        Ok("OK".to_string())
+    } else {
+        Err(Status::InternalServerError)
+    }
+}
+
+pub fn routes() -> Vec<rocket::Route> {
+    routes![migrate_db_route]
 }

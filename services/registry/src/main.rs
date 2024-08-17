@@ -39,6 +39,7 @@
     clippy::wildcard_imports
 )]
 
+use internal::InternalStartup;
 use reqwest as _;
 
 use did_method_plc::{Keypair, DIDPLC};
@@ -52,6 +53,7 @@ pub mod config;
 mod well_known;
 pub mod xrpc;
 mod database;
+mod internal;
 
 use database::Registry;
 
@@ -69,8 +71,10 @@ pub fn init() -> Result<rocket::Rocket<rocket::Build>, ProgramError> {
 
     let rocket = rocket::build()
         .attach(Registry::init())
+        .attach(InternalStartup {})
         .mount("/", routes![])
         .mount("/.well-known", well_known::routes())
+        .mount("/internal", internal::routes())
         .manage(didplc)
         .manage(didweb);
 
@@ -101,7 +105,6 @@ pub fn init() -> Result<rocket::Rocket<rocket::Build>, ProgramError> {
 #[rocket::main]
 async fn main() -> Result<(), ProgramError> {
     let rocket = init()?;
-    // let rocket = init_db(rocket).await?;
 
     rocket.launch().await?;
 
