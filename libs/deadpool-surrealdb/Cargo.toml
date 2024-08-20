@@ -1,6 +1,6 @@
 [package]
 name = "deadpool-surrealdb"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Team Campground"]
 edition = "2021"
 description = "Dead simple async pool for surrealdb"
