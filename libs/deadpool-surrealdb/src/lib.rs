@@ -38,6 +38,12 @@ pub struct Manager {
     creds: Credentials,
 }
 
+impl Manager {
+    pub fn new(host: String, ns: String, db: String, creds: Credentials) -> Self {
+        Self { host, ns, db, creds }
+    }
+}
+
 impl managed::Manager for Manager {
     type Type = Surreal<Client>;
     type Error = surrealdb::Error;
