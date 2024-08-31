@@ -16,7 +16,7 @@ pub enum Error {
 #[derive(Serialize, Deserialize)]
 pub struct UnsignedCommit {
     pub did: String,
-    pub version: i64,
+    pub version: u64,
     pub data: String,
     pub rev: RecordKey,
     pub prev: Option<String>,

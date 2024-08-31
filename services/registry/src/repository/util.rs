@@ -1,3 +1,9 @@
+use cid::Cid;
+use multihash_codetable::{Code, MultihashDigest};
+use serde::{Deserialize, Serialize};
+
+use super::mst::NodeEntry;
+
 const S32_CHAR: &str = "234567abcdefghijklmnopqrstuvwxyz";
 
 pub fn is_s32(s: &str) -> bool {
@@ -30,4 +36,16 @@ pub fn s32decode(s: String) -> f64 {
         i = i * 32.0 + S32_CHAR.find(c).unwrap() as f64;
     }
     i
+}
+
+pub fn to_cid<T>(value: &T) -> Option<Cid>
+    where T: Serialize + Deserialize<'static>
+{
+    let dag = match serde_ipld_dagcbor::to_vec(value) {
+        Ok(dag) => dag,
+        Err(_) => return None
+    };
+    let result = Code::Sha2_256.digest(&dag.as_slice());
+    let cid = Cid::new_v1(0x71, result);
+    Some(cid)
 }
