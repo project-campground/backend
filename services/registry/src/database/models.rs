@@ -8,9 +8,9 @@ pub trait DBModel {
 }
 
 macro_rules! impl_db_model {
-    ($($types:ident),*) => {
+    ($($type:ident),*) => {
         $(
-            impl DBModel for $types {
+            impl DBModel for $type {
                 fn id(&self) -> String {
                     self.id.id.to_string()
                 }
@@ -25,30 +25,30 @@ macro_rules! impl_db_model {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Account {
-    id: Thing,
-    created_at: DateTime<Utc>,
-    email: String,
-    password: String,
-    email_confirmed_at: Option<DateTime<Utc>>,
+    pub id: Thing,
+    pub created_at: DateTime<Utc>,
+    pub email: String,
+    pub password: String,
+    pub email_confirmed_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Actor {
-    id: Thing,
-    handle: String,
-    created_at: DateTime<Utc>,
-    deactivated_at: Option<DateTime<Utc>>,
-    delete_after: Option<DateTime<Utc>>,
-    takedown_ref: Option<String>,
+    pub id: Thing,
+    pub handle: String,
+    pub created_at: DateTime<Utc>,
+    pub deactivated_at: Option<DateTime<Utc>>,
+    pub delete_after: Option<DateTime<Utc>>,
+    pub takedown_ref: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppPassword {
-    id: Thing,
-    name: String,
-    created_at: DateTime<Utc>,
-    password: String,
-    privileged: bool,
+    pub id: Thing,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub password: String,
+    pub privileged: bool,
 }
 
 impl_db_model![Account, Actor, AppPassword];
