@@ -1,7 +1,8 @@
 use did_method_plc::Keypair;
 use serde::{Deserialize, Serialize};
+use cid::Cid;
 
-use super::RecordKey;
+use super::{RecordKey, TID};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -13,13 +14,13 @@ pub enum Error {
     Signing,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UnsignedCommit {
     pub did: String,
     pub version: u64,
-    pub data: String,
-    pub rev: RecordKey,
-    pub prev: Option<String>,
+    pub data: Cid,
+    pub rev: TID,
+    pub prev: Option<Cid>,
 }
 
 impl UnsignedCommit {
