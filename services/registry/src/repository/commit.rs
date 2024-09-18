@@ -1,10 +1,11 @@
-use did_method_plc::Keypair;
+use multihash_codetable::{Code, MultihashDigest};
 use serde::{Deserialize, Serialize};
+use did_method_plc::Keypair;
 use cid::Cid;
 
 use super::{RecordKey, TID};
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Copy, Clone)]
 pub enum Error {
     #[error("Serialization Error")]
     Serialization,
@@ -37,7 +38,19 @@ impl UnsignedCommit {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+impl From<Vec<u8>> for UnsignedCommit {
+    fn from(value: Vec<u8>) -> Self {
+        serde_ipld_dagcbor::from_slice(&value).unwrap()
+    }
+}
+
+impl From<&[u8]> for UnsignedCommit {
+    fn from(value: &[u8]) -> Self {
+        serde_ipld_dagcbor::from_slice(value).unwrap()
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SignedCommit {
     #[serde(flatten)]
     pub unsigned: UnsignedCommit,
@@ -56,5 +69,25 @@ impl SignedCommit {
                 &self.sig.as_slice(),
             )
             .map_err(|_| Error::InvalidSignature)?)
+    }
+}
+
+impl From<Vec<u8>> for SignedCommit {
+    fn from(value: Vec<u8>) -> Self {
+        serde_ipld_dagcbor::from_slice(&value).unwrap()
+    }
+}
+
+impl From<&[u8]> for SignedCommit {
+    fn from(value: &[u8]) -> Self {
+        serde_ipld_dagcbor::from_slice(value).unwrap()
+    }
+}
+
+impl From<SignedCommit> for Cid {
+    fn from(value: SignedCommit) -> Self {
+        let dag = serde_ipld_dagcbor::to_vec(&value).unwrap();
+        let result = Code::Sha2_256.digest(&dag.as_slice());
+        Cid::new_v1(0x71, result)
     }
 }
