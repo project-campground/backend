@@ -1,57 +1,12 @@
 #![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 
-use super::util::{is_s32, s32decode, s32encode};
+use super::{util::is_s32, TID};
 
-pub struct TIDGenerator {
-    last_timestamp: f64,
-    timestamp_count: i32,
-    clockid: f64,
-}
-
-impl TIDGenerator {
-    pub fn new() -> Self {
-        let clockid = (rand::random::<i64>() * 32) as f64;
-        Self {
-            last_timestamp: 0.0,
-            timestamp_count: 0,
-            clockid,
-        }
-    }
-
-    pub fn next(&mut self, prev: Option<RecordKey>) -> RecordKey {
-        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs_f64();
-        if now == self.last_timestamp {
-            self.timestamp_count += 1;
-        }
-        self.last_timestamp = now;
-        let timestamp = now * 1000.0 + self.timestamp_count as f64;
-        let tid = RecordKey::TID{timestamp, clockid: self.clockid};
-        if prev.is_none() {
-            tid
-        } else {
-            let prev = prev.unwrap();
-            if tid > prev {
-                return tid;
-            }
-            match prev {
-                RecordKey::TID {timestamp, clockid: _} => {
-                    RecordKey::TID{
-                        timestamp: timestamp + 1.0,
-                        clockid: self.clockid
-                    }
-                },
-                _ => tid
-            }
-        }
-    }
-}
-
+#[derive(Clone, Debug)]
 pub enum RecordKey {
-    TID{
-        timestamp: f64,
-        clockid: f64,
-    },
+    TID(TID),
     Literal(String),
     Any(String),
     Invalid
@@ -80,18 +35,8 @@ impl Eq for RecordKey {}
 impl ToString for RecordKey {
     fn to_string(&self) -> String {
         match self {
-            RecordKey::TID{timestamp, clockid} => {
-                if timestamp == &0.0 && clockid == &0.0 {
-                    return "2222222222222".to_string()
-                }
-                let timestamp = s32encode(*timestamp);
-                let clockid = s32encode(*clockid);
-                let clockid = if clockid.len() < 2 {
-                    format!("2{}", clockid)
-                } else {
-                    clockid
-                };
-                format!("{}{}", timestamp, clockid)
+            RecordKey::TID(tid) => {
+                tid.to_string()
             },
             RecordKey::Literal(s) => {
                 format!("literal:{}", s)
@@ -127,9 +72,8 @@ impl From<String> for RecordKey {
                 return RecordKey::Invalid
             }
 
-            let timestamp = s32decode(no_dashes[0..11].to_string());
-            let clockid = s32decode(no_dashes[11..13].to_string());
-            return RecordKey::TID{timestamp, clockid}
+
+            return RecordKey::TID(TID::from(no_dashes))
         }
 
         if s.starts_with("literal:") {
