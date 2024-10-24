@@ -16,7 +16,7 @@ rocket_db_pools = { version = "0.2.0", optional = true}
 rocket = { version = "0.5.1", optional = true }
 serde_json = "1.0.118"
 deadpool = { version = "0.12.1", features = ["rt_tokio_1"]}
-surrealdb = "1.5.3"
+surrealdb = ">=2.0.4"
 serde = "1.0.203"
 
 [dev-dependencies]

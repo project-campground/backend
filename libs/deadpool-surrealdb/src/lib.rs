@@ -22,12 +22,6 @@ pub enum Credentials {
         ns: String,
         db: String,
     },
-    Scope {
-        ns: String,
-        db: String,
-        sc: String,
-        params: serde_json::Value,
-    },
 }
 
 pub struct Manager {
@@ -48,7 +42,7 @@ impl managed::Manager for Manager {
     type Type = Surreal<Client>;
     type Error = surrealdb::Error;
 
-    async fn create(&self) -> Result<Self::Type, Self::Error> {
+    async fn create(&self) -> Result<Surreal<Client>, surrealdb::Error> {
         let db = match self.host.clone().split_once("://") {
             Some(("ws", host)) => Surreal::new::<Ws>(host).await?,
             Some(("wss", host)) => Surreal::new::<Wss>(host).await?,
@@ -65,14 +59,11 @@ impl managed::Manager for Manager {
             Credentials::Database { user, pass, ns, db: database } => {
                 db.signin(auth::Database { username: &user, password: &pass, namespace: &ns, database: &database }).await?;
             },
-            Credentials::Scope { ns, db: database, sc, params } => {
-                db.signin(auth::Scope { namespace: &ns, database: &database, scope: &sc, params }).await?;
-            },
         }
         Ok(db)
     }
 
-    async fn recycle(&self, conn: &mut Self::Type, _: &managed::Metrics) -> managed::RecycleResult<Self::Error> {
+    async fn recycle(&self, conn: &mut Surreal<Client>, _: &managed::Metrics) -> managed::RecycleResult<surrealdb::Error> {
         conn.use_ns(self.ns.clone()).use_db(self.db.clone()).await?;
         match &self.creds {
             Credentials::Root { user, pass } => {
@@ -83,9 +74,6 @@ impl managed::Manager for Manager {
             },
             Credentials::Database { user, pass, ns, db: database } => {
                 conn.signin(auth::Database { username: &user, password: &pass, namespace: &ns, database: &database }).await?;
-            },
-            Credentials::Scope { ns, db: database, sc, params } => {
-                conn.signin(auth::Scope { namespace: &ns, database: &database, scope: &sc, params }).await?;
             },
         }
         Ok(())
@@ -196,12 +184,6 @@ mod rocket_pool {
                     pass: config.pass.clone().unwrap_or_default(),
                     ns: config.ns.clone(),
                     db: config.db.clone(),
-                },
-                "scope" => Credentials::Scope {
-                    ns: config.ns.clone(),
-                    db: config.db.clone(),
-                    sc: config.sc.clone().unwrap_or_default(),
-                    params: config.params.clone().unwrap_or_default(),
                 },
                 _ => panic!("Database is misconfigured"),
             };
