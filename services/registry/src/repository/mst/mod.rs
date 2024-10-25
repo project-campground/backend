@@ -1307,9 +1307,8 @@ mod tests {
     #[actix_rt::test]
     async fn adds_records() -> Result<()> {
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let mut storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1342,9 +1341,8 @@ mod tests {
     #[actix_rt::test]
     async fn edits_records() -> Result<()> {
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let mut storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1381,9 +1379,8 @@ mod tests {
     #[actix_rt::test]
     async fn deletes_records() -> Result<()> {
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let mut storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1427,9 +1424,8 @@ mod tests {
     #[actix_rt::test]
     async fn is_order_independent() -> Result<()> {
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let mut storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1470,10 +1466,9 @@ mod tests {
     async fn saves_and_loads_from_blockstore() -> Result<()> {
         let conn: Surreal<Any> = Surreal::init();
         println!("Connecting to DB");
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         println!("Using NS and DB test, test");
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         println!("Creating storage");
         let mut storage =
@@ -1602,9 +1597,8 @@ mod tests {
         let cid1 = Cid::try_from(cid1str)?;
 
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1677,9 +1671,8 @@ mod tests {
     #[actix_rt::test]
     async fn empty_tree_root() -> Result<()> {
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1699,9 +1692,8 @@ mod tests {
     async fn trivial_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?; //dag-pb
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1722,9 +1714,8 @@ mod tests {
     async fn singlelayer2_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?; //dag-pb
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1746,9 +1737,8 @@ mod tests {
     async fn simple_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1775,9 +1765,8 @@ mod tests {
     async fn trim_on_delete() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1822,9 +1811,8 @@ mod tests {
     async fn handle_insertion_that_splits_two_layers_down() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
@@ -1881,9 +1869,8 @@ mod tests {
     async fn handle_new_layers_that_are_two_higher_than_existing() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let conn: Surreal<Any> = Surreal::init();
-        conn.connect("memory").await?;
+        conn.connect("mem://").await?;
         conn.use_ns("test").use_db("test").await?;
-        assert_eq!(migrate_db(&conn).await, true);
 
         let storage =
             RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));

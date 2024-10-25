@@ -15,6 +15,7 @@ use rsky_pds::repo::parse;
 use serde_cbor::Value as CborValue;
 use surrealdb::sql::Thing;
 use serde::{Serialize, Deserialize};
+use surrealdb::Bytes;
 use crate::database::{RepoBlock, RepoRoot};
 use rsky_pds::storage::RepoRootError::RepoRootNotFoundError;
 
@@ -182,15 +183,25 @@ impl SurrealRepoReader {
         }
 
         println!("Getting results from DB");
-        let result: Option<Vec<u8>> = conn.query("SELECT content FROM ONLY repo_block WHERE cid == $cid && did == $did LIMIT 1;")
-            .bind(("cid", cid.to_string()))
-            .bind(("did", self.did.clone()))
-            .await?
-            .take(0)?;
+        println!("{:?}", conn);
+        let mut query = conn.query("SELECT content FROM repo_block WHERE cid == $cid && did == $did LIMIT 1;");
+        println!("Created query");
+        query = query.bind(("cid", cid.to_string()));
+        println!("Bound CID");
+        query = query.bind(("did", self.did.clone()));
+        println!("Bound DID");
+        let mut response = query.await?;
+        println!("Got response");
+        let result: Option<Bytes> = response.take(0)?;
+        // let result: Option<Bytes> = conn.query("SELECT content FROM ONLY repo_block WHERE cid == $cid && did == $did LIMIT 1;")
+        //     .bind(("cid", cid.to_string()))
+        //     .bind(("did", self.did.clone()))
+        //     .await?
+        //     .take(0)?;
         println!("Got results from DB");
         if let Some(result) = result {
-            self.cache.set(*cid, result.clone());
-            return Ok(result);
+            self.cache.set(*cid, result.clone().to_vec());
+            return Ok(result.to_vec());
         }
         bail!("No results found for CID: {}", cid);
     }
