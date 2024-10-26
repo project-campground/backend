@@ -9,11 +9,5 @@ public_url = "example.com"
 did = "did:web:example.com"
 secret_key = ""
 
-[default.databases.registry]
-url = "ws://localhost"
-port = 8000
-credentials_type = "root"
-user = "example"
-password = "example"
-db = "registry"
-ns = "example.com"
+[default.database]
+url = "postgresql://example:example@localhost/registry"
