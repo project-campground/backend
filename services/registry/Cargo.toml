@@ -9,6 +9,7 @@ edition = "2021"
 rsky-pds = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 lexicon_cid = { package = "cid", version = "0.10.1", features = ["serde-codec"] }
 did-method-plc = { version = "*", path = "../../libs/did-method-plc" }
+diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
 reqwest = { version = "0.12.5", features = ["json"] }
 serde_bytes = "0.11.15"
 serde_json = "1.0.118"
