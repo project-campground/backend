@@ -59,10 +59,6 @@ impl<'r> FromRequest<'r> for InternalEndpoint {
 }
 
 pub fn routes() -> Vec<rocket::Route> {
-    let db_routes = crate::database::routes();
-
-    let mut routes = Vec::new();
-    routes.extend(db_routes);
-
+    let routes = Vec::new();
     routes
 }

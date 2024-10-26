@@ -52,15 +52,15 @@ use did_web::DIDWeb;
 pub mod config;
 mod well_known;
 mod repository;
+pub mod schema;
 pub mod xrpc;
 mod database;
 mod internal;
 
-
 #[derive(Error, Debug)]
 pub enum ProgramError {
     #[error("Database error")]
-    DBError(#[from] surrealdb::Error),
+    DBError(#[from] diesel::ConnectionError),
     #[error("Rocket error")]
     RocketError(#[from] rocket::Error),
 }
