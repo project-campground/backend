@@ -8,19 +8,13 @@ edition = "2021"
 [dependencies]
 rsky-pds = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 lexicon_cid = { package = "cid", version = "0.10.1", features = ["serde-codec"] }
-deadpool-surrealdb = { version = "*", path = "../../libs/deadpool-surrealdb" }
 did-method-plc = { version = "*", path = "../../libs/did-method-plc" }
 reqwest = { version = "0.12.5", features = ["json"] }
-surrealdb-migrations = "2.0.0"
-rocket_db_pools = "0.2.0"
 serde_bytes = "0.11.15"
 serde_json = "1.0.118"
-include_dir = "0.7.3"
 lazy_static = "1.5.0"
 serde_cbor = "0.11.2"
 thiserror = "1.0.61"
-surrealdb = "2.0.4"
-libipld = "0.16.0"
 futures = "0.3.28"
 did-web = "0.2.2"
 base64 = "0.22.1"
@@ -35,4 +29,3 @@ rand = "0.8.5"
 
 [dev-dependencies]
 actix-rt = "2.10.0"
-surrealdb = { version = "2.0.4", features = ["kv-mem"] }
