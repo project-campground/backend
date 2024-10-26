@@ -20,3 +20,9 @@ pub struct ServiceConfig {
     pub did: String,
     pub secret_key: String,
 }
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+pub struct DatabaseConfig {
+    pub url: String,
+}

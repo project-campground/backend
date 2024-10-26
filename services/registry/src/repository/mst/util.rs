@@ -1,6 +1,6 @@
 /**
  * Implementation from https://github.com/blacksky-algorithms/rsky
- * Modified to work with SurrealDB instead of SQL
+ * Modified to work with our own DB
  * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
  */
 
@@ -231,9 +231,7 @@ pub fn random_str(len: usize) -> String {
 }
 
 pub async fn save_mst(storage: &RepoReader, mst: &mut MST) -> Result<Cid> {
-    println!("Getting unstored blocks");
     let diff = mst.get_unstored_blocks()?;
-    println!("Saving blocks to storage");
     storage
         .put_many(diff.blocks, Ticker::new().next(None).to_string())
         .await?;

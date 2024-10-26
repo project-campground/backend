@@ -539,9 +539,7 @@ impl MST {
     /// Return the necessary blocks to persist the MST to repo storage
     pub fn get_unstored_blocks(&mut self) -> Result<UnstoredBlocks> {
         let mut blocks = BlockMap::new();
-        println!("Getting pointer");
         let pointer = self.get_pointer()?;
-        println!("Checking already has");
         let already_has = block_on(self.storage.has(pointer))?;
         if already_has {
             return Ok(UnstoredBlocks {
@@ -549,17 +547,12 @@ impl MST {
                 blocks,
             });
         }
-        println!("Getting entries");
         let entries = self.get_entries()?;
-        println!("Serializing");
         let data = util::serialize_node_data(entries.clone())?;
-        println!("Adding data");
         let _ = blocks.add(data)?;
         for entry in entries {
             if let NodeEntry::MST(mut e) = entry {
-                println!("Getting subtree blocks");
                 let subtree = e.get_unstored_blocks()?;
-                println!("Adding subtree blocks");
                 blocks.add_map(subtree.blocks)?;
             }
         }
@@ -1289,16 +1282,14 @@ pub mod walker;
 
 #[cfg(test)]
 mod tests {
-    use crate::repository::storage::SurrealRepoReader;
-    use crate::database::migrate_test_db as migrate_db;
+    use crate::repository::storage::PostgresRepoReader;
 
     use super::util::*;
     use super::*;
     use anyhow::Result;
     use rand::seq::SliceRandom;
     use rand::thread_rng;
-    use surrealdb::engine::any::Any;
-    use surrealdb::Surreal;
+    use rocket::local::blocking::Client;
 
     fn string_to_vec_u8(input: &str) -> Vec<u8> {
         input.as_bytes().to_vec()
@@ -1306,12 +1297,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn adds_records() -> Result<()> {
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let mut storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mapping = generate_bulk_data_keys(254, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1340,12 +1327,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn edits_records() -> Result<()> {
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let mut storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mapping = generate_bulk_data_keys(100, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1378,12 +1361,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn deletes_records() -> Result<()> {
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let mut storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mapping = generate_bulk_data_keys(254, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1423,12 +1402,8 @@ mod tests {
 
     #[actix_rt::test]
     async fn is_order_independent() -> Result<()> {
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let mut storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mapping = generate_bulk_data_keys(254, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1464,32 +1439,17 @@ mod tests {
 
     #[actix_rt::test]
     async fn saves_and_loads_from_blockstore() -> Result<()> {
-        let conn: Surreal<Any> = Surreal::init();
-        println!("Connecting to DB");
-        conn.connect("mem://").await?;
-        println!("Using NS and DB test, test");
-        conn.use_ns("test").use_db("test").await?;
-
-        println!("Creating storage");
         let mut storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
-        println!("Generating bulk data");
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let _mapping = generate_bulk_data_keys(50, Some(&mut storage))?;
-        println!("Creating MST");
         let mut mst = MST::create(storage, None, None)?;
 
-        println!("Cloning MST storage");
         let mst_storage = mst.storage.clone();
-        println!("Saving MST");
         let root = save_mst(&mst_storage, &mut mst).await?;
-        println!("Loading MST");
         let loaded = MST::load(mst_storage, root, None)?;
-        println!("Getting original nodes");
         let original_nodes = mst.all_nodes()?;
-        println!("Getting loaded nodes");
         let loaded_nodes = loaded.all_nodes()?;
 
-        println!("Comparing nodes");
         assert_eq!(original_nodes.len(), loaded_nodes.len());
         assert_eq!(original_nodes, loaded_nodes);
 
@@ -1596,12 +1556,8 @@ mod tests {
         let cid1str = "bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454";
         let cid1 = Cid::try_from(cid1str)?;
 
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
         // Rejects empty key
         let result = mst.add(&"".to_string(), cid1, None);
@@ -1670,12 +1626,8 @@ mod tests {
     /// computes "empty" tree root CID
     #[actix_rt::test]
     async fn empty_tree_root() -> Result<()> {
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         assert_eq!(mst.clone().leaf_count()?, 0);
@@ -1691,12 +1643,8 @@ mod tests {
     #[actix_rt::test]
     async fn trivial_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?; //dag-pb
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         mst = mst.add(&"com.example.record/3jqfcqzm3fo2j".to_string(), cid1, None)?;
@@ -1713,12 +1661,8 @@ mod tests {
     #[actix_rt::test]
     async fn singlelayer2_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?; //dag-pb
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         mst = mst.add(&"com.example.record/3jqfcqzm3fx2j".to_string(), cid1, None)?;
@@ -1736,12 +1680,8 @@ mod tests {
     #[actix_rt::test]
     async fn simple_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         let mut mst = mst.add(&"com.example.record/3jqfcqzm3fp2j".to_string(), cid1, None)?; // level 0
@@ -1764,12 +1704,8 @@ mod tests {
     #[actix_rt::test]
     async fn trim_on_delete() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         let l1root = "bafyreifnqrwbk6ffmyaz5qtujqrzf5qmxf7cbxvgzktl4e3gabuxbtatv4";
@@ -1810,12 +1746,8 @@ mod tests {
     #[actix_rt::test]
     async fn handle_insertion_that_splits_two_layers_down() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         let l1root = "bafyreiettyludka6fpgp33stwxfuwhkzlur6chs4d2v4nkmq2j3ogpdjem";
@@ -1868,12 +1800,8 @@ mod tests {
     #[actix_rt::test]
     async fn handle_new_layers_that_are_two_higher_than_existing() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
-        let conn: Surreal<Any> = Surreal::init();
-        conn.connect("mem://").await?;
-        conn.use_ns("test").use_db("test").await?;
-
         let storage =
-            RepoReader::SurrealDB(SurrealRepoReader::new(conn, None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
         let mut mst = MST::create(storage, None, None)?;
 
         let l0root = "bafyreidfcktqnfmykz2ps3dbul35pepleq7kvv526g47xahuz3rqtptmky";
