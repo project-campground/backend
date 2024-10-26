@@ -1,3 +1,4 @@
+//! NOTE: This has been abandoned for now as SurrealDB is too unstable
 use std::str::FromStr;
 use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
