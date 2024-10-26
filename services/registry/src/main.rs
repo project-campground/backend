@@ -44,7 +44,6 @@ use rand::Rng;
 use reqwest as _;
 
 use did_method_plc::{Keypair, DIDPLC};
-use rocket_db_pools::Database;
 use thiserror::Error;
 use did_web::DIDWeb;
 
@@ -57,7 +56,6 @@ pub mod xrpc;
 mod database;
 mod internal;
 
-use database::Registry;
 
 #[derive(Error, Debug)]
 pub enum ProgramError {
@@ -72,7 +70,6 @@ pub fn init() -> Result<rocket::Rocket<rocket::Build>, ProgramError> {
     let didweb = DIDWeb {};
 
     let rocket = rocket::build()
-        .attach(Registry::init())
         .attach(InternalStartup {})
         .mount("/", routes![])
         .mount("/.well-known", well_known::routes())
