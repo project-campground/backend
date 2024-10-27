@@ -1,23 +1,35 @@
+use std::sync::{Mutex, OnceLock};
+
 use anyhow::Result;
 use rocket::figment::providers::Format;
 use crate::config::DatabaseConfig;
-use rocket::figment::{Figment, providers::Toml};
-use diesel::{pg::PgConnection, Connection};
+use diesel::{pg::PgConnection, r2d2::{Pool, ConnectionManager, PooledConnection}};
 use lazy_static::lazy_static;
 
 pub mod models;
 pub use self::models::*;
+
+pub type DbPool = Pool<ConnectionManager<PgConnection>>;
+pub type DbConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
 lazy_static! {
     static ref CONFIG: DatabaseConfig = Figment::new()
         .merge(Toml::file("Rocket.toml"))
         .extract_inner("default.database")
         .expect("Failed to load database configuration");
+
+    static ref POOL: OnceLock<Mutex<DbPool>> = OnceLock::new();
 }
 
-pub fn establish_connection() -> Result<PgConnection> {
-    Ok(PgConnection::establish(&CONFIG.url).map_err(|error| {
-        let context = format!("Error connecting to {:?}", CONFIG.url);
-        anyhow::Error::new(error).context(context)
-    })?)
+pub fn establish_connection() -> Result<DbConnection> {
+    let pool = POOL.get_or_init(|| {
+        let manager = ConnectionManager::<PgConnection>::new(&CONFIG.url);
+        Mutex::new(
+            Pool::builder()
+                .max_size(CONFIG.pool_size.clone())
+                .build(manager)
+                .expect("Failed to create connection pool")
+            )
+    });
+    Ok(pool.lock().unwrap().get()?)
 }

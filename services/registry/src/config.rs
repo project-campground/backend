@@ -25,4 +25,5 @@ pub struct ServiceConfig {
 #[serde(crate = "rocket::serde")]
 pub struct DatabaseConfig {
     pub url: String,
+    pub pool_size: u32,
 }
