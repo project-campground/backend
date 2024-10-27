@@ -1,7 +1,7 @@
 use std::sync::{Mutex, OnceLock};
 
 use anyhow::Result;
-use rocket::figment::providers::Format;
+use rocket::Config;
 use crate::config::DatabaseConfig;
 use diesel::{pg::PgConnection, r2d2::{Pool, ConnectionManager, PooledConnection}};
 use lazy_static::lazy_static;
@@ -13,9 +13,8 @@ pub type DbPool = Pool<ConnectionManager<PgConnection>>;
 pub type DbConnection = PooledConnection<ConnectionManager<PgConnection>>;
 
 lazy_static! {
-    static ref CONFIG: DatabaseConfig = Figment::new()
-        .merge(Toml::file("Rocket.toml"))
-        .extract_inner("default.database")
+    static ref CONFIG: DatabaseConfig = Config::figment()
+        .extract_inner("database")
         .expect("Failed to load database configuration");
 
     static ref POOL: OnceLock<Mutex<DbPool>> = OnceLock::new();
