@@ -40,74 +40,179 @@
 )]
 
 use std::env;
-use rand::Rng;
+use api::bsky_api_forwarder;
+use rocket::shield::{NoSniff, Shield};
+use rsky_identity::types::{DidCache, IdentityResolverOpts};
+use rsky_identity::IdResolver;
+use tokio::sync::RwLock;
+use database::establish_connection;
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::Status;
+use rocket::response::status;
+use rocket::http::Header;
+use rocket::serde::json::Json;
+use rocket::{Request, Response};
+use diesel::prelude::*;
+use diesel::sql_types::Int4;
 use reqwest as _;
-
-use did_method_plc::{Keypair, DIDPLC};
-use thiserror::Error;
-use did_web::DIDWeb;
+use anyhow::Result;
+use rsky_pds::crawlers::Crawlers;
+use rsky_pds::sequencer::Sequencer;
+use rsky_pds::{SharedIdResolver, SharedSequencer};
+use crate::config::{IDENTITY_CONFIG, CORE_CONFIG};
 
 #[macro_use] extern crate rocket;
 
-pub mod config;
+mod account_manager;
+mod auth_verifier;
+mod pipethrough;
 mod well_known;
 mod repository;
-pub mod schema;
-pub mod xrpc;
 mod database;
 mod context;
+mod config;
+mod schema;
+mod xrpc;
+mod api;
 
-#[derive(Error, Debug)]
-pub enum ProgramError {
-    #[error("Database error")]
-    DBError(#[from] diesel::ConnectionError),
-    #[error("Rocket error")]
-    RocketError(#[from] rocket::Error),
+pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+struct CORS;
+
+#[get("/robots.txt")]
+async fn robots() -> &'static str {
+    "# Hello!\n\n# Crawling the public API is allowed\nUser-agent: *\nAllow: /"
 }
 
-pub fn init() -> Result<rocket::Rocket<rocket::Build>, ProgramError> {
-    let didplc = DIDPLC::default();
-    let didweb = DIDWeb {};
+#[get("/xrpc/_health")]
+async fn health() -> Result<
+    Json<rsky_pds::models::ServerVersion>,
+    status::Custom<Json<rsky_pds::models::ErrorMessageResponse>>,
+> {
+    let conn = &mut match establish_connection() {
+        Ok(conn) => conn,
+        Err(error) => {
+            eprintln!("Internal Error: {error}");
+            let internal_error = rsky_pds::models::ErrorMessageResponse {
+                code: Some(rsky_pds::models::ErrorCode::ServiceUnavailable),
+                message: Some(error.to_string()),
+            };
+            return Err(status::Custom(
+                Status::ServiceUnavailable,
+                Json(internal_error),
+            ));
+        }
+    };
+    let result =
+        diesel::select(diesel::dsl::sql::<Int4>("1")) // SELECT 1;
+            .load::<i32>(conn)
+            .map(|v| v.into_iter().next().expect("no results"));
+    match result {
+        Ok(_) => {
+            let env_version = env!("CARGO_PKG_VERSION").to_owned();
+            let version = rsky_pds::models::ServerVersion {
+                version: env_version,
+            };
+            Ok(Json(version))
+        }
+        Err(error) => {
+            eprintln!("Internal Error: {error}");
+            let internal_error = rsky_pds::models::ErrorMessageResponse {
+                code: Some(rsky_pds::models::ErrorCode::ServiceUnavailable),
+                message: Some(error.to_string()),
+            };
+            Err(status::Custom(
+                Status::ServiceUnavailable,
+                Json(internal_error),
+            ))
+        }
+    }
+}
+
+#[catch(default)]
+async fn default_catcher() -> Json<rsky_pds::models::ErrorMessageResponse> {
+    let internal_error = rsky_pds::models::ErrorMessageResponse {
+        code: Some(rsky_pds::models::ErrorCode::InternalServerError),
+        message: Some("Internal error.".to_string()),
+    };
+    Json(internal_error)
+}
+
+/// Catches all OPTION requests in order to get the CORS related Fairing triggered.
+#[options("/<_..>")]
+async fn all_options() {
+    /* Intentionally left empty */
+}
+
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Add CORS headers to responses",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, GET, PATCH, OPTIONS, DELETE",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
+pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
+    let sequencer = SharedSequencer {
+        sequencer: RwLock::new(Sequencer::new(
+            Crawlers::new(CORE_CONFIG.hostname(), CORE_CONFIG.crawlers.clone()),
+            None,
+        )),
+    };
+    let mut background_sequencer = sequencer.sequencer.write().await.clone();
+    tokio::spawn(async move { background_sequencer.start().await });
+
+    let aws_sdk_config = aws_config::from_env()
+        .endpoint_url(CORE_CONFIG.aws_endpoint.clone().unwrap_or("localhost".to_owned()))
+        .load()
+        .await;
+
+    let id_resolver = SharedIdResolver {
+        id_resolver: RwLock::new(IdResolver::new(IdentityResolverOpts {
+            timeout: None,
+            plc_url: Some(IDENTITY_CONFIG.plc_url.clone()),
+            did_cache: Some(DidCache::new(None, None)),
+            backup_nameservers: IDENTITY_CONFIG.handle_backup_name_servers.clone()
+        })),
+    };
+
+    let shield = Shield::default().enable(NoSniff::Enable);
 
     let rocket = rocket::build()
         .mount("/", routes![
-        .mount("/", routes![])
+            api::com::atproto::identity::resolve_handle::resolve_handle,
+            api::com::atproto::identity::update_handle::update_handle,
+            robots,
+            health,
+            bsky_api_forwarder,
+            all_options
+        ])
         .mount("/.well-known", well_known::routes())
         .register("/", catchers![default_catcher])
-        .manage(didplc)
-        .manage(didweb);
-
-    let figment = rocket.figment();
-
-    let mut auth_config: config::AuthConfig = figment.extract_inner("auth").expect("auth");
-    let mut service_config: config::ServiceConfig = figment.extract_inner("service").expect("service");
-
-    if auth_config.secret_key == "" {
-        println!("WARNING: No auth secret key provided, generating a new one. This is not secure in production!");
-        let key = Keypair::generate(did_method_plc::BlessedAlgorithm::K256);
-        auth_config.secret_key = key.to_private_key().unwrap();
-    }
-
-    if service_config.secret_key == "" {
-        println!("WARNING: No service secret key provided, generating a new one. This is not secure in production!");
-        let key = rand::thread_rng()
-            .sample_iter(&rand::distributions::Alphanumeric)
-            .take(32)
-            .map(char::from)
-            .collect::<String>();
-        service_config.secret_key = key;
-    }
-
-    let rocket = rocket
-        .manage(auth_config.clone())
-        .manage(service_config.clone());
+        .attach(shield)
+        .attach(CORS)
+        .manage(sequencer)
+        .manage(aws_sdk_config)
+        .manage(id_resolver);
 
     Ok(rocket)
 }
 
 #[rocket::main]
-async fn main() -> Result<(), ProgramError> {
-    let rocket = init()?;
+async fn main() -> Result<()> {
+    let rocket = init().await?;
 
     rocket.launch().await?;
 
