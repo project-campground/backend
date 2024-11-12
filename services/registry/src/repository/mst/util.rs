@@ -196,7 +196,7 @@ pub fn random_cid(storage: &mut Option<&mut RepoReader>) -> Result<Cid> {
     let cid = cid_for_cbor(&record)?;
     let bytes = common::struct_to_cbor(record)?;
     if let Some(ref mut storage) = storage {
-        storage.blocks().set(cid, bytes);
+        storage.blocks.set(cid, bytes);
     }
     Ok(cid)
 }

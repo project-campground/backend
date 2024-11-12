@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports)]
 /**
  * Implementation from https://github.com/blacksky-algorithms/rsky
- * Modified to work with SurrealDB instead of SQL
+ * Modified to work with our own DB
  * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
  */
 
@@ -27,7 +27,6 @@ use rsky_pds::repo::error::DataStoreError;
 use rsky_pds::repo::parse;
 use rsky_pds::repo::types::{BlockWriter, CidAndBytes};
 use rsky_pds::storage::ObjAndBytes;
-use futures::executor::block_on;
 use crate::repository::storage::RepoReader;
 use anyhow::{anyhow, bail, Result};
 use serde::{Deserialize, Serialize};
@@ -436,12 +435,12 @@ impl MST {
         };
         // otherwise this is a virtual/pointer struct, and we need to hydrate from
         // block store before returning entries
-        let data: CborValue = block_on(self.storage.read_obj(&self.pointer, |obj: &CborValue| {
+        let data: CborValue = self.storage.read_obj(&self.pointer, |obj: &CborValue| {
             match serde_cbor::value::from_value::<NodeData>(obj.clone()) {
                 Ok(_) => true,
                 Err(_) => false,
             }
-        }))?;
+        })?;
         let data: NodeData = serde_cbor::value::from_value(data)?;
 
         // can compute the layer on the first KeySuffix, because
@@ -540,7 +539,7 @@ impl MST {
     pub fn get_unstored_blocks(&mut self) -> Result<UnstoredBlocks> {
         let mut blocks = BlockMap::new();
         let pointer = self.get_pointer()?;
-        let already_has = block_on(self.storage.has(pointer))?;
+        let already_has = self.storage.has(pointer)?;
         if already_has {
             return Ok(UnstoredBlocks {
                 root: pointer,
@@ -1180,13 +1179,13 @@ impl MST {
 
     /// Sync Protocol
     /// @TODO: This needs to implement an actual CarWriter
-    pub fn write_to_car_stream(&mut self, car: &mut BlockWriter) -> Result<()> {
+    pub async fn write_to_car_stream(&mut self, car: &mut BlockWriter) -> Result<()> {
         let mut leaves = CidSet::new(None);
         let mut to_fetch = CidSet::new(None);
         to_fetch.add(self.get_pointer()?);
         while to_fetch.size() > 0 {
             let mut next_layer = CidSet::new(None);
-            let fetched = block_on(self.storage.get_blocks(to_fetch.to_list()))?;
+            let fetched = self.storage.get_blocks(to_fetch.to_list()).await?;
             if fetched.missing.len() > 0 {
                 return Err(anyhow::Error::new(DataStoreError::MissingBlocks(
                     "mst node".to_owned(),
@@ -1217,7 +1216,7 @@ impl MST {
             }
             to_fetch = next_layer;
         }
-        let leaf_data = block_on(self.storage.get_blocks(leaves.to_list()))?;
+        let leaf_data = self.storage.get_blocks(leaves.to_list()).await?;
         if leaf_data.missing.len() > 0 {
             return Err(anyhow::Error::new(DataStoreError::MissingBlocks(
                 "mst leaf".to_owned(),
@@ -1282,8 +1281,6 @@ pub mod walker;
 
 #[cfg(test)]
 mod tests {
-    use crate::repository::storage::PostgresRepoReader;
-
     use super::util::*;
     use super::*;
     use anyhow::Result;
@@ -1298,7 +1295,7 @@ mod tests {
     #[actix_rt::test]
     async fn adds_records() -> Result<()> {
         let mut storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mapping = generate_bulk_data_keys(254, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1328,7 +1325,7 @@ mod tests {
     #[actix_rt::test]
     async fn edits_records() -> Result<()> {
         let mut storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mapping = generate_bulk_data_keys(100, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1362,7 +1359,7 @@ mod tests {
     #[actix_rt::test]
     async fn deletes_records() -> Result<()> {
         let mut storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mapping = generate_bulk_data_keys(254, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1403,7 +1400,7 @@ mod tests {
     #[actix_rt::test]
     async fn is_order_independent() -> Result<()> {
         let mut storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mapping = generate_bulk_data_keys(254, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
         let mut rng = thread_rng();
@@ -1440,7 +1437,7 @@ mod tests {
     #[actix_rt::test]
     async fn saves_and_loads_from_blockstore() -> Result<()> {
         let mut storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let _mapping = generate_bulk_data_keys(50, Some(&mut storage))?;
         let mut mst = MST::create(storage, None, None)?;
 
@@ -1557,7 +1554,7 @@ mod tests {
         let cid1 = Cid::try_from(cid1str)?;
 
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
         // Rejects empty key
         let result = mst.add(&"".to_string(), cid1, None);
@@ -1627,7 +1624,7 @@ mod tests {
     #[actix_rt::test]
     async fn empty_tree_root() -> Result<()> {
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         assert_eq!(mst.clone().leaf_count()?, 0);
@@ -1644,7 +1641,7 @@ mod tests {
     async fn trivial_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?; //dag-pb
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         mst = mst.add(&"com.example.record/3jqfcqzm3fo2j".to_string(), cid1, None)?;
@@ -1662,7 +1659,7 @@ mod tests {
     async fn singlelayer2_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?; //dag-pb
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         mst = mst.add(&"com.example.record/3jqfcqzm3fx2j".to_string(), cid1, None)?;
@@ -1681,7 +1678,7 @@ mod tests {
     async fn simple_tree() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         let mut mst = mst.add(&"com.example.record/3jqfcqzm3fp2j".to_string(), cid1, None)?; // level 0
@@ -1705,7 +1702,7 @@ mod tests {
     async fn trim_on_delete() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         let l1root = "bafyreifnqrwbk6ffmyaz5qtujqrzf5qmxf7cbxvgzktl4e3gabuxbtatv4";
@@ -1747,7 +1744,7 @@ mod tests {
     async fn handle_insertion_that_splits_two_layers_down() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         let l1root = "bafyreiettyludka6fpgp33stwxfuwhkzlur6chs4d2v4nkmq2j3ogpdjem";
@@ -1801,7 +1798,7 @@ mod tests {
     async fn handle_new_layers_that_are_two_higher_than_existing() -> Result<()> {
         let cid1 = Cid::try_from("bafyreie5cvv4h45feadgeuwhbcutmh6t2ceseocckahdoe6uat64zmz454")?;
         let storage =
-            RepoReader::Postgres(PostgresRepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None));
+            RepoReader::new(None, "did:example:123456789abcdefghi".to_string(), None);
         let mut mst = MST::create(storage, None, None)?;
 
         let l0root = "bafyreidfcktqnfmykz2ps3dbul35pepleq7kvv526g47xahuz3rqtptmky";

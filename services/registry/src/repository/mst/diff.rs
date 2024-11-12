@@ -1,6 +1,6 @@
 /**
  * Implementation from https://github.com/blacksky-algorithms/rsky
- * Modified to work with SurrealDB instead of SQL
+ * Modified to work with our own DB
  * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
  */
 
