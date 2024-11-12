@@ -160,6 +160,79 @@ pub struct DidDoc {
 }
 
 #[derive(
+    Clone, Copy, Debug, PartialEq, Eq, Hash, Default, Serialize, Deserialize, AsExpression,
+)]
+#[diesel(sql_type = Text)]
+pub enum EmailTokenPurpose {
+    #[default]
+    ConfirmEmail,
+    UpdateEmail,
+    ResetPassword,
+    DeleteAccount,
+    PlcOperation,
+}
+
+impl EmailTokenPurpose {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            EmailTokenPurpose::ConfirmEmail => "confirm_email",
+            EmailTokenPurpose::UpdateEmail => "update_email",
+            EmailTokenPurpose::ResetPassword => "reset_password",
+            EmailTokenPurpose::DeleteAccount => "delete_account",
+            EmailTokenPurpose::PlcOperation => "plc_operation",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Result<Self> {
+        match s {
+            "confirm_email" => Ok(EmailTokenPurpose::ConfirmEmail),
+            "update_email" => Ok(EmailTokenPurpose::UpdateEmail),
+            "reset_password" => Ok(EmailTokenPurpose::ResetPassword),
+            "delete_account" => Ok(EmailTokenPurpose::DeleteAccount),
+            "plc_operation" => Ok(EmailTokenPurpose::PlcOperation),
+            _ => bail!("Unable to parse as EmailTokenPurpose: `{s:?}`"),
+        }
+    }
+}
+
+impl<DB> Queryable<Text, DB> for EmailTokenPurpose
+where
+    DB: Backend,
+    String: FromSql<Text, DB>,
+{
+    type Row = String;
+
+    fn build(s: String) -> deserialize::Result<Self> {
+        Ok(EmailTokenPurpose::from_str(&s)?)
+    }
+}
+
+impl ToSql<Text, pg::Pg> for EmailTokenPurpose
+where
+    String: ToSql<Text, pg::Pg>,
+{
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, pg::Pg>) -> serialize::Result {
+        let v = self.as_str().to_owned();
+        <String as ToSql<Text, pg::Pg>>::to_sql(&v, &mut out.reborrow())
+    }
+}
+
+#[derive(
+    Queryable, Identifiable, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+)]
+#[diesel(primary_key(purpose, did))]
+#[diesel(table_name = crate::schema::registry::email_token)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct EmailToken {
+    pub purpose: EmailTokenPurpose,
+    pub did: String,
+    pub token: String,
+    #[diesel(column_name = requestedAt)]
+    #[serde(rename = "requestedAt")]
+    pub requested_at: String,
+}
+
+#[derive(
     Queryable,
     Identifiable,
     Insertable,
