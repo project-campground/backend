@@ -1,41 +1,60 @@
-use did_method_plc::Keypair;
-use rocket::State;
-use serde_json::json;
+use crate::account_manager::AccountManager;
+use rocket::request::{FromRequest, Outcome};
+use rocket::response::status;
+use rocket::Request;
+use rocket::http::Status;
+use anyhow::Result;
 
-use crate::config;
+use crate::config::IDENTITY_CONFIG;
 
-#[get("/did.json")]
+pub struct HostHeader(pub String);
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for HostHeader {
+    type Error = ();
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match req.headers().get_one("Host") {
+            Some(h) => Outcome::Success(HostHeader(h.to_string())),
+            None => Outcome::Forward(Status::InternalServerError),
+        }
+    }
+}
+
+#[get("/atproto-did")]
 async fn did(
-    auth_config: &State<config::AuthConfig>,
-    service_config: &State<config::ServiceConfig>,
-) -> String {
-    let key = Keypair::from_private_key(&auth_config.secret_key);
-    match key {
-        Ok(key) => {
-            let key_did = key.to_did_key().unwrap();
-            json!({
-                "@context": ["https://www.w3.org/ns/did/v1"],
-                "id": service_config.did,
-                "verificationMethod": [
-                    {
-                        "id": format!("{}#atproto_label", service_config.did),
-                        "type": "Multikey",
-                        "controller": service_config.did,
-                        "publicKeyMultibase": key_did.replace("did:key", ""),
-                    }
-                ],
-                "service": [
-                    {
-                        "id": "#atproto_labeler",
-                        "type": "AtprotoLabeler",
-                        "service_endpoint": service_config.public_url,
-                    }
-                ]
-            }).to_string()
+    host: HostHeader,
+) -> Result<String, status::Custom<String>> {
+    let handle = host.0;
+    let supported_handle = IDENTITY_CONFIG
+        .service_handle_domains
+        .iter()
+        .find(|host| handle.ends_with(host.as_str()) || handle == host[1..])
+        .is_some();
+    if !supported_handle {
+        return Err(status::Custom(
+            Status::NotFound,
+            "User not found".to_string(),
+        ));
+    }
+    match AccountManager::get_account(&handle, None).await {
+        Ok(user) => {
+            let did: Option<String> = match user {
+                Some(user) => Some(user.did),
+                None => None,
+            };
+            match did {
+                None => Err(status::Custom(
+                    Status::NotFound,
+                    "User not found".to_string(),
+                )),
+                Some(did) => Ok(did),
+            }
         }
-        Err(e) => {
-            panic!("Failed to create DID: {}", e);
-        }
+        Err(_) => Err(status::Custom(
+            Status::InternalServerError,
+            "Internal Server Error".to_string(),
+        )),
     }
 }
 
