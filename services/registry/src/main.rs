@@ -39,7 +39,7 @@
     clippy::wildcard_imports
 )]
 
-use internal::InternalStartup;
+use std::env;
 use rand::Rng;
 use reqwest as _;
 
@@ -55,7 +55,7 @@ mod repository;
 pub mod schema;
 pub mod xrpc;
 mod database;
-mod internal;
+mod context;
 
 #[derive(Error, Debug)]
 pub enum ProgramError {
@@ -70,10 +70,10 @@ pub fn init() -> Result<rocket::Rocket<rocket::Build>, ProgramError> {
     let didweb = DIDWeb {};
 
     let rocket = rocket::build()
-        .attach(InternalStartup {})
+        .mount("/", routes![
         .mount("/", routes![])
         .mount("/.well-known", well_known::routes())
-        .mount("/internal", internal::routes())
+        .register("/", catchers![default_catcher])
         .manage(didplc)
         .manage(didweb);
 
