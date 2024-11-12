@@ -72,6 +72,15 @@ pub mod registry {
     }
 
     diesel::table! {
+        registry.email_token (purpose, did) {
+            purpose -> Varchar,
+            did -> Varchar,
+            token -> Varchar,
+            requestedAt -> Varchar,
+        }
+    }
+
+    diesel::table! {
         registry.record (uri) {
             uri -> Varchar,
             cid -> Varchar,
@@ -140,6 +149,7 @@ pub mod registry {
         backlink,
         blob,
         did_doc,
+        email_token,
         record,
         record_blob,
         refresh_token,
