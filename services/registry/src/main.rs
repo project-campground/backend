@@ -194,6 +194,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         .mount("/", routes![
             api::com::atproto::identity::resolve_handle::resolve_handle,
             api::com::atproto::identity::update_handle::update_handle,
+            api::com::atproto::server::create_account::create_account,
             robots,
             health,
             bsky_api_forwarder,
