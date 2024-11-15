@@ -57,9 +57,11 @@ use diesel::sql_types::Int4;
 use reqwest as _;
 use anyhow::Result;
 use rsky_pds::crawlers::Crawlers;
-use rsky_pds::sequencer::Sequencer;
-use rsky_pds::{SharedIdResolver, SharedSequencer};
+use rsky_pds::SharedIdResolver;
+use crate::sequencer::Sequencer;
 use crate::config::{IDENTITY_CONFIG, CORE_CONFIG};
+use event_emitter_rs::EventEmitter;
+use lazy_static::lazy_static;
 
 #[macro_use] extern crate rocket;
 
@@ -68,6 +70,7 @@ mod auth_verifier;
 mod pipethrough;
 mod well_known;
 mod repository;
+mod sequencer;
 mod database;
 mod context;
 mod config;
@@ -76,6 +79,17 @@ mod xrpc;
 mod api;
 
 pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
+
+#[derive(Debug)]
+pub struct SharedSequencer {
+    pub sequencer: RwLock<Sequencer>,
+}
+
+// Use lazy_static! because the size of EventEmitter is not known at compile time
+lazy_static! {
+    // Export the emitter with `pub` keyword
+    pub static ref EVENT_EMITTER: RwLock<EventEmitter> = RwLock::new(EventEmitter::new());
+}
 
 struct CORS;
 
