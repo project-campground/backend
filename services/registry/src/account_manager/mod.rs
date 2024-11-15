@@ -7,6 +7,7 @@ use crate::account_manager::helpers::auth::{
 };
 use crate::account_manager::helpers::password::UpdateUserPasswordOpts;
 use crate::account_manager::helpers::repo;
+use crate::config::{SECRET_CONFIG, SERVICE_CONFIG};
 use rsky_pds::auth_verifier::AuthScope;
 use rsky_pds::common;
 use rsky_pds::common::time::{from_micros_to_str, from_str_to_micros, HOUR};
@@ -21,7 +22,6 @@ use libipld::Cid;
 use rsky_lexicon::com::atproto::admin::StatusAttr;
 use rsky_lexicon::com::atproto::server::CreateAppPasswordOutput;
 use secp256k1::{Keypair, Secp256k1, SecretKey};
-use std::env;
 use std::time::SystemTime;
 
 /// Helps with readability when calling create_account()
@@ -115,14 +115,14 @@ impl AccountManager {
         };
         // Should be a global var so this only happens once
         let secp = Secp256k1::new();
-        let private_key = env::var("PDS_JWT_KEY_K256_PRIVATE_KEY_HEX").unwrap();
+        let private_key = SECRET_CONFIG.pds_private_key.clone();
         let secret_key =
             SecretKey::from_slice(&hex::decode(private_key.as_bytes()).unwrap()).unwrap();
         let jwt_key = Keypair::from_secret_key(&secp, &secret_key);
         let (access_jwt, refresh_jwt) = auth::create_tokens(auth::CreateTokensOpts {
             did: did.clone(),
             jwt_key,
-            service_did: env::var("PDS_SERVICE_DID").unwrap(),
+            service_did: SERVICE_CONFIG.did.clone(),
             scope: Some(AuthScope::Access),
             jti: None,
             expires_in: None,
@@ -196,7 +196,7 @@ impl AccountManager {
         app_password_name: Option<String>,
     ) -> Result<(String, String)> {
         let secp = Secp256k1::new();
-        let private_key = env::var("PDS_JWT_KEY_K256_PRIVATE_KEY_HEX").unwrap();
+        let private_key = SECRET_CONFIG.pds_private_key.clone();
         let secret_key =
             SecretKey::from_slice(&hex::decode(private_key.as_bytes()).unwrap()).unwrap();
         let jwt_key = Keypair::from_secret_key(&secp, &secret_key);
@@ -208,7 +208,7 @@ impl AccountManager {
         let (access_jwt, refresh_jwt) = auth::create_tokens(CreateTokensOpts {
             did,
             jwt_key,
-            service_did: env::var("PDS_SERVICE_DID").unwrap(),
+            service_did: SERVICE_CONFIG.did.clone(),
             scope: Some(scope),
             jti: None,
             expires_in: None,
@@ -253,7 +253,7 @@ impl AccountManager {
                 .unwrap_or_else(|| auth::get_refresh_token_id());
 
             let secp = Secp256k1::new();
-            let private_key = env::var("PDS_JWT_KEY_K256_PRIVATE_KEY_HEX").unwrap();
+            let private_key = SECRET_CONFIG.pds_private_key.clone();
             let secret_key =
                 SecretKey::from_slice(&hex::decode(private_key.as_bytes()).unwrap()).unwrap();
             let jwt_key = Keypair::from_secret_key(&secp, &secret_key);
@@ -261,7 +261,7 @@ impl AccountManager {
             let (access_jwt, refresh_jwt) = auth::create_tokens(CreateTokensOpts {
                 did: token.did,
                 jwt_key,
-                service_did: env::var("PDS_SERVICE_DID").unwrap(),
+                service_did: SERVICE_CONFIG.did.clone(),
                 scope: Some(if token.app_password_name.is_none() {
                     AuthScope::Access
                 } else {
