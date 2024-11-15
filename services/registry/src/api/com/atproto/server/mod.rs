@@ -282,3 +282,5 @@ pub async fn assert_valid_doc_contents(contents: AssertionContents) -> Result<()
     }
     Ok(())
 }
+
+pub mod create_account;
