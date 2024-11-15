@@ -211,6 +211,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
             api::com::atproto::identity::update_handle::update_handle,
             api::com::atproto::server::create_account::create_account,
             api::com::atproto::server::create_session::create_session,
+            api::com::atproto::server::refresh_session::refresh_session,
             robots,
             health,
             bsky_api_forwarder,
