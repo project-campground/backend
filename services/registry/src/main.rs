@@ -78,6 +78,7 @@ mod schema;
 mod xrpc;
 mod api;
 
+pub const INVALID_HANDLE: &'static str = "handle.invalid";
 pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
 #[derive(Debug)]
@@ -209,6 +210,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
             api::com::atproto::identity::resolve_handle::resolve_handle,
             api::com::atproto::identity::update_handle::update_handle,
             api::com::atproto::server::create_account::create_account,
+            api::com::atproto::server::create_session::create_session,
             robots,
             health,
             bsky_api_forwarder,
