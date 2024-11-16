@@ -289,6 +289,7 @@ pub mod activate_account;
 pub mod delete_account;
 pub mod create_session;
 pub mod delete_session;
+pub mod check_account_status;
 pub mod get_session;
 pub mod refresh_session;
 pub mod get_service_auth;
