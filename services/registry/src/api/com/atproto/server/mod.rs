@@ -289,3 +289,4 @@ pub mod create_session;
 pub mod delete_session;
 pub mod get_session;
 pub mod refresh_session;
+pub mod confirm_email;
