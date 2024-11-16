@@ -50,6 +50,7 @@ impl ModerationMailer {
                     .from(from_address.parse::<lettre::message::Mailbox>().unwrap())
                     .to(to.parse::<lettre::message::Mailbox>().unwrap())
                     .subject(subject)
+                    .header(lettre::message::header::ContentType::TEXT_HTML)
                     .body(template.render().unwrap())
                     .unwrap();
     
