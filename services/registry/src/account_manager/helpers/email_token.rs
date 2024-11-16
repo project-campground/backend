@@ -1,4 +1,4 @@
-use rsky_pds::apis::com::atproto::server::get_random_token;
+use crate::api::com::atproto::server::get_random_token;
 use rsky_pds::common;
 use rsky_pds::common::time::{from_str_to_utc, less_than_ago_ms, MINUTE};
 use crate::database::establish_connection;

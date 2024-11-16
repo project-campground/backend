@@ -32,7 +32,7 @@ pub struct AvailabilityFlags {
     pub include_deactivated: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Deserialize, Serialize)]
 pub enum AccountStatus {
     Active,
     Takendown,
