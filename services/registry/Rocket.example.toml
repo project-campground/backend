@@ -30,3 +30,24 @@ cache_state_ttl = 15
 cache_max_ttl = 15
 service_handle_domains = ["example.com"]
 enable_did_doc_with_session = false
+
+[default.email]
+provider = "SMTP"
+host = "smtp.example.com"
+username = "user@example.com"
+password = "example"
+from_address = "user@example.com"
+
+# [default.email]
+# provider = "Mailgun"
+# api_key = ""
+# domain = "example.com"
+# from_name = "example"
+# from_address = "user@example.com"
+
+[default.mod_email]
+provider = "SMTP"
+host = "smtp.example.com"
+username = "user@example.com"
+password = "example"
+from_address = "user@example.com"
