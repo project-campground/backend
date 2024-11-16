@@ -174,7 +174,7 @@ impl RepoReader {
         Ok(result)
     }
 
-    pub fn count_blocks(&self) -> Result<i64> {
+    pub async fn count_blocks(&self) -> Result<i64> {
         use crate::schema::registry::repo_block::dsl as RepoBlockSchema;
         let conn = &mut establish_connection()?;
 
@@ -325,13 +325,13 @@ impl RepoReader {
     }
 
     pub async fn get_root(&self) -> Option<Cid> {
-        match self.get_root_detailed() {
+        match self.get_root_detailed().await {
             Ok(root) => Some(root.cid),
             Err(_) => None,
         }
     }
 
-    pub fn get_root_detailed(&self) -> Result<CidAndRev> {
+    pub async fn get_root_detailed(&self) -> Result<CidAndRev> {
         use crate::schema::registry::repo_root::dsl as RepoRootSchema;
         let conn = &mut establish_connection()?;
 

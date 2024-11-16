@@ -137,7 +137,7 @@ impl ActorStore {
         writes: Vec<PreparedWrite>,
         swap_commit: Option<Cid>,
     ) -> Result<CommitData> {
-        let current_root = self.storage.get_root_detailed();
+        let current_root = self.storage.get_root_detailed().await;
         if let Ok(current_root) = current_root {
             if let Some(swap_commit) = swap_commit {
                 if !current_root.cid.eq(&swap_commit) {

@@ -85,7 +85,7 @@ impl RecordReader {
         RecordReader { did }
     }
 
-    pub fn record_count(&mut self) -> Result<i64> {
+    pub async fn record_count(&mut self) -> Result<i64> {
         use crate::schema::registry::record::dsl::*;
         let conn = &mut establish_connection()?;
 
