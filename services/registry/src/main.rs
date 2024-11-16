@@ -73,6 +73,7 @@ mod repository;
 mod sequencer;
 mod database;
 mod context;
+mod mailer;
 mod config;
 mod schema;
 mod xrpc;
