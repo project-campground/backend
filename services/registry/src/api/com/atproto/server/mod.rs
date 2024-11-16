@@ -294,4 +294,5 @@ pub mod refresh_session;
 pub mod get_service_auth;
 pub mod describe_server;
 pub mod request_email_confirmation;
+pub mod request_email_update;
 pub mod confirm_email;
