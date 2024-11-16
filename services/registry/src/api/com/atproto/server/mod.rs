@@ -284,6 +284,7 @@ pub async fn assert_valid_doc_contents(contents: AssertionContents) -> Result<()
 }
 
 pub mod create_account;
+pub mod activate_account;
 pub mod create_session;
 pub mod delete_session;
 pub mod get_session;
