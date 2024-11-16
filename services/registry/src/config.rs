@@ -14,6 +14,8 @@ pub static DATABASE_CONFIG: LazyLock<DatabaseConfig> = LazyLock::new(|| CONFIG.e
 pub static IDENTITY_CONFIG: LazyLock<IdentityConfig> = LazyLock::new(|| CONFIG.extract_inner("identity").expect("Failed to load identity configuration"));
 pub static CORE_CONFIG: LazyLock<CoreConfig> = LazyLock::new(|| CONFIG.extract_inner("core").expect("Failed to load core configuration"));
 pub static SECRET_CONFIG: LazyLock<SecretConfig> = LazyLock::new(|| CONFIG.extract_inner("secret").expect("Failed to load secret configuration"));
+pub static EMAIL_CONFIG: LazyLock<MailConfig> = LazyLock::new(|| CONFIG.extract_inner("email").expect("Failed to load email configuration"));
+pub static MODERATION_EMAIL_CONFIG: LazyLock<MailConfig> = LazyLock::new(|| CONFIG.extract_inner("mod_email").expect("Failed to load moderation email configuration"));
 
 pub static SERVICE_CONFIG: LazyLock<ServiceConfig> = LazyLock::new(|| CONFIG.extract_inner("service").expect("Failed to load service configuration"));
 pub static MOD_SERVICE_CONFIG: LazyLock<Option<ServiceConfig>> = LazyLock::new(|| CONFIG.extract_inner("mod_service").unwrap_or(None));
@@ -73,6 +75,24 @@ impl CoreConfig {
 
     pub fn dev_mode(&self) -> bool {
         self.dev_mode.unwrap_or(cfg!(debug_assertions))
+    }
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+#[serde(tag = "provider")]
+pub enum MailConfig {
+    SMTP {
+        host: String,
+        username: String,
+        password: String,
+        from_address: String
+    },
+    Mailgun {
+        api_key: String,
+        domain: String,
+        from_name: String,
+        from_address: String
     }
 }
 
