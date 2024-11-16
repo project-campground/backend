@@ -296,6 +296,8 @@ pub mod get_service_auth;
 pub mod describe_server;
 pub mod reset_password;
 pub mod update_email;
+pub mod reserve_signing_key;
+pub mod get_account_invite_codes;
 pub mod request_email_confirmation;
 pub mod request_password_reset;
 pub mod request_email_update;
