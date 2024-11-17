@@ -18,6 +18,7 @@ pub static SECRET_CONFIG: LazyLock<SecretConfig> = LazyLock::new(|| CONFIG.extra
 pub static EMAIL_CONFIG: LazyLock<MailConfig> = LazyLock::new(|| CONFIG.extract_inner("email").expect("Failed to load email configuration"));
 pub static MODERATION_EMAIL_CONFIG: LazyLock<MailConfig> = LazyLock::new(|| CONFIG.extract_inner("mod_email").expect("Failed to load moderation email configuration"));
 pub static S3_CONFIG: LazyLock<S3Config> = LazyLock::new(|| CONFIG.extract_inner("s3").expect("Failed to load AWS configuration"));
+pub static SUBSCRIPTION_CONFIG: LazyLock<SubscriptionConfig> = LazyLock::new(|| CONFIG.extract_inner("subscription").expect("Failed to load subscription configuration"));
 
 pub static SERVICE_CONFIG: LazyLock<ServiceConfig> = LazyLock::new(|| CONFIG.extract_inner("service").expect("Failed to load service configuration"));
 pub static MOD_SERVICE_CONFIG: LazyLock<Option<ServiceConfig>> = LazyLock::new(|| CONFIG.extract_inner("mod_service").unwrap_or(None));
@@ -79,6 +80,14 @@ impl CoreConfig {
         self.dev_mode.unwrap_or(cfg!(debug_assertions))
     }
 }
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+pub struct SubscriptionConfig {
+    pub max_buffer: u64,
+    pub repo_backfill_limit_ms: u64,
+}
+
 #[derive(Debug, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 pub struct S3Config {
