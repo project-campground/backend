@@ -303,3 +303,4 @@ pub mod request_email_confirmation;
 pub mod request_password_reset;
 pub mod request_email_update;
 pub mod confirm_email;
+pub mod create_app_password;
