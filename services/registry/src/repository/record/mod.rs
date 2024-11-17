@@ -93,7 +93,7 @@ impl RecordReader {
         Ok(res)
     }
 
-    pub fn list_collections(&mut self) -> Result<Vec<String>> {
+    pub async fn list_collections(&mut self) -> Result<Vec<String>> {
         use crate::schema::registry::record::dsl::*;
         let conn = &mut establish_connection()?;
 
@@ -107,7 +107,7 @@ impl RecordReader {
         Ok(collections)
     }
 
-    pub fn list_records_for_collection(
+    pub async fn list_records_for_collection(
         &mut self,
         collection: String,
         limit: i64,
