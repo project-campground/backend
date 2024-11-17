@@ -4,7 +4,7 @@ use crate::api::com::atproto::server::safe_resolve_did_doc;
 use crate::auth_verifier::UserDidAuthOptional;
 use crate::config::SECRET_CONFIG;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
-use rsky_pds::repo::aws::s3::S3BlobStore;
+use crate::repository::aws::s3::S3BlobStore;
 use crate::repository::ActorStore;
 use crate::SharedIdResolver;
 use crate::SharedSequencer;

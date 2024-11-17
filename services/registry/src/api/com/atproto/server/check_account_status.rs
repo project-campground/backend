@@ -3,7 +3,7 @@ use crate::api::com::atproto::server::is_valid_did_doc_for_service;
 use crate::auth_verifier::AccessFull;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use crate::repository::ActorStore;
-use rsky_pds::repo::aws::s3::S3BlobStore;
+use crate::repository::aws::s3::S3BlobStore;
 use anyhow::Result;
 use aws_config::SdkConfig;
 use futures::try_join;

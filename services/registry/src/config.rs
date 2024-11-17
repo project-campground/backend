@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports)]
 use std::sync::LazyLock;
 
+use aws_config::SdkConfig;
 use rocket::{figment::Figment, serde::Deserialize};
 use lazy_static::lazy_static;
 use rocket::Config;
@@ -16,6 +17,7 @@ pub static CORE_CONFIG: LazyLock<CoreConfig> = LazyLock::new(|| CONFIG.extract_i
 pub static SECRET_CONFIG: LazyLock<SecretConfig> = LazyLock::new(|| CONFIG.extract_inner("secret").expect("Failed to load secret configuration"));
 pub static EMAIL_CONFIG: LazyLock<MailConfig> = LazyLock::new(|| CONFIG.extract_inner("email").expect("Failed to load email configuration"));
 pub static MODERATION_EMAIL_CONFIG: LazyLock<MailConfig> = LazyLock::new(|| CONFIG.extract_inner("mod_email").expect("Failed to load moderation email configuration"));
+pub static S3_CONFIG: LazyLock<S3Config> = LazyLock::new(|| CONFIG.extract_inner("s3").expect("Failed to load AWS configuration"));
 
 pub static SERVICE_CONFIG: LazyLock<ServiceConfig> = LazyLock::new(|| CONFIG.extract_inner("service").expect("Failed to load service configuration"));
 pub static MOD_SERVICE_CONFIG: LazyLock<Option<ServiceConfig>> = LazyLock::new(|| CONFIG.extract_inner("mod_service").unwrap_or(None));
@@ -75,6 +77,33 @@ impl CoreConfig {
 
     pub fn dev_mode(&self) -> bool {
         self.dev_mode.unwrap_or(cfg!(debug_assertions))
+    }
+}
+#[derive(Debug, Deserialize, Clone)]
+#[serde(crate = "rocket::serde")]
+pub struct S3Config {
+    pub endpoint: String,
+    pub access_key: String,
+    pub secret_key: String,
+    pub bucket: String,
+    pub region: String,
+}
+
+impl S3Config {
+    pub async fn to_sdk_config(&self) -> SdkConfig {
+        aws_config::ConfigLoader::default()
+            .endpoint_url(self.endpoint.to_owned())
+            .credentials_provider(aws_sdk_s3::config::Credentials::new(
+                self.access_key.to_owned(),
+                self.secret_key.to_owned(),
+                None,
+                None,
+                "custom",
+            ))
+            .region(aws_sdk_s3::config::Region::new(self.region.to_owned()))
+            .behavior_version(aws_sdk_s3::config::BehaviorVersion::latest())
+            .load()
+            .await
     }
 }
 

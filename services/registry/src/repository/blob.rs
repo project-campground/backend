@@ -3,7 +3,7 @@ use crate::database::establish_connection;
 use crate::database::models;
 use rsky_pds::common::ipld::sha256_raw_to_cid;
 use rsky_pds::common::now;
-use rsky_pds::repo::aws::s3::S3BlobStore;
+use crate::repository::aws::s3::S3BlobStore;
 use rsky_pds::repo::blob_refs::BlobRef;
 use rsky_pds::repo::error::BlobError;
 use rsky_pds::repo::types::{PreparedBlobRef, PreparedWrite};

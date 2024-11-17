@@ -6,7 +6,7 @@ use crate::sequencer;
 use crate::SharedSequencer;
 use crate::repository::ActorStore;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
-use rsky_pds::repo::aws::s3::S3BlobStore;
+use crate::repository::aws::s3::S3BlobStore;
 use anyhow::{bail, Result};
 use aws_config::SdkConfig;
 use rocket::http::Status;

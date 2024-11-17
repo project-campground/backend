@@ -41,6 +41,7 @@
 
 use std::env;
 use api::bsky_api_forwarder;
+use config::S3_CONFIG;
 use rocket::shield::{NoSniff, Shield};
 use rsky_identity::types::{DidCache, IdentityResolverOpts};
 use rsky_identity::IdResolver;
@@ -190,10 +191,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
     let mut background_sequencer = sequencer.sequencer.write().await.clone();
     tokio::spawn(async move { background_sequencer.start().await });
 
-    let aws_sdk_config = aws_config::from_env()
-        .endpoint_url(CORE_CONFIG.aws_endpoint.clone().unwrap_or("localhost".to_owned()))
-        .load()
-        .await;
+    let aws_sdk_config = S3_CONFIG.to_sdk_config().await;
 
     let id_resolver = SharedIdResolver {
         id_resolver: RwLock::new(IdResolver::new(IdentityResolverOpts {
