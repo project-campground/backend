@@ -31,6 +31,17 @@ cache_max_ttl = 15
 service_handle_domains = ["example.com"]
 enable_did_doc_with_session = false
 
+[default.subscription]
+max_buffer = 100
+repo_backfill_limit_ms = 6000
+
+[default.s3]
+endpoint = "https://s3.example.com"
+access_key = ""
+secret_key = ""
+bucket = "example"
+region = "auto"
+
 [default.email]
 provider = "SMTP"
 host = "smtp.example.com"
