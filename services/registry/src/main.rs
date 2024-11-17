@@ -231,6 +231,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
             api::com::atproto::server::request_email_update::request_email_update,
             api::com::atproto::server::confirm_email::confirm_email,
             api::com::atproto::server::list_app_passwords::list_app_passwords,
+            api::com::atproto::server::revoke_app_password::revoke_app_password,
             robots,
             health,
             bsky_api_forwarder,

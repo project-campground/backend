@@ -304,4 +304,5 @@ pub mod request_password_reset;
 pub mod request_email_update;
 pub mod confirm_email;
 pub mod create_app_password;
+pub mod revoke_app_password;
 pub mod list_app_passwords;
