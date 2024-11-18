@@ -147,10 +147,30 @@ async fn health() -> Result<
 }
 
 #[catch(default)]
-async fn default_catcher() -> Json<rsky_pds::models::ErrorMessageResponse> {
+async fn default_catcher(status: Status, _request: &Request<'_>) -> Json<rsky_pds::models::ErrorMessageResponse> {
     let internal_error = rsky_pds::models::ErrorMessageResponse {
-        code: Some(rsky_pds::models::ErrorCode::InternalServerError),
-        message: Some("Internal error.".to_string()),
+        code: Some(
+            match status.code {
+                400 => rsky_pds::models::ErrorCode::BadRequest,
+                401 => rsky_pds::models::ErrorCode::Unauthorized,
+                403 => rsky_pds::models::ErrorCode::Forbidden,
+                404 => rsky_pds::models::ErrorCode::NotFound,
+                409 => rsky_pds::models::ErrorCode::Conflict,
+                500 => rsky_pds::models::ErrorCode::InternalServerError,
+                503 => rsky_pds::models::ErrorCode::ServiceUnavailable,
+                _ => rsky_pds::models::ErrorCode::InternalServerError
+            }
+        ),
+        message: match status.code {
+            400 => Some(status.reason().unwrap_or("Bad request.").to_string()),
+            401 => Some(status.reason().unwrap_or("Unauthorized.").to_string()),
+            403 => Some(status.reason().unwrap_or("Forbidden.").to_string()),
+            404 => Some(status.reason().unwrap_or("Not found.").to_string()),
+            409 => Some(status.reason().unwrap_or("Conflict.").to_string()),
+            503 => Some(status.reason().unwrap_or("Service unavailable.").to_string()),
+            500 => Some("Internal error.".to_string()),
+            _ => Some("Internal error.".to_string())
+        },
     };
     Json(internal_error)
 }
