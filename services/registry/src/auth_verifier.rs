@@ -99,18 +99,18 @@ pub async fn access_check<'r>(
         Ok(access) => Outcome::Success(access),
         Err(error) => match error.downcast_ref() {
             Some(AuthError::AccountDeactivated(error)) => Outcome::Error((
-                Status::BadRequest,
+                Status::Unauthorized,
                 AuthError::AccountDeactivated(error.to_string()),
             )),
             Some(AuthError::AccountNotFound(error)) => Outcome::Error((
-                Status::BadRequest,
+                Status::Unauthorized,
                 AuthError::AccountNotFound(error.to_string()),
             )),
             Some(AuthError::AccountTakedown(error)) => Outcome::Error((
-                Status::BadRequest,
+                Status::Unauthorized,
                 AuthError::AccountTakedown(error.to_string()),
             )),
-            _ => Outcome::Error((Status::BadRequest, AuthError::BadJwt(error.to_string()))),
+            _ => Outcome::Error((Status::Unauthorized, AuthError::BadJwt(error.to_string()))),
         },
     }
 }
