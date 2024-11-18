@@ -3,6 +3,13 @@ use mailgun_rs::{EmailAddress, Mailgun, MailgunRegion, Message as MailgunMessage
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{Message as LettreMessage, SmtpTransport, Transport};
 use crate::config::{MODERATION_EMAIL_CONFIG, MailConfig};
+use askama::Template;
+
+#[derive(Template)]
+#[template(path = "admin_email.html")]
+pub struct AdminEmail<'a> {
+    pub content: &'a str,
+}
 
 pub struct HtmlMailOpts {
     pub to: String,
@@ -12,7 +19,7 @@ pub struct HtmlMailOpts {
 pub struct ModerationMailer {}
 
 impl ModerationMailer {
-    pub async fn send_template<T: askama::Template>(opts: HtmlMailOpts, template: T) -> Result<()> {
+    pub async fn send_template<T: Template>(opts: HtmlMailOpts, template: T) -> Result<()> {
         let HtmlMailOpts { to, subject } = opts;
 
         match &*MODERATION_EMAIL_CONFIG {

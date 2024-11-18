@@ -237,7 +237,7 @@ impl RecordReader {
         Ok(!!record_uri.is_some())
     }
 
-    pub fn get_record_takedown_status(&self, uri: String) -> Result<Option<StatusAttr>> {
+    pub async fn get_record_takedown_status(&self, uri: String) -> Result<Option<StatusAttr>> {
         use crate::schema::registry::record::dsl as RecordSchema;
         let conn = &mut establish_connection()?;
 
@@ -263,7 +263,7 @@ impl RecordReader {
         }
     }
 
-    pub fn get_current_record_cid(&self, uri: String) -> Result<Option<Cid>> {
+    pub async fn get_current_record_cid(&self, uri: String) -> Result<Option<Cid>> {
         use crate::schema::registry::record::dsl as RecordSchema;
         let conn = &mut establish_connection()?;
 
@@ -451,7 +451,7 @@ impl RecordReader {
         }
     }
 
-    pub fn update_record_takedown_status(
+    pub async fn update_record_takedown_status(
         &self,
         uri: &String, // @TODO: Use AtUri
         takedown: StatusAttr,
