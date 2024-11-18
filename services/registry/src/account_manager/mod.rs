@@ -10,7 +10,7 @@ use crate::account_manager::helpers::repo;
 use crate::config::{SECRET_CONFIG, SERVICE_CONFIG};
 use rsky_pds::auth_verifier::AuthScope;
 use rsky_pds::common;
-use rsky_pds::common::time::{from_micros_to_str, from_str_to_micros, HOUR};
+use rsky_pds::common::time::{from_millis_to_str, from_str_to_millis};
 use rsky_pds::common::RFC3339_VARIANT;
 use crate::database::models::EmailTokenPurpose;
 use anyhow::Result;
@@ -231,10 +231,11 @@ impl AccountManager {
 
             // Shorten the refresh token lifespan down from its
             // original expiration time to its revocation grace period.
-            let prev_expires_at = from_str_to_micros(&token.expires_at);
+            let prev_expires_at = from_str_to_millis(&token.expires_at)?;
 
+            const HOUR: i32 = 60 * 60 * 1000;
             const REFRESH_GRACE_MS: i32 = 2 * HOUR;
-            let grace_expires_at = dt.timestamp_micros() + REFRESH_GRACE_MS as i64;
+            let grace_expires_at = dt.timestamp_millis() + REFRESH_GRACE_MS as i64;
 
             let expires_at = if grace_expires_at < prev_expires_at {
                 grace_expires_at
@@ -242,7 +243,7 @@ impl AccountManager {
                 prev_expires_at
             };
 
-            if expires_at <= dt.timestamp_micros() {
+            if expires_at <= dt.timestamp_millis() {
                 return Ok(None);
             }
 
@@ -274,7 +275,7 @@ impl AccountManager {
             match try_join!(
                 auth::add_refresh_grace_period(RefreshGracePeriodOpts {
                     id: id.clone(),
-                    expires_at: from_micros_to_str(expires_at),
+                    expires_at: from_millis_to_str(expires_at),
                     next_id
                 }),
                 auth::store_refresh_token(refresh_payload, token.app_password_name)
