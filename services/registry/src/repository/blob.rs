@@ -23,6 +23,7 @@ use rsky_lexicon::com::atproto::admin::StatusAttr;
 use rsky_lexicon::com::atproto::repo::ListMissingBlobsRefRecordBlob;
 use sha2::{Digest, Sha256};
 
+#[derive(Debug, Clone)]
 pub struct BlobMetadata {
     pub temp_key: String,
     pub size: i64,
@@ -32,28 +33,33 @@ pub struct BlobMetadata {
     pub height: Option<i32>,
 }
 
+#[derive(Debug, Clone)]
 pub struct BlobReader {
     pub blobstore: S3BlobStore,
     pub did: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct ListMissingBlobsOpts {
     pub cursor: Option<String>,
     pub limit: u16,
 }
 
+#[derive(Debug, Clone)]
 pub struct ListBlobsOpts {
     pub since: Option<String>,
     pub cursor: Option<String>,
     pub limit: u16,
 }
 
+#[derive(Debug)]
 pub struct GetBlobOutput {
     pub size: i32,
     pub mime_type: Option<String>,
     pub stream: ByteStream,
 }
 
+#[derive(Debug, Clone)]
 pub struct GetBlobMetadataOutput {
     pub size: i32,
     pub mime_type: Option<String>,

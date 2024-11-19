@@ -76,6 +76,7 @@ pub fn get_backlinks(uri: &String, record: &RepoRecord) -> Result<Vec<models::Ba
     Ok(Vec::new())
 }
 
+#[derive(Debug, Clone)]
 pub struct RecordReader {
     pub did: String,
 }

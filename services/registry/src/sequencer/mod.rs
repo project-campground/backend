@@ -18,6 +18,7 @@ use std::cmp;
 use std::pin::Pin;
 use std::task::{Context, Poll, Waker};
 
+#[derive(Debug, Clone)]
 pub struct RequestSeqRangeOpts {
     pub earliest_seq: Option<i64>,
     pub latest_seq: Option<i64>,

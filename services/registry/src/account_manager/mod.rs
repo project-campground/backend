@@ -25,6 +25,7 @@ use secp256k1::{Keypair, Secp256k1, SecretKey};
 use std::time::SystemTime;
 
 /// Helps with readability when calling create_account()
+#[derive(Debug, Clone)]
 pub struct CreateAccountOpts {
     pub did: String,
     pub handle: String,
@@ -35,27 +36,31 @@ pub struct CreateAccountOpts {
     pub deactivated: Option<bool>,
 }
 
+#[derive(Debug, Clone)]
 pub struct ConfirmEmailOpts<'em> {
     pub did: &'em String,
     pub token: &'em String,
 }
 
+#[derive(Debug, Clone)]
 pub struct ResetPasswordOpts {
     pub password: String,
     pub token: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct UpdateAccountPasswordOpts {
     pub did: String,
     pub password: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct UpdateEmailOpts {
     pub did: String,
     pub email: String,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AccountManager {}
 
 impl AccountManager {

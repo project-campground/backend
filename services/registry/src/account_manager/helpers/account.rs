@@ -27,6 +27,7 @@ pub enum AccountHelperError {
     DieselError(String),
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct AvailabilityFlags {
     pub include_taken_down: Option<bool>,
     pub include_deactivated: Option<bool>,

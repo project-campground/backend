@@ -48,6 +48,7 @@ pub struct Repo {
     cid: Cid,
 }
 
+#[derive(Debug, Clone)]
 pub struct ActorStore {
     pub did: String,
     pub storage: RepoReader, // get ipld blocks from db

@@ -16,6 +16,7 @@ pub struct OutboxOpts {
     pub max_buffer_size: usize,
 }
 
+#[allow(dead_code)]
 pub struct Outbox {
     caught_up: Arc<Mutex<bool>>,
     pub last_seen: i64,

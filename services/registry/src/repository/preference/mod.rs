@@ -8,6 +8,7 @@ use anyhow::{bail, Result};
 use diesel::*;
 use rsky_lexicon::app::bsky::actor::RefPreferences;
 
+#[derive(Debug, Clone)]
 pub struct PreferenceReader {
     pub did: String,
 }
