@@ -1,6 +1,7 @@
-use rsky_pds::auth_verifier::{AccessOutput, AccessStandard};
 use rsky_pds::common::{get_service_endpoint, GetServiceEndpointOpts};
 use rsky_pds::repo::types::Ids;
+use rsky_pds::auth_verifier::AccessOutput;
+use crate::auth_verifier::AccessStandard;
 use crate::xrpc::types::{HandlerPipeThrough, InvalidRequestError, XRPCError};
 use crate::config::{ServiceConfig, BSKY_APP_VIEW_CONFIG, CORE_CONFIG, MOD_SERVICE_CONFIG, REPORT_SERVICE_CONFIG};
 use crate::{context, SharedIdResolver, APP_USER_AGENT};
