@@ -62,6 +62,8 @@ use rsky_pds::crawlers::Crawlers;
 use rsky_pds::SharedIdResolver;
 use crate::read_after_write::viewer::{LocalViewerCreator, LocalViewer, LocalViewerCreatorParams};
 use crate::sequencer::Sequencer;
+use atrium_api::client::AtpServiceClient;
+use atrium_xrpc_client::reqwest::{ReqwestClient, ReqwestClientBuilder};
 use crate::config::{IDENTITY_CONFIG, CORE_CONFIG};
 use event_emitter_rs::EventEmitter;
 use lazy_static::lazy_static;
@@ -94,6 +96,11 @@ pub struct SharedSequencer {
 #[allow(missing_debug_implementations)]
 pub struct SharedLocalViewer {
     pub local_viewer: RwLock<LocalViewerCreator>,
+}
+
+#[allow(missing_debug_implementations)]
+pub struct SharedATPAgent {
+    pub app_view_agent: Option<RwLock<AtpServiceClient<ReqwestClient>>>,
 }
 
 
@@ -231,6 +238,25 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         })),
     };
 
+    let app_view_agent = match &*BSKY_APP_VIEW_CONFIG {
+        None => SharedATPAgent {
+            app_view_agent: None,
+        },
+        Some(ref bsky_app_view) => {
+            let client = ReqwestClientBuilder::new(bsky_app_view.url.clone())
+                .client(
+                    reqwest::ClientBuilder::new()
+                        .user_agent(APP_USER_AGENT)
+                        .timeout(std::time::Duration::from_millis(1000))
+                        .build()
+                        .unwrap(),
+                )
+                .build();
+            SharedATPAgent {
+                app_view_agent: Some(RwLock::new(AtpServiceClient::new(client))),
+            }
+        }
+    };
     let local_viewer = SharedLocalViewer {
         local_viewer: RwLock::new(LocalViewer::creator(LocalViewerCreatorParams {
             account_manager: AccountManager {},
@@ -323,7 +349,8 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         .manage(sequencer)
         .manage(local_viewer)
         .manage(aws_sdk_config)
-        .manage(id_resolver);
+        .manage(id_resolver)
+        .manage(app_view_agent);
 
     Ok(rocket)
 }
