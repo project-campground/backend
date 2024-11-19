@@ -1,10 +1,13 @@
 #![allow(dead_code, unused_imports)]
 use std::sync::LazyLock;
-
+use anyhow::Result;
 use aws_config::SdkConfig;
+use reqwest::header::HeaderMap;
 use rocket::{figment::Figment, serde::Deserialize};
 use lazy_static::lazy_static;
 use rocket::Config;
+use anyhow::bail;
+use crate::context;
 
 lazy_static! {
     static ref CONFIG: Figment = Config::figment();
@@ -160,4 +163,13 @@ pub struct IdentityConfig {
 pub struct DatabaseConfig {
     pub url: String,
     pub pool_size: u32,
+}
+
+pub async fn appview_auth_headers(did: &String, lxm: &String) -> Result<HeaderMap> {
+    match &*BSKY_APP_VIEW_CONFIG {
+        None => bail!("No appview configured."),
+        Some(bsky_app_view) => {
+            context::service_auth_headers(did, &bsky_app_view.did, lxm).await
+        }
+    }
 }
