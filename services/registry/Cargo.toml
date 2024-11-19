@@ -16,10 +16,12 @@ lexicon_cid = { package = "cid", version = "0.10.1", features = ["serde-codec"] 
 aws-config = { version = "1.1.8",features = ["behavior-version-latest"] }
 diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
 serde_ipld_dagcbor = {  version = "0.6.1" ,features = ["codec"]}
+atrium-ipld = {package = "ipld-core", version = "0.4.1"}
 indexmap = { version = "1.9.3",features = ["serde-1"] }
 reqwest = { version = "0.12.5", features = ["json"] }
 tokio = { version = "1.28.2",features = ["full"] }
 ws = { package = "rocket_ws", version = "0.1.1" }
+atrium-xrpc-client = "0.5.8"
 event-emitter-rs = "0.1.4"
 unsigned-varint = "0.8.0"
 data-encoding = "2.5.0"
@@ -31,6 +33,7 @@ mailgun-rs = "0.1.10"
 lazy_static = "1.5.0"
 serde_cbor = "0.11.2"
 aws-sdk-s3 = "1.29.0"
+atrium-api = "0.24.6"
 base64-url = "2.0.2"
 thiserror = "1.0.61"
 multibase = "0.9.1"
