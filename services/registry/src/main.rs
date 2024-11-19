@@ -310,6 +310,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
             api::app::bsky::actor::get_profile::get_profile,
             api::app::bsky::actor::get_profiles::get_profiles,
             api::app::bsky::actor::put_preferences::put_preferences,
+            api::app::bsky::notification::register_push::register_push,
             robots,
             health,
             bsky_api_forwarder,
