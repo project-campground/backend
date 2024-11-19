@@ -40,8 +40,9 @@
 )]
 
 use std::env;
+use account_manager::AccountManager;
 use api::bsky_api_forwarder;
-use config::S3_CONFIG;
+use config::{BSKY_APP_VIEW_CONFIG, S3_CONFIG};
 use rocket::shield::{NoSniff, Shield};
 use rsky_identity::types::{DidCache, IdentityResolverOpts};
 use rsky_identity::IdResolver;
@@ -59,6 +60,7 @@ use reqwest as _;
 use anyhow::Result;
 use rsky_pds::crawlers::Crawlers;
 use rsky_pds::SharedIdResolver;
+use crate::read_after_write::viewer::{LocalViewerCreator, LocalViewer, LocalViewerCreatorParams};
 use crate::sequencer::Sequencer;
 use crate::config::{IDENTITY_CONFIG, CORE_CONFIG};
 use event_emitter_rs::EventEmitter;
@@ -66,6 +68,7 @@ use lazy_static::lazy_static;
 
 #[macro_use] extern crate rocket;
 
+mod read_after_write;
 mod account_manager;
 mod auth_verifier;
 mod pipethrough;
@@ -87,6 +90,12 @@ pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CAR
 pub struct SharedSequencer {
     pub sequencer: RwLock<Sequencer>,
 }
+
+#[allow(missing_debug_implementations)]
+pub struct SharedLocalViewer {
+    pub local_viewer: RwLock<LocalViewerCreator>,
+}
+
 
 // Use lazy_static! because the size of EventEmitter is not known at compile time
 lazy_static! {
@@ -222,6 +231,25 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         })),
     };
 
+    let local_viewer = SharedLocalViewer {
+        local_viewer: RwLock::new(LocalViewer::creator(LocalViewerCreatorParams {
+            account_manager: AccountManager {},
+            pds_hostname: CORE_CONFIG.hostname().clone(),
+            appview_agent: match &*BSKY_APP_VIEW_CONFIG {
+                None => None,
+                Some(ref bsky_app_view) => Some(bsky_app_view.url.clone()),
+            },
+            appview_did: match &*BSKY_APP_VIEW_CONFIG {
+                None => None,
+                Some(ref bsky_app_view) => Some(bsky_app_view.did.clone()),
+            },
+            appview_cdn_url_pattern: match &*BSKY_APP_VIEW_CONFIG {
+                None => None,
+                Some(ref bsky_app_view) => bsky_app_view.cdn_url_pattern.clone(),
+            },
+        })),
+    };
+
     let shield = Shield::default().enable(NoSniff::Enable);
 
     let rocket = rocket::build()
@@ -292,6 +320,7 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         .attach(shield)
         .attach(CORS)
         .manage(sequencer)
+        .manage(local_viewer)
         .manage(aws_sdk_config)
         .manage(id_resolver);
 
