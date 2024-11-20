@@ -1,6 +1,6 @@
 use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
-use crate::api::com::atproto::server::get_keys_from_private_key_str;
+use crate::api::com::atproto::server::{get_keys_from_private_key_str, normalize_and_validate_handle};
 use crate::auth_verifier::AdminToken;
 use crate::SharedSequencer;
 use crate::config::{IDENTITY_CONFIG, SECRET_CONFIG};
@@ -18,9 +18,8 @@ async fn inner_update_account_handle(
     sequencer: &State<SharedSequencer>,
 ) -> Result<()> {
     let UpdateAccountHandleInput { did, handle } = body.into_inner();
-    // @TODO: Implement normalizeAndValidateHandle()
     let account = AccountManager::get_account(
-        &handle,
+        &normalize_and_validate_handle(&handle)?,
         Some(AvailabilityFlags {
             include_deactivated: Some(true),
             include_taken_down: Some(true),

@@ -1,5 +1,6 @@
 use crate::account_manager::helpers::account::ActorAccount;
 use crate::account_manager::AccountManager;
+use crate::api::com::atproto::server::normalize_and_validate_handle;
 use crate::{SharedIdResolver, APP_USER_AGENT};
 use crate::config::{BSKY_APP_VIEW_CONFIG, IDENTITY_CONFIG};
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
@@ -43,7 +44,7 @@ async fn inner_resolve_handle(
     handle: String,
     id_resolver: &State<SharedIdResolver>,
 ) -> Result<ResolveHandleOutput> {
-    // @TODO: Implement normalizeAndEnsureValidHandle()
+    let handle = normalize_and_validate_handle(&handle)?;
     let mut did: Option<String> = None;
     let user: Option<ActorAccount> = AccountManager::get_account(&handle, None).await?;
 

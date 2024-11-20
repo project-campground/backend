@@ -93,6 +93,18 @@ pub async fn safe_resolve_did_doc(
     }
 }
 
+pub fn normalize_and_validate_handle(handle: &str) -> Result<String> {
+    let normalized_handle = normalize_handle(handle);
+    if !validate_handle(&normalized_handle) {
+        bail!("Invalid handle");
+    }
+    Ok(normalized_handle)
+}
+
+pub fn normalize_handle(handle: &str) -> String {
+    handle.to_lowercase()
+}
+
 pub fn validate_handle(handle: &str) -> bool {
     let suffix: String = CORE_CONFIG.hostname();
     let s_slice: &str = &suffix[..]; // take a full slice of the string

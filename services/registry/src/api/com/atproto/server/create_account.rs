@@ -165,6 +165,7 @@ pub async fn validate_inputs_for_local_pds(
     match email {
         None => bail!("Email is required"),
         Some(email) => {
+            let handle = super::normalize_handle(&handle);
             let e_slice: &str = &email[..]; // take a full slice of the string
             if !EmailAddress::is_valid(e_slice) {
                 bail!("Invalid email");
@@ -175,7 +176,6 @@ pub async fn validate_inputs_for_local_pds(
             if did.is_some() {
                 bail!("Not yet allowing people to bring their own DID");
             };
-            // @TODO: Normalize handle as well
             if !super::validate_handle(&handle) {
                 bail!("Invalid handle");
             };
