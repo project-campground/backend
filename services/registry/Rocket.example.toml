@@ -8,6 +8,7 @@ pds_rotation_key = ""
 repo_signing_key = ""
 
 [default.core]
+# hostname = "example.com
 admin_pass = "example"
 crawlers = []
 
