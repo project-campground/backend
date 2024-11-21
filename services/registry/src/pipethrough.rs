@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::common::{get_service_endpoint, GetServiceEndpointOpts};
 use rsky_pds::repo::types::Ids;
 use rsky_pds::auth_verifier::AccessOutput;

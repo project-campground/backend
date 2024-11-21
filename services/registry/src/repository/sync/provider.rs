@@ -1,4 +1,9 @@
 #![allow(dead_code, unused_imports)]
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::car::read_car_bytes;
 use rsky_pds::repo::block_map::BlockMap;
 use rsky_pds::repo::cid_set::CidSet;

@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::common::sign::atproto_sign;
 use tldextract::{TldExtractor, TldOption};
 use crate::database::models::*;

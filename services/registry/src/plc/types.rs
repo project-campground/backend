@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to fix operation CIDs improperly serializing
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use std::collections::BTreeMap;
 use anyhow::Result;
 use rsky_pds::common::ipld::cid_for_cbor;

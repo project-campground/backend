@@ -1,4 +1,9 @@
 #![allow(dead_code, unused_imports)]
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB and fix refresh session not working
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use crate::account_manager::helpers::account::{
     AccountStatus, ActorAccount, AvailabilityFlags, GetAccountAdminStatusOutput,
 };

@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own config
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::account_manager::helpers::auth::ServiceJwtParams;
 use rsky_pds::xrpc_server::auth::create_service_auth_headers;
 use crate::config::SECRET_CONFIG;

@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to fix operation CIDs improperly serializing
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use crate::plc::types::{CompatibleOp, CompatibleOpOrTombstone, Operation, Service, Tombstone};
 use rsky_pds::common::ipld::cid_for_cbor;
 use rsky_pds::common::sign::atproto_sign;

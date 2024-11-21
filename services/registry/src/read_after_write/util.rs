@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::common::time::from_str_to_utc;
 use crate::pipethrough::parse_res;
 use crate::read_after_write::types::LocalRecords;

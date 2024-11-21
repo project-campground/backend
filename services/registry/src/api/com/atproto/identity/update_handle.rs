@@ -1,6 +1,11 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
-use crate::api::com::atproto::server::{encode_did_key, get_keys_from_private_key_str, normalize_and_validate_handle};
+use crate::api::com::atproto::server::{get_keys_from_private_key_str, normalize_and_validate_handle};
 use crate::auth_verifier::AccessStandardCheckTakedown;
 use crate::config::{IDENTITY_CONFIG, SECRET_CONFIG};
 use crate::SharedSequencer;

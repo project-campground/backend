@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use libipld::Cid;
 use rsky_lexicon::app::bsky::actor::Profile;
 use rsky_lexicon::app::bsky::feed::Post;

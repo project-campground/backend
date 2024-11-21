@@ -1,3 +1,7 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::SharedIdResolver;
 use anyhow::{bail, Result};
 use rocket::State;

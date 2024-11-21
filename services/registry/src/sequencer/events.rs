@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use crate::account_manager::helpers::account::AccountStatus;
 use crate::database::models;
 use rsky_pds::car::read_car_bytes;

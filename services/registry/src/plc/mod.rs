@@ -1,4 +1,9 @@
 #![allow(dead_code, unused_imports)]
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to fix operation CIDs improperly serializing
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::common::encode_uri_component;
 use crate::plc::operations::update_handle_op;
 use crate::plc::types::{CompatibleOp, OpOrTombstone};

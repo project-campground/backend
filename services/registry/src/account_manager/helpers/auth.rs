@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::auth_verifier::AuthScope;
 use rsky_pds::common::time::{from_micros_to_utc, MINUTE};
 use rsky_pds::common::{get_random_str, json_to_b64url, RFC3339_VARIANT};

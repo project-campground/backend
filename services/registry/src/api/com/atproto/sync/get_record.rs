@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use crate::api::com::atproto::repo::assert_repo_availability;
 use crate::auth_verifier::OptionalAccessOrAdminToken;
 use crate::repository::aws::s3::S3BlobStore;

@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own config and support SMTP
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 pub mod moderation;
 
 use anyhow::Result;

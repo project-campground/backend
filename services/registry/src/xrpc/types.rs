@@ -1,3 +1,7 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use rsky_pds::auth_verifier::AuthError;
 use reqwest::header::HeaderMap;
 use std::collections::BTreeMap;

@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use crate::account_manager::AccountManager;
 use crate::auth_verifier::AccessStandard;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};

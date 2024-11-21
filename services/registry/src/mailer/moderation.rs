@@ -1,3 +1,8 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own config and support SMTP
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
 use anyhow::Result;
 use mailgun_rs::{EmailAddress, Mailgun, MailgunRegion, Message as MailgunMessage};
 use lettre::transport::smtp::authentication::Credentials;
