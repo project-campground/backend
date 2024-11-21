@@ -1,4 +1,5 @@
 use crate::account_manager::AccountManager;
+use crate::config::SECRET_CONFIG;
 use crate::database::establish_connection;
 use crate::database::models;
 use crate::read_after_write::types::{LocalRecords, RecordDescript};
@@ -45,7 +46,6 @@ use rsky_lexicon::app::bsky::feed::{FeedViewPost, GeneratorView, Post, PostView}
 use rsky_lexicon::app::bsky::graph::ListView;
 use rsky_syntax::aturi::AtUri;
 use secp256k1::SecretKey;
-use std::env;
 use std::str::FromStr;
 
 pub type Agent = AtpServiceClient<ReqwestClient>;
@@ -141,7 +141,7 @@ impl LocalViewer {
         match &self.appview_did {
             None => bail!("Could not find bsky appview did"),
             Some(appview_did) => {
-                let private_key = env::var("PDS_REPO_SIGNING_KEY_K256_PRIVATE_KEY_HEX").unwrap();
+                let private_key = SECRET_CONFIG.repo_signing_key.clone();
                 let keypair =
                     SecretKey::from_slice(&hex::decode(private_key.as_bytes()).unwrap()).unwrap();
                 create_service_auth_headers(ServiceJwtParams {

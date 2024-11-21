@@ -328,7 +328,7 @@ pub async fn assert_valid_doc_contents(contents: AssertionContents) -> Result<()
         pds_endpoint,
         rotation_keys,
     } = contents;
-    let private_key = SECRET_CONFIG.pds_private_key.clone();
+    let private_key = SECRET_CONFIG.pds_rotation_key.clone();
     let (_, plc_rotation_key) = get_keys_from_private_key_str(private_key)?;
     let plc_rotation_key = encode_did_key(&plc_rotation_key);
 
