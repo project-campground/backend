@@ -4,7 +4,7 @@ use crate::database::models::*;
 use serde::{Serialize, Deserialize};
 use crate::config::{CORE_CONFIG, IDENTITY_CONFIG, SECRET_CONFIG};
 use crate::{SharedIdResolver, APP_USER_AGENT};
-use rsky_pds::plc;
+use crate::plc;
 use anyhow::{bail, Result};
 use data_encoding::BASE32;
 use diesel::prelude::*;

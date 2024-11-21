@@ -5,7 +5,7 @@ use crate::auth_verifier::AdminToken;
 use crate::SharedSequencer;
 use crate::config::{IDENTITY_CONFIG, SECRET_CONFIG};
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
-use rsky_pds::plc;
+use crate::plc;
 use anyhow::{bail, Result};
 use rocket::http::Status;
 use rocket::response::status;

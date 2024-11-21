@@ -83,6 +83,7 @@ mod mailer;
 mod config;
 mod schema;
 mod xrpc;
+mod plc;
 mod api;
 
 pub const INVALID_HANDLE: &'static str = "handle.invalid";
