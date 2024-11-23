@@ -73,6 +73,14 @@ pub async fn bsky_api_forwarder(
     }
 }
 
+pub fn routes() -> Vec<rocket::Route> {
+    let mut routes = Vec::new();
+    routes.append(&mut app::routes());
+    routes.append(&mut chat::routes());
+    routes.append(&mut com::routes());
+    routes
+}
+
 pub mod app;
 pub mod chat;
 pub mod com;

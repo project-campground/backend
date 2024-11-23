@@ -287,6 +287,34 @@ pub async fn assert_valid_doc_contents(contents: AssertionContents) -> Result<()
     Ok(())
 }
 
+pub fn routes() -> Vec<rocket::Route> {
+    routes![
+        create_account::create_account,
+        deactivate_account::deactivate_account,
+        activate_account::activate_account,
+        delete_account::delete_account,
+        create_session::create_session,
+        delete_session::delete_session,
+        check_account_status::check_account_status,
+        get_session::get_session,
+        refresh_session::refresh_session,
+        get_service_auth::get_service_auth,
+        describe_server::describe_server,
+        reset_password::reset_password,
+        update_email::update_email,
+        reserve_signing_key::reserve_signing_key,
+        get_account_invite_codes::get_account_invite_codes,
+        request_account_delete::request_account_delete,
+        request_email_confirmation::request_email_confirmation,
+        request_password_reset::request_password_reset,
+        request_email_update::request_email_update,
+        confirm_email::confirm_email,
+        create_app_password::create_app_password,
+        revoke_app_password::revoke_app_password,
+        list_app_passwords::list_app_passwords
+    ]
+}
+
 pub mod create_account;
 pub mod deactivate_account;
 pub mod activate_account;

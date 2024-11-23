@@ -36,6 +36,21 @@ pub async fn assert_repo_availability(
     }
 }
 
+pub fn routes() -> Vec<rocket::Route> {
+    routes![
+        apply_writes::apply_writes,
+        create_record::create_record,
+        delete_record::delete_record,
+        describe_repo::describe_repo,
+        get_record::get_record,
+        import_repo::import_repo,
+        list_missing_blobs::list_missing_blobs,
+        list_records::list_records,
+        put_record::put_record,
+        upload_blob::upload_blob,
+    ]
+}
+
 pub mod apply_writes;
 pub mod create_record;
 pub mod delete_record;

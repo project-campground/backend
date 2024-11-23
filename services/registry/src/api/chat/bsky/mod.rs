@@ -455,3 +455,22 @@ pub async fn update_read(
         }
     }
 }
+
+pub fn routes() -> Vec<rocket::Route> {
+    routes![
+        delete_account,
+        export_account_data,
+        delete_message_for_self,
+        get_convo,
+        get_convo_for_members,
+        get_log,
+        get_messages,
+        leave_convo,
+        list_convos,
+        mute_convo,
+        send_message,
+        send_message_batch,
+        unmute_convo,
+        update_read
+    ]
+}
