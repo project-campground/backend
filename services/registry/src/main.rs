@@ -82,6 +82,7 @@ mod context;
 mod mailer;
 mod config;
 mod schema;
+mod handle;
 mod xrpc;
 mod plc;
 mod api;

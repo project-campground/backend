@@ -5,9 +5,12 @@
  */
 use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
-use crate::api::com::atproto::server::{get_keys_from_private_key_str, normalize_and_validate_handle};
+use crate::api::com::atproto::server::get_keys_from_private_key_str;
 use crate::auth_verifier::AccessStandardCheckTakedown;
 use crate::config::{IDENTITY_CONFIG, SECRET_CONFIG};
+use crate::handle::explicit_slurs::has_explicit_slur;
+use crate::handle::normalize_and_validate_handle;
+use crate::handle::reserved::is_handle_reserved;
 use crate::SharedSequencer;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use crate::plc;
@@ -27,6 +30,14 @@ async fn inner_update_handle(
     let requester = auth.access.credentials.unwrap().did.unwrap();
 
     let handle = normalize_and_validate_handle(&handle)?;
+
+    if has_explicit_slur(&handle) {
+        bail!("Inappropriate language in handle");
+    }
+    if is_handle_reserved(&handle) {
+        bail!("Reserved handle");
+    }
+
     let account = AccountManager::get_account(
         &handle,
         Some(AvailabilityFlags {

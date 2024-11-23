@@ -5,7 +5,7 @@
  */
 use crate::account_manager::helpers::account::ActorAccount;
 use crate::account_manager::AccountManager;
-use crate::api::com::atproto::server::normalize_and_ensure_valid_handle;
+use crate::handle::normalize_and_ensure_valid_handle;
 use crate::{SharedIdResolver, APP_USER_AGENT};
 use crate::config::{BSKY_APP_VIEW_CONFIG, IDENTITY_CONFIG};
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};

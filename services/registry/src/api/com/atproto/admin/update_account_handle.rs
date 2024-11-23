@@ -5,8 +5,9 @@
  */
 use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
-use crate::api::com::atproto::server::{get_keys_from_private_key_str, normalize_and_validate_handle};
+use crate::api::com::atproto::server::get_keys_from_private_key_str;
 use crate::auth_verifier::AdminToken;
+use crate::handle::normalize_and_validate_handle;
 use crate::SharedSequencer;
 use crate::config::{IDENTITY_CONFIG, SECRET_CONFIG};
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};

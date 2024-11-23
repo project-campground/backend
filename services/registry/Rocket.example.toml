@@ -31,6 +31,9 @@ cache_state_ttl = 15
 cache_max_ttl = 15
 service_handle_domains = ["example.com"]
 enable_did_doc_with_session = false
+# reserved_handles_path = "path/to/reserved.txt"
+use_default_reserved_handles = true # Set to false if you don't want to include the default reserved handles list
+filter_explicit_handles = true
 
 [default.subscription]
 max_buffer = 100

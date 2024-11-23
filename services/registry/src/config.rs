@@ -156,6 +156,9 @@ pub struct IdentityConfig {
     pub service_handle_domains: Vec<String>,
     pub handle_backup_name_servers: Option<Vec<String>>,
     pub enable_did_doc_with_session: bool,
+    pub reserved_handles_path: Option<String>,
+    pub use_default_reserved_handles: Option<bool>,
+    pub filter_explicit_handles: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Clone)]

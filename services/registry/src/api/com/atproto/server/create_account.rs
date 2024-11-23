@@ -8,6 +8,9 @@ use crate::account_manager::{AccountManager, CreateAccountOpts};
 use crate::api::com::atproto::server::safe_resolve_did_doc;
 use crate::auth_verifier::UserDidAuthOptional;
 use crate::config::SECRET_CONFIG;
+use crate::handle::explicit_slurs::has_explicit_slur;
+use crate::handle::normalize_handle;
+use crate::handle::reserved::is_handle_reserved;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use crate::repository::aws::s3::S3BlobStore;
 use crate::repository::ActorStore;
@@ -170,7 +173,7 @@ pub async fn validate_inputs_for_local_pds(
     match email {
         None => bail!("Email is required"),
         Some(email) => {
-            let handle = super::normalize_handle(&handle);
+            let handle = normalize_handle(&handle);
             let e_slice: &str = &email[..]; // take a full slice of the string
             if !EmailAddress::is_valid(e_slice) {
                 bail!("Invalid email");
@@ -184,6 +187,12 @@ pub async fn validate_inputs_for_local_pds(
             if !super::validate_handle(&handle) {
                 bail!("Invalid handle");
             };
+            if has_explicit_slur(&handle) {
+                bail!("Inappropriate language in handle");
+            }
+            if is_handle_reserved(&handle) {
+                bail!("Reserved handle");
+            }
             let handle_accnt = AccountManager::get_account(&handle, None).await?;
             let email_accnt = AccountManager::get_account_by_email(&email, None).await?;
             if handle_accnt.is_some() {
