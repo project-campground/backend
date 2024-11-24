@@ -1,0 +1,127 @@
+{
+  "lexicon": 1,
+  "id": "gg.campground.actor.defs",
+  "defs": {
+    "profileStatus": {
+        "type": "string",
+        "enum": ["online", "donotdisturb", "idle", "offline"],
+        "default": "offline"
+    },
+    "profileViewBasic": {
+      "type": "object",
+      "required": ["did", "handle"],
+      "properties": {
+        "did": { "type": "string", "format": "did" },
+        "handle": { "type": "string", "format": "handle" },
+        "displayName": {
+          "type": "string",
+          "maxGraphemes": 64,
+          "maxLength": 640
+        },
+        "status": { "type": "ref", "ref": "#profileStatus" },
+        "activity": { "type": "ref", "ref": "gg.campground.actor.profileActivity" },
+        "avatar": { "type": "string", "format": "uri" },
+        "viewer": { "type": "ref", "ref": "#viewerState" },
+        "labels": {
+          "type": "array",
+          "items": { "type": "ref", "ref": "com.atproto.label.defs#label" }
+        },
+        "createdAt": { "type": "string", "format": "datetime" }
+      }
+    },
+    "profileView": {
+      "type": "object",
+      "required": ["did", "handle"],
+      "properties": {
+        "did": { "type": "string", "format": "did" },
+        "handle": { "type": "string", "format": "handle" },
+        "displayName": {
+          "type": "string",
+          "maxGraphemes": 64,
+          "maxLength": 640
+        },
+        "status": { "type": "ref", "ref": "#profileStatus" },
+        "activities": {
+          "type": "array",
+          "items": { "type": "ref", "ref": "gg.campground.actor.profileActivity" }
+        },
+        "description": {
+          "type": "string",
+          "maxGraphemes": 256,
+          "maxLength": 2560
+        },
+        "avatar": { "type": "string", "format": "uri" },
+        "indexedAt": { "type": "string", "format": "datetime" },
+        "createdAt": { "type": "string", "format": "datetime" },
+        "viewer": { "type": "ref", "ref": "#viewerState" },
+        "labels": {
+          "type": "array",
+          "items": { "type": "ref", "ref": "com.atproto.label.defs#label" }
+        }
+      }
+    },
+    "profileViewDetailed": {
+      "type": "object",
+      "required": ["did", "handle"],
+      "properties": {
+        "did": { "type": "string", "format": "did" },
+        "handle": { "type": "string", "format": "handle" },
+        "displayName": {
+          "type": "string",
+          "maxGraphemes": 64,
+          "maxLength": 640
+        },
+        "status": { "type": "ref", "ref": "#profileStatus" },
+        "activities": {
+          "type": "array",
+          "items": { "type": "ref", "ref": "gg.campground.actor.profileActivity" }
+        },
+        "tagline": {
+          "type": "string",
+          "maxGraphemes": 64,
+          "maxLength": 640
+        },
+        "description": {
+          "type": "string",
+          "maxGraphemes": 256,
+          "maxLength": 2560
+        },
+        "location": {
+          "type": "string",
+          "maxGraphemes": 64,
+          "maxLength": 640
+        },
+        "socialConnections": {
+          "type": "array",
+          "items": { "type": "ref", "ref": "gg.campground.actor.socialConnection" }
+        },
+        "avatar": { "type": "string", "format": "uri" },
+        "banner": { "type": "string", "format": "uri" },
+        "indexedAt": { "type": "string", "format": "datetime" },
+        "createdAt": { "type": "string", "format": "datetime" },
+        "viewer": { "type": "ref", "ref": "#viewerState" },
+        "labels": {
+          "type": "array",
+          "items": { "type": "ref", "ref": "com.atproto.label.defs#label" }
+        }
+      }
+    },
+    "viewerState": {
+      "type": "object",
+      "description": "Metadata about the requesting account's relationship with the subject account. Only has meaningful content for authed requests.",
+      "properties": {
+        "muted": { "type": "boolean" },
+        "mutedByList": {
+          "type": "ref",
+          "ref": "app.bsky.graph.defs#listViewBasic"
+        },
+        "blockedBy": { "type": "boolean" },
+        "blocking": { "type": "string", "format": "at-uri" },
+        "blockingByList": {
+          "type": "ref",
+          "ref": "app.bsky.graph.defs#listViewBasic"
+        }
+      }
+    }
+  }
+}
