@@ -2,7 +2,7 @@
     "lexicon": 1,
     "id": "gg.campground.socials.defs",
     "defs": {
-        "main": {
+        "socials": {
             "type": "union",
             "refs": [
                 "#twitter",

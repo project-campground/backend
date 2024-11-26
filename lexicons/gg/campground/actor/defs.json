@@ -19,7 +19,7 @@
           "maxLength": 640
         },
         "status": { "type": "ref", "ref": "#profileStatus" },
-        "activity": { "type": "ref", "ref": "gg.campground.actor.profileActivity" },
+        "activity": { "type": "ref", "ref": "#activity" },
         "avatar": { "type": "string", "format": "uri" },
         "viewer": { "type": "ref", "ref": "#viewerState" },
         "labels": {
@@ -43,7 +43,7 @@
         "status": { "type": "ref", "ref": "#profileStatus" },
         "activities": {
           "type": "array",
-          "items": { "type": "ref", "ref": "gg.campground.actor.profileActivity" }
+          "items": { "type": "ref", "ref": "#activity" }
         },
         "description": {
           "type": "string",
@@ -74,7 +74,7 @@
         "status": { "type": "ref", "ref": "#profileStatus" },
         "activities": {
           "type": "array",
-          "items": { "type": "ref", "ref": "gg.campground.actor.profileActivity" }
+          "items": { "type": "ref", "ref": "#activity" }
         },
         "tagline": {
           "type": "string",
@@ -122,6 +122,348 @@
           "ref": "app.bsky.graph.defs#listViewBasic"
         }
       }
-    }
+    },
+    "activity": {
+            "type": "union",
+            "refs": [
+                "#activityCustom",
+                "#activityPlaying",
+                "#activityStreaming",
+                "#activityListening",
+                "#activityWatching",
+                "#activityCompeting"
+            ]
+        },
+        "activityCustom": {
+            "type": "object",
+            "properties": {
+                "emoji": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                }
+            }
+        },
+        "activityPlaying": {
+            "type": "object",
+            "required": ["name", "createdAt"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "format": "status"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "timestamps": {
+                    "type": "object",
+                    "properties": {
+                        "start": {
+                            "type": "string",
+                            "format": "datetime"
+                        },
+                        "end": {
+                            "type": "string",
+                            "format": "datetime"
+                        }
+                    }
+                },
+                "party": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string"
+                        },
+                        "currentSize": {
+                            "type": "integer"
+                        },
+                        "maxSize": {
+                            "type": "integer"
+                        }
+                    }
+                },
+                "assets": {
+                    "type": "object",
+                    "properties": {
+                        "smallImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "smallText": {
+                            "type": "string"
+                        },
+                        "largeImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "largeText": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "activityStreaming": {
+            "type": "object",
+            "required": ["name", "createdAt"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "format": "status"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "assets": {
+                    "type": "object",
+                    "properties": {
+                        "smallImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "smallText": {
+                            "type": "string"
+                        },
+                        "largeImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "largeText": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "activityListening": {
+            "type": "object",
+            "required": ["name", "createdAt"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "format": "status"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "timestamps": {
+                    "type": "object",
+                    "properties": {
+                        "start": {
+                            "type": "string",
+                            "format": "datetime"
+                        },
+                        "end": {
+                            "type": "string",
+                            "format": "datetime"
+                        }
+                    }
+                },
+                "assets": {
+                    "type": "object",
+                    "properties": {
+                        "smallImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "smallText": {
+                            "type": "string"
+                        },
+                        "largeImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "largeText": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "party": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string"
+                        },
+                        "currentSize": {
+                            "type": "integer"
+                        },
+                        "maxSize": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "activityWatching": {
+            "type": "object",
+            "required": ["name", "createdAt"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "format": "status"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "timestamps": {
+                    "type": "object",
+                    "properties": {
+                        "start": {
+                            "type": "string",
+                            "format": "datetime"
+                        },
+                        "end": {
+                            "type": "string",
+                            "format": "datetime"
+                        }
+                    }
+                },
+                "assets": {
+                    "type": "object",
+                    "properties": {
+                        "smallImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "smallText": {
+                            "type": "string"
+                        },
+                        "largeImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "largeText": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "party": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string"
+                        },
+                        "currentSize": {
+                            "type": "integer"
+                        },
+                        "maxSize": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        },
+        "activityCompeting": {
+            "type": "object",
+            "required": ["name", "createdAt"],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "format": "status"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "format": "datetime"
+                },
+                "details": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "timestamps": {
+                    "type": "object",
+                    "properties": {
+                        "start": {
+                            "type": "string",
+                            "format": "datetime"
+                        },
+                        "end": {
+                            "type": "string",
+                            "format": "datetime"
+                        }
+                    }
+                },
+                "assets": {
+                    "type": "object",
+                    "properties": {
+                        "smallImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "smallText": {
+                            "type": "string"
+                        },
+                        "largeImage": {
+                            "type": "string",
+                            "format": "uri"
+                        },
+                        "largeText": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "party": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string"
+                        },
+                        "currentSize": {
+                            "type": "integer"
+                        },
+                        "maxSize": {
+                            "type": "integer"
+                        }
+                    }
+                }
+            }
+        }
   }
 }

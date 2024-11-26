@@ -43,13 +43,13 @@ pub struct ActivityAssets {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "$type")]
 #[non_exhaustive]
-pub enum ProfileActivity {
-    #[serde(rename = "gg.campground.actor.profileActivity#custom")]
+pub enum Activity {
+    #[serde(rename = "gg.campground.actor.defs#activityCustom")]
     Custom {
         emoji: Option<String>,
         state: Option<String>,
     },
-    #[serde(rename = "gg.campground.actor.profileActivity#playing")]
+    #[serde(rename = "gg.campground.actor.defs#activityPlaying")]
     #[serde(rename_all = "camelCase")]
     Playing {
         name: String,
@@ -61,7 +61,7 @@ pub enum ProfileActivity {
         party: Option<ActivityParty>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.actor.profileActivity#streaming")]
+    #[serde(rename = "gg.campground.actor.defs#activityStreaming")]
     #[serde(rename_all = "camelCase")]
     Streaming {
         name: String,
@@ -70,7 +70,7 @@ pub enum ProfileActivity {
         details: Option<String>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.actor.profileActivity#listening")]
+    #[serde(rename = "gg.campground.actor.defs#activityListening")]
     #[serde(rename_all = "camelCase")]
     Listening {
         name: String,
@@ -82,7 +82,7 @@ pub enum ProfileActivity {
         party: Option<ActivityParty>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.actor.profileActivity#watching")]
+    #[serde(rename = "gg.campground.actor.defs#activityWatching")]
     #[serde(rename_all = "camelCase")]
     Watching {
         name: String,
@@ -94,7 +94,7 @@ pub enum ProfileActivity {
         party: Option<ActivityParty>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.actor.profileActivity#competing")]
+    #[serde(rename = "gg.campground.actor.defs#activityCompeting")]
     #[serde(rename_all = "camelCase")]
     Competing {
         name: String,
@@ -111,7 +111,7 @@ pub enum ProfileActivity {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileStatus {
-    pub activities: Vec<ProfileActivity>,
+    pub activities: Vec<Activity>,
     pub status_type: Option<ProfileStatusType>,
 }
 
@@ -147,7 +147,7 @@ pub struct ProfileViewBasic {
     pub handle: String,
     pub display_name: Option<String>,
     pub status: Option<ProfileStatus>,
-    pub activity: Option<ProfileActivity>,
+    pub activity: Option<Activity>,
     pub avatar: Option<String>,
     pub viewer: Option<ViewerState>,
     pub labels: Option<Vec<Label>>,
@@ -161,7 +161,7 @@ pub struct ProfileView {
     pub handle: String,
     pub display_name: Option<String>,
     pub status: Option<ProfileStatus>,
-    pub activities: Vec<ProfileActivity>,
+    pub activities: Vec<Activity>,
     pub tagline: Option<String>,
     pub description: Option<String>,
     pub avatar: Option<String>,
@@ -176,7 +176,7 @@ pub struct ProfileViewDetailed {
     pub handle: String,
     pub display_name: Option<String>,
     pub status: Option<ProfileStatus>,
-    pub activities: Vec<ProfileActivity>,
+    pub activities: Vec<Activity>,
     pub tagline: Option<String>,
     pub description: Option<String>,
     pub location: Option<String>,

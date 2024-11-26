@@ -26,7 +26,7 @@
                     },
                     "socialConnections": {
                         "type": "ref",
-                        "ref": "gg.campground.socials.defs"
+                        "ref": "gg.campground.socials.defs#socials"
                     },
                     "description": {
                         "type": "string",
