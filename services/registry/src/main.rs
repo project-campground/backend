@@ -80,6 +80,7 @@ mod sequencer;
 mod database;
 mod context;
 mod mailer;
+mod common;
 mod config;
 mod schema;
 mod handle;
