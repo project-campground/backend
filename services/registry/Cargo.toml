@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 secp256k1 = { version = "0.28.2", features = ["global-context", "serde", "rand", "hashes"] }
-rsky-lexicon = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
+rsky-lexicon = { version = "*", path = "../../libs/rsky-lexicon" }
 rsky-identity = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 rsky-syntax = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 jwt-simple = { version = "0.12.9", default-features = false, features = ["pure-rust"] }
