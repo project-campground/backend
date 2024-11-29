@@ -214,6 +214,7 @@ pub struct TreeEntry {
 /// single-character.
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct NodeData {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub l: Option<Cid>, // [optional] pointer to lower-level subtree to the "left" of this path/key
     pub e: Vec<TreeEntry>, // ordered list of entries at this node
 }
