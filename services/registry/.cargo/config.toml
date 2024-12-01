@@ -1,0 +1,2 @@
+[env]
+ROCKET_CONFIG = { value="Rocket.toml", relative = true }

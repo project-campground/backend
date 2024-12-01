@@ -1,0 +1,6 @@
+[default]
+port = 3989
+
+[default.database]
+url = "postgresql://example:example@localhost/example"
+pool_size = 10

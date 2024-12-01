@@ -1,0 +1,31 @@
+/**
+ * Implementation from https://github.com/blacksky-algorithms/rsky
+ * Modified to work with our own DB
+ * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
+ */
+use crate::account_manager::AccountManager;
+use crate::auth_verifier::RevokeRefreshToken;
+use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
+use rocket::http::Status;
+use rocket::response::status;
+use rocket::serde::json::Json;
+
+#[rocket::post("/xrpc/com.atproto.server.deleteSession")]
+pub async fn delete_session(
+    auth: RevokeRefreshToken,
+) -> Result<(), status::Custom<Json<ErrorMessageResponse>>> {
+    match AccountManager::revoke_refresh_token(auth.id).await {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            eprintln!("@LOG: ERROR: {error}");
+            let internal_error = ErrorMessageResponse {
+                code: Some(ErrorCode::InternalServerError),
+                message: Some(error.to_string()),
+            };
+            return Err(status::Custom(
+                Status::InternalServerError,
+                Json(internal_error),
+            ));
+        }
+    }
+}

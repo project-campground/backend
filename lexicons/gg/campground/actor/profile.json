@@ -1,0 +1,59 @@
+{
+    "lexicon": 1,
+    "id": "gg.campground.actor.profile",
+    "defs": {
+        "main": {
+            "type": "record",
+            "description": "A declaration of a Campground account profile.",
+            "key": "literal:self",
+            "record": {
+                "type": "object",
+                "properties": {
+                    "displayName": {
+                        "type": "string",
+                        "maxGraphemes": 64,
+                        "maxLength": 640
+                    },
+                    "tagline": {
+                        "type": "string",
+                        "maxGraphemes": 64,
+                        "maxLength": 640
+                    },
+                    "location": {
+                        "type": "string",
+                        "maxGraphemes": 64,
+                        "maxLength": 640
+                    },
+                    "socialConnections": {
+                        "type": "ref",
+                        "ref": "gg.campground.socials.defs#socials"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Free-form profile description text.",
+                        "maxGraphemes": 256,
+                        "maxLength": 2560
+                    },
+                    "avatar": {
+                        "type": "blob",
+                        "description": "Small image to be displayed next to messages from account. AKA, 'profile picture'",
+                        "accept": ["image/png", "image/jpeg"],
+                        "maxSize": 1000000
+                    },
+                    "banner": {
+                        "type": "blob",
+                        "description": "Larger horizontal image to display behind profile view.",
+                        "accept": ["image/png", "image/jpeg"],
+                        "maxSize": 1000000
+                    },
+                    "labels": {
+                        "type": "union",
+                        "description": "Self-label values, specific to the Campground application, on the overall account.",
+                        "refs": ["com.atproto.label.defs#selfLabels"]
+                    },
+                    "createdAt": { "type": "string", "format": "datetime" }
+                }
+            }
+        }
+    }
+}

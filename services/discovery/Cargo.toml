@@ -1,0 +1,15 @@
+[package]
+name = "discovery"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
+serde_json = "1.0.118"
+lazy_static = "1.5.0"
+thiserror = "1.0.61"
+anyhow = "1.0.90"
+serde = "1.0.203"
+rocket = "0.5.1"
