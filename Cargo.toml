@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "./services/registry",
+    "./services/discovery",
+    "./libs/did-method-plc",
+    "./libs/deadpool-surrealdb",
+    "./libs/campground-lexicon",
+]
+resolver = "2"

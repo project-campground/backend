@@ -1,0 +1,129 @@
+{
+    "lexicon": 1,
+    "id": "gg.campground.socials.defs",
+    "defs": {
+        "socials": {
+            "type": "union",
+            "refs": [
+                "#twitter",
+                "#instagram",
+                "#tiktok",
+                "#youtube",
+                "#facebook",
+                "#twitch",
+                "#reddit",
+                "#steam",
+                "#bluesky",
+                "#mastodon",
+                "#roblox",
+                "#website",
+                "#github"
+            ]
+        },
+        "twitter": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "instagram": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "tiktok": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "youtube": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "facebook": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "twitch": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "reddit": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "steam": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "bluesky": {
+            "type": "object",
+            "required": ["handle", "did"],
+            "items": {
+                "handle": { "type": "string", "format": "handle" },
+                "did": { "type": "string", "format": "did" }
+            }
+        },
+        "mastodon": {
+            "type": "object",
+            "required": ["handle", "user_id", "instance"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" },
+                "instance": { "type": "string" }
+            }
+        },
+        "roblox": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "username": { "type": "string" },
+                "display_name": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        },
+        "website": {
+            "type": "object",
+            "required": ["url"],
+            "items": {
+                "url": { "type": "string" }
+            }
+        },
+        "github": {
+            "type": "object",
+            "required": ["handle", "user_id"],
+            "items": {
+                "handle": { "type": "string" },
+                "user_id": { "type": "string" }
+            }
+        }
+    }
+}

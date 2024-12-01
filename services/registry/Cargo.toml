@@ -1,0 +1,60 @@
+[package]
+name = "campground-registry"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+secp256k1 = { version = "0.28.2", features = ["global-context", "serde", "rand", "hashes"] }
+rsky-lexicon = { version = "*", path = "../../libs/rsky-lexicon" }
+rsky-identity = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
+rsky-syntax = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
+jwt-simple = { version = "0.12.9", default-features = false, features = ["pure-rust"] }
+rsky-pds = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
+lexicon_cid = { package = "cid", version = "0.10.1", features = ["serde-codec"] }
+campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
+aws-config = { version = "1.1.8", features = ["behavior-version-latest"] }
+diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
+serde_ipld_dagcbor = { version = "0.6.1" , features = ["codec"] }
+atrium-ipld = { package = "ipld-core", version = "0.4.1" }
+indexmap = { version = "1.9.3", features = ["serde-1"] }
+reqwest = { version = "0.12.5", features = ["json"] }
+tokio = { version = "1.28.2", features = ["full"] }
+ws = { package = "rocket_ws", version = "0.1.1" }
+atrium-xrpc-client = "0.5.8"
+event-emitter-rs = "0.1.4"
+unsigned-varint = "0.8.0"
+data-encoding = "2.5.0"
+email_address = "0.2.9"
+serde_bytes = "0.11.15"
+serde_json = "1.0.118"
+mailchecker = "6.0.1"
+mailgun-rs = "0.1.10"
+lazy_static = "1.5.0"
+serde_cbor = "0.11.2"
+aws-sdk-s3 = "1.29.0"
+atrium-api = "0.24.6"
+base64-url = "2.0.2"
+tldextract = "0.6.0"
+thiserror = "1.0.61"
+multibase = "0.9.1"
+lettre = "0.11.10"
+libipld = "0.16.0"
+base64ct = "1.6.0"
+futures = "0.3.28"
+base64 = "0.22.1"
+serde = "1.0.203"
+chrono = "0.4.38"
+anyhow = "1.0.90"
+askama = "0.12.1"
+argon2 = "0.5.3"
+regex = "1.11.0"
+rocket = "0.5.1"
+sha2 = "0.10.8"
+rand = "0.8.5"
+url = "2.5.2"
+hex = "0.4.3"
+
+[dev-dependencies]
+actix-rt = "2.10.0"
