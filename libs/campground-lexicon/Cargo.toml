@@ -1,0 +1,10 @@
+[package]
+name = "campground-lexicon"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version = "0.4.24", features = ["serde"] }
+serde_derive = "1.0.215"
+serde = { version = "1.0.203", features = ["derive"] }
+rsky-lexicon = { version = ">=0.1.0", git = "https://github.com/blacksky-algorithms/rsky" }

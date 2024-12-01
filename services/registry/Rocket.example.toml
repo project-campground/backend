@@ -1,0 +1,68 @@
+[default]
+port = 3984
+
+# All secret keys are expected to be hex-encoded secp256k1 private keys
+[default.secret]
+pds_private_key = ""
+pds_rotation_key = ""
+repo_signing_key = ""
+
+[default.core]
+# hostname = "example.com
+admin_pass = "example"
+crawlers = []
+
+[default.service]
+url = "https://example.com"
+did = "did:web:example.com"
+
+[default.bsky_app_view]
+url = "https://api.bsky.app"
+did = "did:web:api.bsky.app"
+
+[default.database]
+url = "postgresql://example:example@localhost/registry"
+pool_size = 10
+
+[default.identity]
+plc_url = "https://plc.directory"
+resolver_timeout = 15
+cache_state_ttl = 15
+cache_max_ttl = 15
+service_handle_domains = ["example.com"]
+enable_did_doc_with_session = false
+# reserved_handles_path = "path/to/reserved.txt"
+use_default_reserved_handles = true # Set to false if you don't want to include the default reserved handles list
+filter_explicit_handles = true
+
+[default.subscription]
+max_buffer = 100
+repo_backfill_limit_ms = 6000
+
+[default.s3]
+endpoint = "https://s3.example.com"
+access_key = ""
+secret_key = ""
+bucket = "example"
+region = "auto"
+
+[default.email]
+provider = "SMTP"
+host = "smtp.example.com"
+username = "user@example.com"
+password = "example"
+from_address = "user@example.com"
+
+# [default.email]
+# provider = "Mailgun"
+# api_key = ""
+# domain = "example.com"
+# from_name = "example"
+# from_address = "user@example.com"
+
+[default.mod_email]
+provider = "SMTP"
+host = "smtp.example.com"
+username = "user@example.com"
+password = "example"
+from_address = "user@example.com"
