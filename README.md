@@ -12,6 +12,8 @@ setx PQ_LIB_DIR "C:\Program Files\PostgreSQL\VER_NUM\lib
 
 Where VER_NUM is the number of the folder after the PostgreSQL folder
 
+3) Add the same path shown in the above command to PATH, so that apps may be able to access the Postgres libraries properly
+
 From there, follow the directions within the service folders to run each individual service.
 
 If you encounter any errors with Rust or PostgreSQL and resolve them, you must run the below command before proceeding:
