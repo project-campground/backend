@@ -117,6 +117,19 @@ impl S3Config {
             .load()
             .await
     }
+
+    pub fn get_provider(&self) -> S3Provider {
+        if self.endpoint.ends_with("r2.cloudflarestorage.com") {
+            S3Provider::Cloudflare
+        } else {
+            S3Provider::AWS
+        }
+    }
+}
+
+pub enum S3Provider {
+    AWS,
+    Cloudflare
 }
 
 #[derive(Debug, Deserialize, Clone)]
