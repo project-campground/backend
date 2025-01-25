@@ -10,8 +10,8 @@ use crate::SharedSequencer;
 use crate::repository::ActorStore;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use crate::repository::aws::s3::S3BlobStore;
-use rsky_pds::repo::types::{CommitData, PreparedWrite};
-use rsky_pds::repo::{
+use crate::repository::types::{CommitData, PreparedWrite};
+use crate::repository::{
     make_aturi, prepare_create, prepare_update, PrepareCreateOpts, PrepareUpdateOpts,
 };
 use anyhow::{bail, Result};

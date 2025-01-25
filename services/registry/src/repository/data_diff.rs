@@ -5,7 +5,7 @@
  * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
  */
 
-use rsky_pds::repo::block_map::BlockMap;
+use crate::repository::block_map::BlockMap;
 use rsky_pds::repo::cid_set::CidSet;
 use crate::repository::mst::diff::mst_diff;
 use crate::repository::mst::{NodeEntry, MST};

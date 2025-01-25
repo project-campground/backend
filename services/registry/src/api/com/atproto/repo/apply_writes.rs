@@ -7,11 +7,11 @@ use crate::account_manager::helpers::account::AvailabilityFlags;
 use crate::account_manager::AccountManager;
 use crate::auth_verifier::AccessStandardIncludeChecks;
 use crate::repository::ActorStore;
-use rsky_pds::repo::{
+use crate::repository::{
     prepare_create, prepare_delete, prepare_update, PrepareCreateOpts,
     PrepareDeleteOpts, PrepareUpdateOpts,
 };
-use rsky_pds::repo::types::PreparedWrite;
+use crate::repository::types::PreparedWrite;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use crate::repository::aws::s3::S3BlobStore;
 use crate::SharedSequencer;

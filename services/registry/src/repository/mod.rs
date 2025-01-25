@@ -12,19 +12,23 @@ use crate::repository::mst::MST;
 use crate::repository::preference::PreferenceReader;
 use crate::repository::record::RecordReader;
 use crate::repository::storage::RepoReader;
+use blob_refs::{BlobRef, JsonBlobRef};
 use rsky_pds::common;
+use rsky_pds::common::ipld::data_to_cbor_block;
 use rsky_pds::common::tid::{Ticker, TID};
+use rsky_pds::storage::Ipld;
+use serde_json::{json, Value};
+use types::IpldCid;
+use util::{cbor_to_lex, lex_to_ipld};
 use crate::repository::aws::s3::S3BlobStore;
-use rsky_pds::repo::block_map::BlockMap;
+use crate::repository::block_map::BlockMap;
 use rsky_pds::repo::cid_set::CidSet;
 use rsky_pds::repo::error::DataStoreError;
-use rsky_pds::repo::parse;
-use rsky_pds::repo::types::{
-    write_to_op, CollectionContents, Commit, CommitData,
-    PreparedCreateOrUpdate, PreparedWrite, RecordCreateOrUpdateOp, RecordWriteEnum,
+use crate::repository::types::{
+    write_to_op, BlobConstraint, CollectionContents, Commit, CommitData, Ids, Lex, PreparedBlobRef,
+    PreparedCreateOrUpdate, PreparedDelete, PreparedWrite, RecordCreateOrUpdateOp, RecordWriteEnum,
     RecordWriteOp, RepoContents, RepoRecord, UnsignedCommit, WriteOpAction,
 };
-use rsky_pds::repo::util;
 use anyhow::{anyhow, bail, Result};
 use diesel::*;
 use futures::stream::{self, StreamExt};
@@ -35,8 +39,42 @@ use libipld::Ipld as VendorIpld;
 use libipld::{Block, DefaultParams};
 use secp256k1::{Keypair, Secp256k1, SecretKey};
 use serde_cbor::Value as CborValue;
+use serde_json::Value as JsonValue;
 use std::collections::BTreeMap;
 use std::str::FromStr;
+use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct FoundBlobRef {
+    pub r#ref: BlobRef,
+    pub path: Vec<String>,
+}
+
+pub struct PrepareCreateOpts {
+    pub did: String,
+    pub collection: String,
+    pub rkey: Option<String>,
+    pub swap_cid: Option<Cid>,
+    pub record: RepoRecord,
+    pub validate: Option<bool>,
+}
+
+pub struct PrepareUpdateOpts {
+    pub did: String,
+    pub collection: String,
+    pub rkey: String,
+    pub swap_cid: Option<Cid>,
+    pub record: RepoRecord,
+    pub validate: Option<bool>,
+}
+
+pub struct PrepareDeleteOpts {
+    pub did: String,
+    pub collection: String,
+    pub rkey: String,
+    pub swap_cid: Option<Cid>,
+}
 
 pub struct CommitRecord {
     collection: String,
@@ -129,6 +167,7 @@ impl ActorStore {
                 .index_writes(writes.clone(), &commit.rev)
                 .await?;
         }
+        println!("Writes: {:?}", &writes);
         try_join!(
             // persist the commit to repo storage
             self.storage.apply_commit(commit.clone(), None),
@@ -348,6 +387,7 @@ impl Repo {
                 let block = Block::<DefaultParams>::new(commit_cid, commit_bytes.clone())?;
                 let ipld = block.decode::<DagCborCodec, VendorIpld>()?;
                 // Convert Ipld to Commit
+                println!("Ipld: {:?}", ipld);
                 let commit: Commit = match ipld {
                     VendorIpld::Map(m) => Commit {
                         did: m
@@ -376,7 +416,29 @@ impl Repo {
                             .get("data")
                             .and_then(|v| {
                                 if let VendorIpld::Link(cid) = v {
-                                    Some(cid)
+                                    Some(IpldCid::from(cid.clone()))
+                                } else if let VendorIpld::List(bytes) = v {
+                                    let bytes = match bytes.into_iter()
+                                        .map(|v| {
+                                            if let VendorIpld::Integer(i) = v {
+                                                Some(*i as u8)
+                                            } else {
+                                                None
+                                            }
+                                        })
+                                        .collect::<Option<Vec<u8>>>() {
+                                        Some(bytes) => bytes,
+                                        None => return None,
+                                    };
+                                    match Cid::try_from(bytes) {
+                                        Ok(cid) => Some(cid.into()),
+                                        Err(_) => None,
+                                    }
+                                } else if let VendorIpld::Bytes(bytes) = v {
+                                    match Cid::try_from(bytes.clone()) {
+                                        Ok(cid) => Some(cid.into()),
+                                        Err(_) => None,
+                                    }
                                 } else {
                                     None
                                 }
@@ -385,7 +447,7 @@ impl Repo {
                             .clone(),
                         prev: m.get("prev").and_then(|v| {
                             if let VendorIpld::Link(cid) = v {
-                                Some(cid.clone())
+                                Some(cid.clone().into())
                             } else {
                                 None
                             }
@@ -405,7 +467,18 @@ impl Repo {
                             .get("sig")
                             .and_then(|v| {
                                 if let VendorIpld::Bytes(b) = v {
-                                    Some(b)
+                                    Some(b.clone())
+                                } else if let VendorIpld::List(l) = v {
+                                    match l.into_iter().map(|v| {
+                                        if let VendorIpld::Integer(i) = v {
+                                            Some(*i as u8)
+                                        } else {
+                                            None
+                                        }
+                                    }).collect::<Option<Vec<u8>>>() {
+                                        Some(bytes) => Some(bytes),
+                                        None => None,
+                                    }
                                 } else {
                                     None
                                 }
@@ -415,7 +488,7 @@ impl Repo {
                     },
                     _ => return Err(anyhow!("Invalid Ipld format for Commit")),
                 };
-                let data = MST::load(storage.clone(), commit.data, None)?;
+                let data = MST::load(storage.clone(), *commit.data, None)?;
                 Ok(Repo::new(storage.clone(), data, commit, commit_cid))
             }
             None => bail!("No cid provided and none in storage"),
@@ -509,7 +582,7 @@ impl Repo {
                 version: 3,
                 rev: rev.clone().to_string(),
                 prev: None, // added for backwards compatibility with v2
-                data: data_cid,
+                data: IpldCid::from(data_cid),
             },
             keypair,
         )?;
@@ -595,7 +668,7 @@ impl Repo {
                 version: 3,
                 rev: rev.clone().to_string(),
                 prev: None, // added for backwards compatibility with v2
-                data: data_cid,
+                data: IpldCid::from(data_cid),
             },
             keypair,
         )?;
@@ -640,7 +713,7 @@ impl Repo {
                 version: 3,
                 rev: rev.clone(),
                 prev: None, // added for backwards compatibility with v2
-                data: self.commit.data,
+                data: IpldCid::from(self.commit.data.clone()),
             },
             keypair,
         )?;
@@ -662,11 +735,251 @@ impl Repo {
     }
 }
 
+pub fn blobs_for_write(record: RepoRecord, validate: bool) -> Result<Vec<PreparedBlobRef>> {
+    let refs = find_blob_refs(Lex::Map(record.clone()), None, None);
+    println!("refs: {:?}", refs);
+    let record_type = match record.get("$type") {
+        Some(Lex::Ipld(Ipld::String(t))) => Some(t),
+        _ => None,
+    };
+    println!("record_type: {:?}", record_type);
+    for r#ref in refs.clone() {
+        if matches!(r#ref.r#ref.original, JsonBlobRef::Untyped(_)) {
+            bail!("Legacy blob ref at `{}`", r#ref.path.join("/"))
+        }
+    }
+    refs.into_iter()
+        .map(|FoundBlobRef { r#ref, path }| {
+            println!("Attempting to get constraints");
+            let constraints: BlobConstraint = match (validate, record_type) {
+                (true, Some(record_type)) => {
+                    let properties: crate::constraints::types::Constraint = serde_json::from_value(
+                        CONSTRAINTS[record_type.as_str()][path.join("/")].clone(),
+                    )?;
+                    BlobConstraint {
+                        max_size: Some(properties.max_size as usize),
+                        accept: Some(properties.accept),
+                    }
+                }
+                (_, _) => BlobConstraint {
+                    max_size: None,
+                    accept: None,
+                },
+            };
+            println!("Constraints: {:?}", constraints);
+
+            Ok(PreparedBlobRef {
+                cid: r#ref.get_cid()?,
+                mime_type: r#ref.get_mime_type().to_string(),
+                constraints,
+            })
+        })
+        .collect::<Result<Vec<PreparedBlobRef>>>()
+}
+
+pub fn find_blob_refs(val: Lex, path: Option<Vec<String>>, layer: Option<u8>) -> Vec<FoundBlobRef> {
+    let layer = layer.unwrap_or_else(|| 0);
+    let path = path.unwrap_or_else(|| vec![]);
+    if layer > 32 {
+        return vec![];
+    }
+    // walk arrays
+    match val {
+        Lex::List(list) => list
+            .into_iter()
+            .flat_map(|item| find_blob_refs(item, Some(path.clone()), Some(layer + 1)))
+            .collect::<Vec<FoundBlobRef>>(),
+        Lex::Blob(blob) => vec![FoundBlobRef { r#ref: blob, path }],
+        Lex::Ipld(Ipld::Json(JsonValue::Array(list))) => list
+            .into_iter()
+            .flat_map(|item| match serde_json::from_value::<RepoRecord>(item) {
+                Ok(item) => find_blob_refs(Lex::Map(item), Some(path.clone()), Some(layer + 1)),
+                Err(_) => vec![],
+            })
+            .collect::<Vec<FoundBlobRef>>(),
+        Lex::Ipld(Ipld::Json(json)) => match serde_json::from_value::<JsonBlobRef>(json.clone()) {
+            Ok(blob) => vec![FoundBlobRef {
+                r#ref: BlobRef { original: blob },
+                path,
+            }],
+            Err(_) => match serde_json::from_value::<RepoRecord>(json) {
+                Ok(record) => record
+                    .into_iter()
+                    .flat_map(|(key, item)| {
+                        find_blob_refs(
+                            item,
+                            Some([path.as_slice(), [key].as_slice()].concat()),
+                            Some(layer + 1),
+                        )
+                    })
+                    .collect::<Vec<FoundBlobRef>>(),
+                Err(_) => vec![],
+            },
+        },
+        Lex::Ipld(_) => vec![],
+        Lex::Map(map) => map
+            .into_iter()
+            .flat_map(|(key, item)| {
+                find_blob_refs(
+                    item,
+                    Some([path.as_slice(), [key].as_slice()].concat()),
+                    Some(layer + 1),
+                )
+            })
+            .collect::<Vec<FoundBlobRef>>(),
+    }
+}
+
+pub fn assert_valid_record(record: &RepoRecord) -> Result<()> {
+    match record.get("$type") {
+        Some(Lex::Ipld(Ipld::String(_))) => Ok(()),
+        _ => bail!("No $type provided"),
+    }
+}
+
+pub fn set_collection_name(
+    collection: &String,
+    mut record: RepoRecord,
+    validate: bool,
+) -> Result<RepoRecord> {
+    if record.get("$type").is_none() {
+        record.insert(
+            "$type".to_string(),
+            Lex::Ipld(Ipld::Json(JsonValue::String(collection.clone()))),
+        );
+    }
+    if let Some(Lex::Ipld(Ipld::Json(JsonValue::String(record_type)))) = record.get("$type") {
+        if validate && record_type.to_string() != *collection {
+            bail!("Invalid $type: expected {collection}, got {record_type}")
+        }
+    }
+    Ok(record)
+}
+
+pub fn make_aturi(
+    handle_or_did: String,
+    collection: Option<String>,
+    rkey: Option<String>,
+) -> String {
+    let mut str = format!("at://{handle_or_did}");
+    if let Some(collection) = collection {
+        str = format!("{str}/{collection}");
+    }
+    if let Some(rkey) = rkey {
+        str = format!("{str}/{rkey}");
+    }
+    str
+}
+
+pub async fn cid_for_safe_record(record: RepoRecord) -> Result<Cid> {
+    let block = data_to_cbor_block(&lex_to_ipld(Lex::Map(record)))?;
+    // Confirm whether Block properly transforms between lex and cbor
+    let _ = cbor_to_lex(block.data().to_vec())?;
+    Ok(*block.cid())
+}
+
+pub async fn prepare_create(opts: PrepareCreateOpts) -> Result<PreparedCreateOrUpdate> {
+    let PrepareCreateOpts {
+        did,
+        collection,
+        rkey,
+        swap_cid,
+        validate,
+        ..
+    } = opts;
+    let validate = validate.unwrap_or_else(|| true);
+
+    let record = set_collection_name(&collection, opts.record, validate)?;
+    if validate {
+        assert_valid_record(&record)?;
+    }
+
+    // assert_no_explicit_slurs(rkey, record).await?;
+    let next_rkey = Ticker::new().next(None);
+    let rkey = rkey.unwrap_or(next_rkey.to_string());
+    Ok(PreparedCreateOrUpdate {
+        action: WriteOpAction::Create,
+        uri: make_aturi(did, Some(collection), Some(rkey)),
+        cid: cid_for_safe_record(record.clone()).await?,
+        swap_cid,
+        record: record.clone(),
+        blobs: blobs_for_write(record, validate)?,
+    })
+}
+
+pub async fn prepare_update(opts: PrepareUpdateOpts) -> Result<PreparedCreateOrUpdate> {
+    let PrepareUpdateOpts {
+        did,
+        collection,
+        rkey,
+        swap_cid,
+        validate,
+        ..
+    } = opts;
+    let validate = validate.unwrap_or_else(|| true);
+
+    let record = set_collection_name(&collection, opts.record, validate)?;
+    if validate {
+        assert_valid_record(&record)?;
+    }
+    // assert_no_explicit_slurs(rkey, record).await?;
+    Ok(PreparedCreateOrUpdate {
+        action: WriteOpAction::Update,
+        uri: make_aturi(did, Some(collection), Some(rkey)),
+        cid: cid_for_safe_record(record.clone()).await?,
+        swap_cid,
+        record: record.clone(),
+        blobs: blobs_for_write(record, validate)?,
+    })
+}
+
+pub fn prepare_delete(opts: PrepareDeleteOpts) -> PreparedDelete {
+    let PrepareDeleteOpts {
+        did,
+        collection,
+        rkey,
+        swap_cid,
+    } = opts;
+    PreparedDelete {
+        action: WriteOpAction::Delete,
+        uri: make_aturi(did, Some(collection), Some(rkey)),
+        swap_cid,
+    }
+}
+
+lazy_static! {
+    static ref CONSTRAINTS: JsonValue = {
+        json!({
+            Ids::AppBskyActorProfile.as_str(): {
+                "avatar": crate::constraints::CONSTRAINTS.avatar,
+                "banner": crate::constraints::CONSTRAINTS.banner
+            },
+            Ids::AppBskyFeedGenerator.as_str(): {
+                "avatar": crate::constraints::CONSTRAINTS.avatar
+            },
+            Ids::AppBskyGraphList.as_str(): {
+                "avatar": crate::constraints::CONSTRAINTS.avatar
+            },
+            Ids::AppBskyFeedPost.as_str(): {
+                "embed/images/image": crate::constraints::CONSTRAINTS.embed,
+                "embed/external/thumb": crate::constraints::CONSTRAINTS.embed,
+                "embed/media/images/image": crate::constraints::CONSTRAINTS.embed,
+                "embed/media/external/thumb": crate::constraints::CONSTRAINTS.embed
+            }
+        })
+    };
+}
+
 pub mod preference;
+pub mod blob_refs;
 pub mod data_diff;
+pub mod block_map;
 pub mod storage;
 pub mod record;
+pub mod types;
+pub mod parse;
 pub mod sync;
+pub mod util;
 pub mod blob;
 pub mod mst;
 pub mod aws;

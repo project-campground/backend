@@ -9,7 +9,7 @@ use rsky_pds::common::{cbor_to_struct, wait};
 use rsky_pds::crawlers::Crawlers;
 use crate::database::establish_connection;
 use crate::database::models;
-use rsky_pds::repo::types::{CommitData, PreparedWrite};
+use crate::repository::types::{CommitData, PreparedWrite};
 use crate::sequencer::events::{
     format_seq_account_evt, format_seq_commit, format_seq_handle_update, format_seq_identity_evt,
     format_seq_tombstone, SeqEvt, TypedAccountEvt, TypedCommitEvt, TypedHandleEvt,

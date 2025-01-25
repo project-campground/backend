@@ -15,7 +15,7 @@ use crate::repository::aws::s3::S3BlobStore;
 use crate::repository::ActorStore;
 use crate::xrpc::types::{HandlerPipeThrough, InvalidRequestError, XRPCError};
 use crate::{SharedLocalViewer, APP_USER_AGENT};
-use rsky_pds::repo::types::Ids;
+use crate::repository::types::Ids;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use anyhow::{anyhow, Result};
 use atrium_api::app::bsky::feed::get_post_thread::{

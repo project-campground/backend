@@ -11,7 +11,7 @@ use crate::xrpc::types::{HandlerPipeThrough, InvalidRequestError};
 use crate::{SharedATPAgent, SharedIdResolver};
 use rsky_pds::auth_verifier::AccessOutput;
 use rsky_pds::models::ErrorMessageResponse;
-use rsky_pds::repo::types::Ids;
+use crate::repository::types::Ids;
 use anyhow::{anyhow, Result};
 use atrium_api::app::bsky::feed::get_feed_generator::{
     Output as AppBskyFeedGetFeedGeneratorOutput, Parameters as AppBskyFeedGetFeedGeneratorParams,

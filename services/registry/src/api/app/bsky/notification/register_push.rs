@@ -8,7 +8,7 @@ use crate::auth_verifier::AccessStandard;
 use crate::config::BSKY_APP_VIEW_CONFIG;
 use crate::{context, APP_USER_AGENT};
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
-use rsky_pds::repo::types::Ids;
+use crate::repository::types::Ids;
 use rsky_pds::common::get_notif_endpoint;
 use rsky_pds::SharedIdResolver;
 use anyhow::{anyhow, bail, Result};

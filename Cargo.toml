@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "./services/registry",
+    # "./services/registry",
     "./services/discovery",
     "./libs/did-method-plc",
     "./libs/deadpool-surrealdb",

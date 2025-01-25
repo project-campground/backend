@@ -14,7 +14,7 @@ use crate::{APP_USER_AGENT, INVALID_HANDLE};
 use rsky_pds::account_manager::helpers::auth::ServiceJwtParams;
 use rsky_pds::xrpc_server::auth::create_service_auth_headers;
 use rsky_pds::common::beginning_of_time;
-use rsky_pds::repo::types::Ids;
+use crate::repository::types::Ids;
 use anyhow::{bail, Result};
 use atrium_api::app::bsky::feed::get_feed_generator::{
     Output as AppBskyFeedGetFeedGeneratorOutput, Parameters as AppBskyFeedGetFeedGeneratorParams,

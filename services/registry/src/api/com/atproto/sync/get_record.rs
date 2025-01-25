@@ -9,7 +9,7 @@ use crate::repository::aws::s3::S3BlobStore;
 use crate::repository::ActorStore;
 use crate::{auth_verifier, repository};
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
-use rsky_pds::repo::types::RecordPath;
+use crate::repository::types::RecordPath;
 use anyhow::{bail, Result};
 use aws_config::SdkConfig;
 use libipld::Cid;

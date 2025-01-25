@@ -21,11 +21,11 @@
  */
 use rsky_pds::common;
 use rsky_pds::common::ipld;
-use rsky_pds::repo::block_map::BlockMap;
+use crate::repository::block_map::BlockMap;
 use rsky_pds::repo::cid_set::CidSet;
 use rsky_pds::repo::error::DataStoreError;
-use rsky_pds::repo::parse;
-use rsky_pds::repo::types::{BlockWriter, CidAndBytes};
+use crate::repository::parse;
+use crate::repository::types::{BlockWriter, CidAndBytes};
 use rsky_pds::storage::ObjAndBytes;
 use crate::repository::storage::RepoReader;
 use anyhow::{anyhow, bail, Result};

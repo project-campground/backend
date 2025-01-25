@@ -6,6 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# for vendored iroh-car
+integer-encoding = { version = "3", features = ["tokio_async"] }
+tokio = { version = "1.28.2",features = ["full"] }
+
 secp256k1 = { version = "0.28.2", features = ["global-context", "serde", "rand", "hashes"] }
 rsky-lexicon = { version = "*", path = "../../libs/rsky-lexicon" }
 rsky-identity = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
@@ -17,10 +21,10 @@ campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
 aws-config = { version = "1.1.8", features = ["behavior-version-latest"] }
 diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
 serde_ipld_dagcbor = { version = "0.6.1" , features = ["codec"] }
+ipld-cbor = { package = "libipld-cbor", version = "0.16.0" }
 atrium-ipld = { package = "ipld-core", version = "0.4.1" }
 indexmap = { version = "1.9.3", features = ["serde-1"] }
 reqwest = { version = "0.12.5", features = ["json"] }
-tokio = { version = "1.28.2", features = ["full"] }
 ws = { package = "rocket_ws", version = "0.1.1" }
 atrium-xrpc-client = "0.5.8"
 event-emitter-rs = "0.1.4"
@@ -51,6 +55,7 @@ askama = "0.12.1"
 argon2 = "0.5.3"
 regex = "1.11.0"
 rocket = "0.5.1"
+toml = "0.8.12"
 sha2 = "0.10.8"
 rand = "0.8.5"
 url = "2.5.2"

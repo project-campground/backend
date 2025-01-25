@@ -76,12 +76,14 @@ impl S3BlobStore {
     pub async fn make_permanent(&self, key: String, cid: Cid) -> Result<()> {
         let already_has = self.has_stored(cid).await?;
         if !already_has {
-            Ok(self
+            let res = self
                 .move_object(MoveObject {
                     from: self.get_tmp_path(&key),
                     to: self.get_stored_path(cid),
                 })
-                .await?)
+                .await;
+            println!("make_permanent: {:?}", res);
+            Ok(res?)
         } else {
             // already saved, so we no-op & just delete the temp
             Ok(self.delete_key(self.get_tmp_path(&key)).await?)
@@ -207,35 +209,35 @@ impl S3BlobStore {
 
     async fn move_object(&self, keys: MoveObject) -> Result<()> {
         match S3_CONFIG.get_provider() {
-            S3Provider::Cloudflare => {
-                // Because Cloudflare R2 doesn't fully support CopyObject yet, this workaround has to be used.
-                let res = self.client
-                    .get_object()
-                    .bucket(&S3_CONFIG.bucket)
-                    .key(&keys.from)
-                    .send()
-                    .await?;
-                let body = res.body.collect().await.map(|data| data.into_bytes())?;
-                self.client
-                    .put_object()
-                    .body(ByteStream::from(body.to_vec()))
-                    .bucket(&S3_CONFIG.bucket)
-                    .key(&keys.to)
-                    .acl(ObjectCannedAcl::PublicRead)
-                    .send()
-                    .await?;
-                self.client
-                    .delete_object()
-                    .bucket(&S3_CONFIG.bucket)
-                    .key(&keys.from)
-                    .send()
-                    .await?;
-            }
+            // S3Provider::Cloudflare => {
+            //     // Because Cloudflare R2 doesn't fully support CopyObject yet, this workaround has to be used.
+            //     let res = self.client
+            //         .get_object()
+            //         .bucket(&S3_CONFIG.bucket)
+            //         .key(&keys.from)
+            //         .send()
+            //         .await?;
+            //     let body = res.body.collect().await.map(|data| data.into_bytes())?;
+            //     self.client
+            //         .put_object()
+            //         .body(ByteStream::from(body.to_vec()))
+            //         .bucket(&S3_CONFIG.bucket)
+            //         .key(&keys.to)
+            //         .acl(ObjectCannedAcl::PublicRead)
+            //         .send()
+            //         .await?;
+            //     self.client
+            //         .delete_object()
+            //         .bucket(&S3_CONFIG.bucket)
+            //         .key(&keys.from)
+            //         .send()
+            //         .await?;
+            // }
             _ => {
                 self.client
                     .copy_object()
                     .bucket(&S3_CONFIG.bucket)
-                    .copy_source(&keys.from)
+                    .copy_source(&format!("{}/{}", S3_CONFIG.bucket, keys.from))
                     .key(keys.to)
                     .acl(ObjectCannedAcl::PublicRead)
                     .send()
