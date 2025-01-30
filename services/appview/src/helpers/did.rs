@@ -1,20 +1,37 @@
 use rsky_identity::{types::{DidDocument, Service}, IdResolver};
+use rsky_syntax::{did::ensure_valid_did, handle::ensure_valid_handle};
 use tokio::sync::RwLockWriteGuard;
 
 use crate::xrpc_server::error::{Result, XRPCError};
 
-pub async fn resolve_actor(resolver: &mut RwLockWriteGuard<'_, IdResolver>, actor: &String) -> Option<String> {
+pub const BLESSED_DID_METHODS: [&str; 2] = ["plc", "web"];
+
+pub async fn resolve_at_identifier(resolver: &mut RwLockWriteGuard<'_, IdResolver>, actor: &String) -> Option<String> {
     if actor.starts_with("did:") {
+        if !ensure_valid_did(actor.to_owned()).is_ok() {
+            return None
+        }
+        
+        let method = actor.split(":").nth(1).unwrap();
+        if !BLESSED_DID_METHODS.contains(&method) {
+            return None
+        }
+
         return Some(actor.to_string())
-    }
-    match resolver.handle.resolve(&actor.to_owned()).await {
-        Ok(did) => did,
-        Err(_) => None
+    } else {
+        if !ensure_valid_handle(actor.to_owned()).is_ok() {
+            return None
+        }
+        
+        match resolver.handle.resolve(&actor.to_owned()).await {
+            Ok(did) => did,
+            Err(_) => None
+        }
     }
 }
 
-pub async fn try_resolve_actor(resolver: &mut RwLockWriteGuard<'_, IdResolver>, actor: &String) -> Result<String> {
-    match resolve_actor(resolver, actor).await {
+pub async fn try_resolve_at_identifier(resolver: &mut RwLockWriteGuard<'_, IdResolver>, actor: &String) -> Result<String> {
+    match resolve_at_identifier(resolver, actor).await {
         Some(did) => Ok(did),
         None => Err(XRPCError::NotFound),
     }
