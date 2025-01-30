@@ -73,8 +73,10 @@ pub struct ProfileView {
     pub tagline: Option<String>,
     pub description: Option<String>,
     pub avatar: Option<String>,
+    pub banner: Option<String>,
     pub labels: Vec<Label>,
     pub indexed_at: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

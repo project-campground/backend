@@ -9,11 +9,13 @@ pub fn profile_view(did_doc: &DidDocument, profile: &Profile) -> ProfileView {
         handle: get_handle(did_doc).unwrap(),
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
+        banner: get_blob_ref(&profile.banner),
         description: profile.description.clone(),
         activities: vec![],
         tagline: profile.tagline.clone(),
         labels: vec![],
         indexed_at: None,
+        created_at: parse_datetime(profile.created_at),
         status: None,
     }
 }
