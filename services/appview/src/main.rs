@@ -44,10 +44,11 @@ use rocket::shield::{Shield, NoSniff};
 use rocket::{Request, Response};
 use rsky_identity::types::{DidCache, IdentityResolverOpts};
 use rsky_identity::IdResolver;
-use rocket::http::Header;
-use config::{CORE_CONFIG, IDENTITY_CONFIG};
+use rocket::http::{Header, Status};
+use config::IDENTITY_CONFIG;
 use tokio::sync::RwLock;
 use anyhow::Result;
+use xrpc_server::error::XRPCError;
 
 #[macro_use] extern crate rocket;
 
@@ -62,6 +63,21 @@ async fn all_options() {
 #[derive(Debug)]
 pub struct SharedIdResolver {
     pub id_resolver: RwLock<IdResolver>,
+}
+
+#[catch(default)]
+async fn default_catcher(status: Status, _request: &Request<'_>) -> XRPCError {
+    match status.code {
+        400 => XRPCError::BadRequest,
+        401 => XRPCError::Unauthorized,
+        403 => XRPCError::Forbidden,
+        404 => XRPCError::NotFound,
+        413 => XRPCError::PayloadTooLarge,
+        429 => XRPCError::TooManyRequests,
+        501 => XRPCError::NotImplemented,
+        500 => XRPCError::InternalServerError,
+        _ => XRPCError::InternalServerError
+    }
 }
 
 struct CORS;
@@ -98,12 +114,18 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         })),
     };
 
+    let client = reqwest::Client::builder()
+        .user_agent(APP_USER_AGENT)
+        .build()?;
+
     let rocket = rocket::build()
         .mount("/", routes![all_options])
         .mount("/", api::routes())
-        .attach(shield)
         .manage(id_resolver)
-        .attach(CORS);
+        .manage(client)
+        .attach(shield)
+        .attach(CORS)
+        .register("/", catchers![default_catcher]);
 
     Ok(rocket)
 }
@@ -120,5 +142,6 @@ async fn main() -> Result<()> {
 mod auth_verifier;
 mod xrpc_server;
 mod database;
+mod helpers;
 mod config;
 mod api;

@@ -1,5 +1,15 @@
 use crate::config::CORE_CONFIG;
 
+macro_rules! merge_routes {
+    ($($routes:expr),*) => {{
+        let mut routes = Vec::new();
+        $(
+            routes.extend($routes);
+        )*
+        routes
+    }}
+}
+
 #[get("/robots.txt")]
 async fn robots() -> &'static str {
     "# Hello!\n\n# Crawling the public API is allowed. HTTP 429 (\"backoff\") status codes are used for rate-limiting.\nUser-agent: *\nAllow: /"
@@ -16,5 +26,14 @@ async fn oauth_client_metadata() -> String {
 }
 
 pub fn routes() -> Vec<rocket::Route> {
-    rocket::routes![robots, index, oauth_client_metadata]
+    merge_routes!(
+        gg::routes(), 
+        rocket::routes![
+            robots,
+            index,
+            oauth_client_metadata
+        ]
+    )
 }
+
+mod gg;
