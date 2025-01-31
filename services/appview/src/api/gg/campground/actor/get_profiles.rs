@@ -5,8 +5,7 @@ use reqwest::Client;
 use crate::{
     auth_verifier::UserDidAuthOptional,
     helpers::{
-        did::{try_get_did_doc, try_get_pds, try_resolve_at_identifier},
-        repo::try_get_record, views::profile_view_detailed
+        deduplicate_list, did::{try_get_did_doc, try_get_pds, try_resolve_at_identifier}, lower_list, repo::try_get_record, views::profile_view_detailed
     },
     xrpc_server::error::{Result, XRPCError},
     SharedIdResolver
@@ -14,6 +13,7 @@ use crate::{
 
 #[get("/xrpc/gg.campground.actor.getProfiles?<actors>")]
 pub async fn get_profiles(auth: UserDidAuthOptional, client: &State<Client>, id_resolver: &State<SharedIdResolver>, actors: Vec<&str>) -> Result<Json<GetProfilesOutput>> {
+    let actors = deduplicate_list(lower_list(actors));
     if actors.len() > 25 || actors.len() == 0 {
         return Err(XRPCError::BadRequest);
     }
