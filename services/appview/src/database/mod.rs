@@ -24,3 +24,6 @@ pub fn establish_connection() -> Result<DbConnection> {
     });
     Ok(pool.lock().unwrap().get()?)
 }
+
+pub mod actors;
+pub use appview_schema::models;
