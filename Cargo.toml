@@ -7,5 +7,6 @@ members = [
     "./libs/campground-lexicon",
     "./libs/common",
     "./services/appview",
+    "./cmd/appview_consumer",
 ]
 resolver = "2"
