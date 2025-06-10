@@ -1,0 +1,8 @@
+[package]
+name = "appview-schema"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+diesel = { version = "=2.1.5", features = ["chrono", "postgres", "r2d2"] }
+serde = "1.0.203"

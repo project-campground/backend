@@ -12,6 +12,7 @@ rsky-crypto = { version = "*", git = "https://github.com/blacksky-algorithms/rsk
 rsky-syntax = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
 diesel = { version = "=2.1.5", features = ["chrono", "postgres", "r2d2"] }
+appview-schema = { version = "*", path = "../../libs/appview-schema" }
 atrium-oauth-client = { git = "https://github.com/sugyan/atrium" }
 common = { version = "*", path = "../../libs/common" }
 reqwest = { version = "0.12.5", features = ["json"] }
