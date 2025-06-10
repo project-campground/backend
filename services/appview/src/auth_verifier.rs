@@ -1,77 +1,160 @@
-/**
- * Implementation from https://github.com/blacksky-algorithms/rsky
- * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
- */
+use atproto_identity::{key::identify_key, plc, resolve::resolve_subject, storage::DidDocumentStorage, storage_lru::LruDidDocumentStorage, web};
+use base64::{engine::general_purpose, Engine};
+use reqwest::Client;
 
-use crate::xrpc_server::auth::{verify_jwt as verify_service_jwt_server, ServiceJwtPayload};
-use rsky_identity::did::atproto_data::{get_did_key_from_multibase, VerificationMaterial};
 use rocket::request::{FromRequest, Outcome, Request};
-use rsky_identity::types::DidDocument;
-use jwt_simple::claims::Audiences;
-use crate::SharedIdResolver;
-use jwt_simple::prelude::*;
+use atproto_oauth::jwt::{Claims, Header};
 use anyhow::{bail, Result};
 use rocket::http::Status;
 use thiserror::Error;
 use rocket::State;
 
-use crate::config::CORE_CONFIG;
+use crate::DNS_RESOLVER;
 
 const BEARER: &str = "Bearer ";
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum AuthScope {
-    Access,
-    Refresh,
-    AppPass,
-    AppPassPrivileged,
-    SignupQueued,
+/// JWT authorization extractor that validates tokens against cached DID documents.
+///
+/// Contains JWT header, validated claims, original token.
+pub struct Authorization(pub Header, pub Claims, pub String);
+
+/// JWT authorization extractor that validates tokens against cached DID documents.
+/// Does not trigger an unauthorized error on failure.
+/// 
+/// Contains JWT header, validated claims, original token, and validation status.
+pub struct OptionalAuthorization(pub Header, pub Claims, pub String, pub bool);
+
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for OptionalAuthorization {
+    type Error = AuthError;
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let auth_header = match req.headers().get_one("Authorization") {
+            Some(header) => header,
+            None => return Outcome::Success(OptionalAuthorization(Header::default(), Claims::default(), "".to_string(), false))
+        };
+        let token = match auth_header.strip_prefix(BEARER) {
+            Some(token) => token.to_string(),
+            None => return Outcome::Success(OptionalAuthorization(Header::default(), Claims::default(), "".to_string(), false))
+        };
+
+        let http_client = req.guard::<&State<Client>>().await.unwrap();
+        let did_document_storage = req.guard::<&State<LruDidDocumentStorage>>().await.unwrap();
+
+        match validate_jwt(&token, &did_document_storage, &*http_client).await {
+            Ok((header, claims)) => {
+                Outcome::Success(OptionalAuthorization(header, claims, token, true))
+            },
+            Err(_e) => Outcome::Success(OptionalAuthorization(Header::default(), Claims::default(), "".to_string(), false))
+        }
+    }
 }
 
-#[derive(Clone)]
-pub struct Credentials {
-    pub r#type: String,
-    pub did: Option<String>,
-    pub scope: Option<AuthScope>,
-    pub audience: Option<String>,
-    pub token_id: Option<String>,
-    pub aud: Option<String>,
-    pub iss: Option<String>,
-    pub is_privileged: Option<bool>,
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Authorization {
+    type Error = AuthError;
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let auth_header = match req.headers().get_one("Authorization") {
+            Some(header) => header,
+            None => return Outcome::Error((Status::Unauthorized, AuthError::AuthRequired))
+        };
+        let token = match auth_header.strip_prefix(BEARER) {
+            Some(token) => token.to_string(),
+            None => return Outcome::Error((Status::Unauthorized, AuthError::AuthRequired))
+        };
+
+        let http_client = req.guard::<&State<Client>>().await.unwrap();
+        let did_document_storage = req.guard::<&State<LruDidDocumentStorage>>().await.unwrap();
+
+        match validate_jwt(&token, &did_document_storage, &*http_client).await {
+            Ok((header, claims)) => {
+                Outcome::Success(Authorization(header, claims, token))
+            },
+            Err(_e) => Outcome::Error((Status::Unauthorized, AuthError::AuthRequired))
+        }
+    }
 }
 
-#[derive(Clone)]
-pub struct AccessOutput {
-    pub credentials: Option<Credentials>,
-    pub artifacts: Option<String>,
-}
+async fn validate_jwt(
+    token: &str,
+    storage: &State<LruDidDocumentStorage>,
+    http_client: &Client
+) -> Result<(Header, Claims)> {
+    // Split and decode JWT
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return Err(AuthError::BadJwt("Invalid JWT".to_string()).into());
+    }
 
-pub struct ValidatedBearer {
-    pub did: String,
-    pub scope: AuthScope,
-    pub token: String,
-    pub payload: JwtPayload,
-    pub audience: Option<String>,
-}
+    // Decode claims to get issuer
+    let encoded_claims = parts[1];
+    let claims_bytes = general_purpose::URL_SAFE_NO_PAD
+        .decode(encoded_claims)
+        .map_err(|e| AuthError::BadJwt(e.to_string()))?;
 
-#[derive(Clone)]
-pub struct JwtPayload {
-    pub scope: AuthScope,
-    pub sub: Option<String>,
-    pub aud: Option<Audiences>,
-    pub exp: Option<Duration>,
-    pub iat: Option<Duration>,
-    pub jti: Option<String>,
-}
+    let claims: Claims = serde_json::from_slice(&claims_bytes)
+        .map_err(|e| AuthError::BadJwt(e.to_string()))?;
 
-pub struct ServiceJwtOpts {
-    pub aud: Option<String>,
-    pub iss: Option<Vec<String>>,
-}
+    // Get issuer from claims
+    let iss = claims
+        .jose
+        .issuer
+        .as_ref()
+        .ok_or_else(|| AuthError::BadJwt("Missing issuer".to_string()))?;
 
-pub struct VerifiedServiceJwt {
-    pub aud: String,
-    pub iss: String,
+    // Try to look up DID document from storage
+    let mut did_document = storage.get_document_by_did(iss).await?;
+
+    // If not found, try to resolve the subject
+    if did_document.is_none() {
+        let did = resolve_subject(http_client, &DNS_RESOLVER, iss).await?;
+        let document = match *did.split(":").collect::<Vec<&str>>().get(1).unwrap() {
+            "plc" => {
+                plc::query(http_client, "plc.directory", &did).await?
+            },
+            "web" => {
+                web::query(http_client, &did).await?
+            },
+            _ => bail!("Unknown DID method")
+        };
+        did_document = Some(document);
+    }
+
+    let did_document = did_document.ok_or_else(|| AuthError::BadJwt("DID document not found".to_string()))?;
+
+    // Extract keys from DID document
+    let did_keys = did_document.did_keys();
+    if did_keys.is_empty() {
+        return Err(AuthError::BadJwt("No keys found in DID document".to_string()).into());
+    }
+
+    for key_multibase in did_keys {
+        match identify_key(key_multibase) {
+            Ok(key_data) => {
+                match atproto_oauth::jwt::verify(token, &key_data) {
+                    Ok(validated_claims) => {
+                        // Decode header for return
+                        let encoded_header = parts[0];
+                        let header_bytes = general_purpose::URL_SAFE_NO_PAD
+                            .decode(encoded_header)
+                            .map_err(|e| AuthError::BadJwt(e.to_string()))?;
+                        let header: Header = serde_json::from_slice(&header_bytes)
+                            .map_err(|e| AuthError::BadJwt(e.to_string()))?;
+                        return Ok((header, validated_claims));
+                    }
+                    Err(_e) => {
+                        continue;
+                    }
+                }
+            }
+            Err(_e) => {
+                continue;
+            }
+        }
+    }
+    
+    Err(AuthError::AuthRequired.into())
 }
 
 #[derive(Error, Debug)]
@@ -82,174 +165,12 @@ pub enum AuthError {
     BadJwtAudience(String),
     #[error("UntrustedIss: `{0}`")]
     UntrustedIss(String),
-    #[error("AuthRequired: `{0}`")]
-    AuthRequired(String),
+    #[error("AuthRequired")]
+    AuthRequired,
     #[error("AccountNotFound: `{0}`")]
     AccountNotFound(String),
     #[error("AccountTakedown: `{0}`")]
     AccountTakedown(String),
     #[error("AccountDeactivated: `{0}`")]
     AccountDeactivated(String),
-}
-
-pub struct UserDidAuth {
-    pub access: AccessOutput,
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for UserDidAuth {
-    type Error = AuthError;
-
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let id_resolver = req.guard::<&State<SharedIdResolver>>().await.unwrap();
-        match verify_service_jwt(
-            req,
-            id_resolver,
-            ServiceJwtOpts {
-                aud: Some(CORE_CONFIG.did()),
-                iss: None,
-            },
-        )
-        .await
-        {
-            Ok(payload) => Outcome::Success(UserDidAuth {
-                access: AccessOutput {
-                    credentials: Some(Credentials {
-                        r#type: "user_did".to_string(),
-                        did: None,
-                        scope: None,
-                        audience: None,
-                        token_id: None,
-                        aud: Some(payload.aud),
-                        iss: Some(payload.iss),
-                        is_privileged: None,
-                    }),
-                    artifacts: None,
-                },
-            }),
-            Err(error) => {
-                Outcome::Error((Status::BadRequest, AuthError::BadJwt(error.to_string())))
-            }
-        }
-    }
-}
-
-pub struct UserDidAuthOptional {
-    pub access: Option<AccessOutput>,
-}
-
-#[rocket::async_trait]
-impl<'r> FromRequest<'r> for UserDidAuthOptional {
-    type Error = AuthError;
-
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        if is_bearer_token(req) {
-            match UserDidAuth::from_request(req).await {
-                Outcome::Success(output) => Outcome::Success(UserDidAuthOptional {
-                    access: Some(output.access),
-                }),
-                Outcome::Error(err) => Outcome::Error(err),
-                _ => panic!("Unexpected outcome during UserDidAuthOptional"),
-            }
-        } else {
-            Outcome::Success(UserDidAuthOptional { access: None })
-        }
-    }
-}
-
-pub fn get_did(doc: &DidDocument) -> String {
-    doc.id.clone()
-}
-
-pub fn get_verification_material(
-    doc: &DidDocument,
-    key_id: &String,
-) -> Option<VerificationMaterial> {
-    let did = get_did(doc);
-    let keys = &doc.verification_method;
-    if let Some(keys) = keys {
-        let found = keys
-            .into_iter()
-            .find(|key| key.id == format!("#{key_id}") || key.id == format!("{did}#{key_id}"));
-        match found {
-            Some(found) if found.public_key_multibase.is_some() => {
-                let found = found.clone();
-                Some(VerificationMaterial {
-                    r#type: found.r#type,
-                    public_key_multibase: found.public_key_multibase.unwrap(),
-                })
-            }
-            _ => None,
-        }
-    } else {
-        None
-    }
-}
-
-pub async fn verify_service_jwt<'r>(
-    request: &'r Request<'_>,
-    id_resolver: &State<SharedIdResolver>,
-    opts: ServiceJwtOpts,
-) -> Result<VerifiedServiceJwt> {
-    let get_signing_key = |iss: String, force_refresh: bool| -> Result<String> {
-        match &opts.iss {
-            Some(opts_iss) if opts_iss.contains(&iss) => bail!("UntrustedIss: Untrusted issuer"),
-            _ => (),
-        }
-        let parts = iss.split("#").collect::<Vec<&str>>();
-        if let (Some(did), Some(service_id)) = (parts.get(0), parts.get(1)) {
-            let (did, service_id) = (did.to_string(), *service_id);
-            let key_id = if service_id == "atproto_labeler" {
-                "atproto_label"
-            } else {
-                "atproto"
-            };
-            let mut lock = futures::executor::block_on(id_resolver.id_resolver.write());
-            let did_doc: Result<DidDocument> =
-                futures::executor::block_on(lock.did.ensure_resolve(&did, Some(force_refresh)));
-            let did_doc: DidDocument = match did_doc {
-                Err(err) => bail!("could not resolve iss did: `{err}`"),
-                Ok(res) => res,
-            };
-            match get_verification_material(&did_doc, &key_id.to_string()) {
-                None => bail!("missing or bad key in did doc"),
-                Some(parsed_key) => match get_did_key_from_multibase(parsed_key)? {
-                    None => bail!("missing or bad key in did doc"),
-                    Some(did_key) => Ok(did_key),
-                },
-            }
-        } else {
-            bail!("could not resolve iss did")
-        }
-    };
-
-    match bearer_token_from_req(request)? {
-        None => bail!("MissingJwt: missing jwt"),
-        Some(jwt_str) => {
-            let payload: ServiceJwtPayload =
-                verify_service_jwt_server(jwt_str, opts.aud, get_signing_key).await?;
-            Ok(VerifiedServiceJwt {
-                iss: payload.iss,
-                aud: payload.aud,
-            })
-        }
-    }
-}
-
-pub fn bearer_token_from_req(request: &Request) -> Result<Option<String>> {
-    match request.headers().get_one("authorization") {
-        Some(header) if !header.starts_with("Bearer ") => Ok(None),
-        Some(header) => {
-            let slice = &header["Bearer ".len()..];
-            Ok(Some(slice.to_string()))
-        }
-        None => Ok(None),
-    }
-}
-
-pub fn is_bearer_token(request: &Request) -> bool {
-    match request.headers().get_one("Authorization") {
-        None => false,
-        Some(auth_header) => auth_header.starts_with(BEARER),
-    }
 }

@@ -39,11 +39,16 @@
     clippy::wildcard_imports
 )]
 
+use std::num::NonZero;
+use std::sync::Arc;
+
+use atproto_identity::resolve::create_resolver;
+use atproto_identity::storage_lru::LruDidDocumentStorage;
+use hickory_resolver::TokioResolver;
+use lazy_static::lazy_static;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::shield::{Shield, NoSniff};
 use rocket::{Request, Response};
-use rsky_identity::types::{DidCache, IdentityResolverOpts};
-use rsky_identity::IdResolver;
 use rocket::http::{Header, Status};
 use config::IDENTITY_CONFIG;
 use tokio::sync::RwLock;
@@ -52,18 +57,18 @@ use xrpc_server::error::XRPCError;
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate diesel;
+#[macro_use] extern crate serde;
 
 pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
+
+lazy_static! {
+    static ref DNS_RESOLVER: Arc<TokioResolver> = Arc::new(create_resolver(&[]));
+}
 
 /// Catches all OPTION requests in order to get the CORS related Fairing triggered.
 #[options("/<_..>")]
 async fn all_options() {
     /* Intentionally left empty */
-}
-
-#[derive(Debug)]
-pub struct SharedIdResolver {
-    pub id_resolver: RwLock<IdResolver>,
 }
 
 #[catch(default)]
@@ -106,15 +111,7 @@ impl Fairing for CORS {
 pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
     let shield = Shield::default().enable(NoSniff::Enable);
 
-    let id_resolver = SharedIdResolver {
-        id_resolver: RwLock::new(IdResolver::new(IdentityResolverOpts {
-            timeout: None,
-            plc_url: Some(IDENTITY_CONFIG.plc_url.clone()),
-            did_cache: Some(DidCache::new(None, None)),
-            backup_nameservers: IDENTITY_CONFIG.handle_backup_name_servers.clone()
-        })),
-    };
-
+    let did_document_cache = LruDidDocumentStorage::new(NonZero::new(6000).unwrap());
     let client = reqwest::Client::builder()
         .user_agent(APP_USER_AGENT)
         .build()?;
@@ -122,8 +119,8 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
     let rocket = rocket::build()
         .mount("/", routes![all_options])
         .mount("/", api::routes())
-        .manage(id_resolver)
         .manage(client)
+        .manage(did_document_cache)
         .attach(shield)
         .attach(CORS)
         .register("/", catchers![default_catcher]);

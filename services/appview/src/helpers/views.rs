@@ -1,5 +1,5 @@
+use atproto_identity::model::Document;
 use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic, ProfileViewDetailed};
-use rsky_identity::types::DidDocument;
 use chrono::{DateTime, Utc};
 use common::{get_handle, get_blob_ref};
 
@@ -10,7 +10,7 @@ pub fn parse_datetime(datetime: Option<DateTime<Utc>>) -> Option<String> {
     }
 }
 
-pub fn profile_view_basic(did_doc: &DidDocument, profile: &Profile) -> ProfileViewBasic {
+pub fn profile_view_basic(did_doc: &Document, profile: &Profile) -> ProfileViewBasic {
     ProfileViewBasic {
         did: did_doc.id.clone(),
         handle: get_handle(did_doc).unwrap(),
@@ -24,7 +24,7 @@ pub fn profile_view_basic(did_doc: &DidDocument, profile: &Profile) -> ProfileVi
     }
 }
 
-pub fn profile_view(did_doc: &DidDocument, profile: &Profile) -> ProfileView {
+pub fn profile_view(did_doc: &Document, profile: &Profile) -> ProfileView {
     ProfileView {
         did: did_doc.id.clone(),
         handle: get_handle(did_doc).unwrap(),
@@ -41,7 +41,7 @@ pub fn profile_view(did_doc: &DidDocument, profile: &Profile) -> ProfileView {
     }
 }
 
-pub fn profile_view_detailed(did_doc: &DidDocument, profile: &Profile) -> ProfileViewDetailed {
+pub fn profile_view_detailed(did_doc: &Document, profile: &Profile) -> ProfileViewDetailed {
     ProfileViewDetailed {
         did: did_doc.id.clone(),
         handle: get_handle(did_doc).unwrap(),

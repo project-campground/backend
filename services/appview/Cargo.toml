@@ -1,13 +1,12 @@
 [package]
 name = "campground-appview"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 secp256k1 = { version = "0.28.2", features = ["global-context", "serde", "rand", "hashes"] }
 rsky-lexicon = { version = ">=0.1.0", git = "https://github.com/blacksky-algorithms/rsky" }
 jwt-simple = { version = "0.12.9", default-features = false, features = ["pure-rust"] }
-rsky-identity = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 rsky-crypto = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 rsky-syntax = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" }
 campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
@@ -19,6 +18,10 @@ reqwest = { version = "0.12.5", features = ["json"] }
 rocket = { version = "0.5.1", features = ["json"] }
 tokio = { version = "1.28.2",features = ["full"] }
 ws = { package = "rocket_ws", version = "0.1.1" }
+atproto-identity = "0.6.0"
+hickory-resolver = "0.25"
+atproto-record = "0.6.0"
+atproto-oauth = "0.6.0"
 serde_json = "1.0.118"
 atrium-api = "0.24.6"
 mailgun-rs = "0.1.10"
@@ -27,6 +30,7 @@ thiserror = "1.0.61"
 base64ct = "1.6.0"
 lettre = "0.11.10"
 futures = "0.3.28"
+base64 = "0.22.1"
 serde = "1.0.203"
 chrono = "0.4.24"
 anyhow = "1.0.90"
