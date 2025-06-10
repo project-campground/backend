@@ -5,6 +5,7 @@ members = [
     "./libs/did-method-plc",
     "./libs/deadpool-surrealdb",
     "./libs/campground-lexicon",
+    "./libs/common",
     "./services/appview",
 ]
 resolver = "2"

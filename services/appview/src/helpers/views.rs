@@ -1,8 +1,7 @@
 use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic, ProfileViewDetailed};
 use rsky_identity::types::DidDocument;
 use chrono::{DateTime, Utc};
-
-use super::{did::get_handle, repo::get_blob_ref};
+use common::{get_handle, get_blob_ref};
 
 pub fn parse_datetime(datetime: Option<DateTime<Utc>>) -> Option<String> {
     match datetime {

@@ -13,6 +13,7 @@ rsky-syntax = { version = "*", git = "https://github.com/blacksky-algorithms/rsk
 campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
 diesel = { version = "=2.1.5", features = ["chrono", "postgres", "r2d2"] }
 atrium-oauth-client = { git = "https://github.com/sugyan/atrium" }
+common = { version = "*", path = "../../libs/common" }
 reqwest = { version = "0.12.5", features = ["json"] }
 rocket = { version = "0.5.1", features = ["json"] }
 tokio = { version = "1.28.2",features = ["full"] }

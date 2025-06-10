@@ -1,0 +1,14 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rsky-lexicon = { version = ">=0.1.0", git = "https://github.com/blacksky-algorithms/rsky" }
+reqwest = { version = "0.12.5", features = ["json"] }
+atproto-identity = "0.6.0"
+hickory-resolver = "0.25"
+atproto-record = "0.6.0"
+serde_json = "1.0.118"
+serde = "1.0.203"
+anyhow = "1.0.90"
