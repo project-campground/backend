@@ -84,3 +84,96 @@ pub fn read(data: &str) -> Result<JetstreamRepoMessage> {
 
     Ok(body)
 }
+
+// JetstreamEvent structs/enums from https://tangled.sh/@smokesignal.events/atproto-identity-rs/blob/main/crates/atproto-jetstream/src/consumer.rs
+
+/// Event data structure for Jetstream events
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum JetstreamEvent {
+    /// Repository commit event (create/update operations)
+    Commit {
+        /// DID of the repository that was updated
+        did: String,
+        /// Event timestamp in microseconds since Unix epoch
+        time_us: u64,
+        /// Event type identifier
+        kind: String,
+
+        #[serde(rename = "commit")]
+        /// Commit operation details
+        commit: JetstreamEventCommit,
+    },
+
+    /// Repository delete event
+    Delete {
+        /// DID of the repository that was updated
+        did: String,
+        /// Event timestamp in microseconds since Unix epoch
+        time_us: u64,
+        /// Event type identifier
+        kind: String,
+
+        #[serde(rename = "commit")]
+        /// Delete operation details
+        commit: JetstreamEventDelete,
+    },
+
+    /// Identity document update event
+    Identity {
+        /// DID whose identity was updated
+        did: String,
+        /// Event timestamp in microseconds since Unix epoch
+        time_us: u64,
+        /// Event type identifier
+        kind: String,
+
+        #[serde(rename = "identity")]
+        /// Identity document data
+        identity: serde_json::Value,
+    },
+
+    /// Account-related event
+    Account {
+        /// DID of the account
+        did: String,
+        /// Event timestamp in microseconds since Unix epoch
+        time_us: u64,
+        /// Event type identifier
+        kind: String,
+
+        #[serde(rename = "account")]
+        /// Account data
+        identity: serde_json::Value,
+    },
+}
+
+/// Repository commit operation details
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JetstreamEventCommit {
+    /// Repository revision identifier
+    pub rev: String,
+    /// Operation type (create, update)
+    pub operation: String,
+    /// AT Protocol collection name
+    pub collection: String,
+    /// Record key within the collection
+    pub rkey: String,
+    /// Content identifier (CID) of the record
+    pub cid: String,
+    /// Record data as JSON
+    pub record: serde_json::Value,
+}
+
+/// Repository delete operation details
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JetstreamEventDelete {
+    /// Repository revision identifier
+    pub rev: String,
+    /// Operation type (delete)
+    pub operation: String,
+    /// AT Protocol collection name
+    pub collection: String,
+    /// Record key that was deleted
+    pub rkey: String,
+}
