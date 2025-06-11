@@ -9,10 +9,12 @@ use reqwest::Client;
 use rsky_lexicon::com::atproto::repo::Blob;
 
 use crate::{
-    auth_verifier::OptionalAuthorization,
     database::profiles,
     helpers::views::profile_view_detailed,
-    xrpc_server::error::{Result, XRPCError}
+    xrpc::{
+        auth::OptionalAuthorization,
+        error::{Result, XRPCError}
+    }
 };
 
 #[get("/xrpc/gg.campground.actor.getProfile?<actor>")]

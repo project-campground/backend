@@ -1,10 +1,14 @@
+#![
+    allow(dead_code)
+]
+
 use atproto_identity::{key::identify_key, plc, resolve::resolve_subject, storage::DidDocumentStorage, storage_lru::LruDidDocumentStorage, web};
 use base64::{engine::general_purpose, Engine};
 use reqwest::Client;
 
 use rocket::request::{FromRequest, Outcome, Request};
 use atproto_oauth::jwt::{Claims, Header};
-use anyhow::{bail, Result};
+use anyhow::Result;
 use rocket::http::Status;
 use thiserror::Error;
 use rocket::State;
@@ -84,24 +88,24 @@ async fn validate_jwt(
     // Split and decode JWT
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {
-        return Err(AuthError::BadJwt("Invalid JWT".to_string()).into());
+        return Err(AuthError::InvalidJWT.into());
     }
 
     // Decode claims to get issuer
     let encoded_claims = parts[1];
     let claims_bytes = general_purpose::URL_SAFE_NO_PAD
         .decode(encoded_claims)
-        .map_err(|e| AuthError::BadJwt(e.to_string()))?;
+        .map_err(|_| AuthError::InvalidClaims)?;
 
     let claims: Claims = serde_json::from_slice(&claims_bytes)
-        .map_err(|e| AuthError::BadJwt(e.to_string()))?;
+        .map_err(|_| AuthError::InvalidClaims)?;
 
     // Get issuer from claims
     let iss = claims
         .jose
         .issuer
         .as_ref()
-        .ok_or_else(|| AuthError::BadJwt("Missing issuer".to_string()))?;
+        .ok_or_else(|| AuthError::MissingIssuer)?;
 
     // Try to look up DID document from storage
     let mut did_document = storage.get_document_by_did(iss).await?;
@@ -116,17 +120,17 @@ async fn validate_jwt(
             "web" => {
                 web::query(http_client, &did).await?
             },
-            _ => bail!("Unknown DID method")
+            _ => return Err(AuthError::InvalidDIDMethod(did).into()),
         };
         did_document = Some(document);
     }
 
-    let did_document = did_document.ok_or_else(|| AuthError::BadJwt("DID document not found".to_string()))?;
+    let did_document = did_document.ok_or_else(|| AuthError::AccountNotFound)?;
 
     // Extract keys from DID document
     let did_keys = did_document.did_keys();
     if did_keys.is_empty() {
-        return Err(AuthError::BadJwt("No keys found in DID document".to_string()).into());
+        return Err(AuthError::MissingKeys.into());
     }
 
     for key_multibase in did_keys {
@@ -138,9 +142,9 @@ async fn validate_jwt(
                         let encoded_header = parts[0];
                         let header_bytes = general_purpose::URL_SAFE_NO_PAD
                             .decode(encoded_header)
-                            .map_err(|e| AuthError::BadJwt(e.to_string()))?;
+                            .map_err(|_| AuthError::InvalidClaims)?;
                         let header: Header = serde_json::from_slice(&header_bytes)
-                            .map_err(|e| AuthError::BadJwt(e.to_string()))?;
+                            .map_err(|_| AuthError::InvalidClaims)?;
                         return Ok((header, validated_claims));
                     }
                     Err(_e) => {
@@ -159,18 +163,22 @@ async fn validate_jwt(
 
 #[derive(Error, Debug)]
 pub enum AuthError {
-    #[error("BadJwt: `{0}`")]
-    BadJwt(String),
-    #[error("BadJwtAudience: `{0}`")]
-    BadJwtAudience(String),
-    #[error("UntrustedIss: `{0}`")]
-    UntrustedIss(String),
-    #[error("AuthRequired")]
+    #[error("Invalid JWT")]
+    InvalidJWT,
+    #[error("Invalid DID method: `{0}`")]
+    InvalidDIDMethod(String),
+    #[error("Invalid Claims")]
+    InvalidClaims,
+    #[error("Missing Issuer")]
+    MissingIssuer,
+    #[error("Missing keys in DID document")]
+    MissingKeys,
+    #[error("Authentication required")]
     AuthRequired,
-    #[error("AccountNotFound: `{0}`")]
-    AccountNotFound(String),
-    #[error("AccountTakedown: `{0}`")]
-    AccountTakedown(String),
-    #[error("AccountDeactivated: `{0}`")]
-    AccountDeactivated(String),
+    #[error("Account not found")]
+    AccountNotFound,
+    // #[error("Account has been taken down")]
+    // AccountTakedown,
+    // #[error("Account was deactivated")]
+    // AccountDeactivated,
 }

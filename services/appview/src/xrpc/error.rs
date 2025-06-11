@@ -20,6 +20,7 @@ pub enum XRPCError {
     #[error("(501) Not implemented")]
     NotImplemented,
     #[error(transparent)]
+    #[allow(dead_code)]
     Other(anyhow::Error)
 }
 

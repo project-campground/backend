@@ -1,3 +1,7 @@
+#![
+    allow(dead_code)
+]
+
 use appview_schema::models::appview::Actor;
 use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic, ProfileViewDetailed};
 use chrono::{DateTime, Utc};

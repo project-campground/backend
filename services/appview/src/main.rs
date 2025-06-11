@@ -50,14 +50,16 @@ use rocket::fairing::{Fairing, Info, Kind};
 use rocket::shield::{Shield, NoSniff};
 use rocket::{Request, Response};
 use rocket::http::{Header, Status};
-use config::IDENTITY_CONFIG;
-use tokio::sync::RwLock;
 use anyhow::Result;
-use xrpc_server::error::XRPCError;
+use xrpc::error::XRPCError;
+
+use askama as _;
+use lettre as _;
+use mailgun_rs as _;
+use ws as _;
 
 #[macro_use] extern crate rocket;
-#[macro_use] extern crate diesel;
-#[macro_use] extern crate serde;
+// #[macro_use] extern crate serde;
 
 pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
 
@@ -137,8 +139,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-mod auth_verifier;
-mod xrpc_server;
+mod xrpc;
 mod database;
 mod helpers;
 mod config;
