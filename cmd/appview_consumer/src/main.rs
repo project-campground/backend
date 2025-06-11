@@ -42,6 +42,7 @@
 use std::{env, num::NonZero, str::FromStr, sync::Arc, time::Duration};
 
 use anyhow::Result;
+use appview_schema::models::appview::Setting;
 use atproto_identity::{resolve::{create_resolver, resolve_subject}, storage_lru::LruDidDocumentStorage};
 use crate::jetstream::*;
 use campground_lexicon::gg::campground::{actor::Profile, home_server::HomeServer};
@@ -56,7 +57,6 @@ use url::Url;
 
 use crate::database::{establish_connection, models::appview::Actor};
 
-#[macro_use] extern crate diesel;
 #[macro_use] extern crate serde;
 
 lazy_static! {
@@ -149,8 +149,21 @@ async fn process(message: String) {
         Ok(body) => {
             match body {
                 JetstreamRepoMessage::Commit(commit) => {
+                    // Update the cursor every 20~ events
                     if commit.time_us.rem_euclid(20) == 0 {
-                        // TODO: Update stored cursor
+                        let setting = Setting {
+                            name: "cursor".to_string(),
+                            value: Some(commit.time_us.to_string())
+                        };
+                        let mut conn = establish_connection().unwrap();
+                        diesel::insert_into(crate::schema::appview::setting::table)
+                            .values(&setting)
+                            .on_conflict(crate::schema::appview::setting::name)
+                            .do_update()
+                            .set(&setting)
+                            .returning(Setting::as_returning())
+                            .get_result(&mut conn)
+                            .expect("Error updating setting");
                     }
 
                     match commit.commit.collection.as_str() {
@@ -170,7 +183,18 @@ async fn process(message: String) {
                                                 return;
                                             }
 
+                                            let mut first_seen = Utc::now().to_string();
                                             let mut conn = establish_connection().unwrap();
+                                            
+                                            let existing = crate::schema::appview::profile::table
+                                                .filter(crate::schema::appview::profile::creator.eq(&commit.did))
+                                                .first::<Profile>(&mut conn)
+                                                .optional()
+                                                .expect("Error loading profile");
+                                            if let Some(existing) = existing {
+                                                first_seen = existing.first_seen;
+                                            }
+                                            
                                             let profile = Profile {
                                                 uri: format!("at://{}/{}/{}", commit.did, commit.commit.collection, commit.commit.rkey),
                                                 cid: commit.commit.cid.unwrap(),
@@ -185,7 +209,14 @@ async fn process(message: String) {
                                                     Some(banner) => Some(banner.cid.unwrap()),
                                                     None => None
                                                 },
-                                                indexed_at: chrono::Utc::now().naive_utc().to_string()
+                                                indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                                                tagline: record.tagline,
+                                                created_at: match record.created_at {
+                                                    Some(created_at) => Some(created_at.to_string()),
+                                                    None => None
+                                                },
+                                                location: record.location,
+                                                first_seen: first_seen
                                             };
                                             diesel::insert_into(crate::schema::appview::profile::table)
                                                 .values(&profile)
@@ -256,18 +287,30 @@ async fn main() -> Result<()> {
     let default_subscriber_path = env::var("JETSTREAM_SERVER_ENDPOINT")
         .unwrap_or("wss://jetstream1.us-west.bsky.network".into());
     let wanted_collections = vec!["gg.campground.actor.profile", "gg.campground.homeServer"];
+    let mut cursor = "".to_string();
+
+    let mut conn = establish_connection().unwrap();
+    let setting = crate::schema::appview::setting::table
+        .filter(crate::schema::appview::setting::name.eq("cursor"))
+        .get_result::<Setting>(&mut conn)
+        .optional()
+        .expect("Error loading setting");
+    if setting.is_some() {
+        cursor = format!("&cursor={}", setting.unwrap().value.unwrap());
+    }
 
     loop {
         match tokio_tungstenite::connect_async(
             Url::parse(
                 format!(
-                    "{sub}/subscribe?{filter}",
+                    "{sub}/subscribe?{filter}{cursor}",
                     sub = default_subscriber_path,
                     filter = wanted_collections
                         .iter()
                         .map(|c| format!("wantedCollections={}", c))
                         .collect::<Vec<String>>()
-                        .join("&")
+                        .join("&"),
+                    cursor = cursor
                 ).as_str()
             )
             .unwrap(),

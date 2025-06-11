@@ -9,6 +9,18 @@ pub mod appview {
     #[derive(
         Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
     )]
+    #[diesel(primary_key(name))]
+    #[diesel(table_name = crate::schema::appview::setting)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct Setting {
+        pub name: String,
+        pub value: Option<String>
+    }
+    
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
     #[diesel(primary_key(did))]
     #[diesel(table_name = crate::schema::appview::actor)]
     #[diesel(check_for_backend(diesel::pg::Pg))]

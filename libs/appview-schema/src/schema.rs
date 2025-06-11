@@ -20,11 +20,16 @@ pub mod appview {
             avatarcid -> Nullable<Varchar>,
             bannercid -> Nullable<Varchar>,
             indexedat -> Varchar,
+    diesel::table! {
+        appview.setting (name) {
+            name -> Varchar,
+            value -> Nullable<Varchar>,
         }
     }
 
     diesel::allow_tables_to_appear_in_same_query!(
         actor,
         profile,
+        setting,
     );
 }
