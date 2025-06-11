@@ -26,4 +26,5 @@ pub fn establish_connection() -> Result<DbConnection> {
 }
 
 pub mod actors;
+pub mod profiles;
 pub use appview_schema::models;

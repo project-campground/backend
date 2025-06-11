@@ -14,6 +14,83 @@ use crate::database::{
     models::appview::Actor,
 };
 
+pub async fn get_actors(client: &Client, did_document_storage: &LruDidDocumentStorage, actors: Vec<String>) -> Result<Vec<Actor>> {
+    let mut conn = establish_connection().unwrap();
+
+    let mut db_actors = Vec::new();
+    let query_result = crate::schema::appview::actor::table
+        .filter(crate::schema::appview::actor::did.eq_any(&actors))
+        .load::<Actor>(&mut conn)
+        .expect("Error loading actors");
+    let mut to_insert = Vec::new();
+
+    for actor in actors {
+        match query_result.iter().find(|a| a.did == actor) {
+            Some(actor) => db_actors.push(actor.clone()),
+            None => {
+                let actor = resolve_subject(client, &DNS_RESOLVER, &actor).await.ok();
+                if let Some(actor) = actor {
+                    let doc = match *actor.split(":").collect::<Vec<&str>>().get(1).unwrap() {
+                        "plc" => {
+                            plc::query(client, "plc.directory", &actor).await?
+                        },
+                        "web" => {
+                            web::query(client, &actor).await?
+                        }
+                        _ => {
+                            continue;
+                        }
+                    };
+                
+                    let handle = doc.also_known_as
+                        .iter()
+                        .find(|&handle| handle.starts_with("at://"));
+                
+                    let home_server = fetch_record::<HomeServer>(&actor, "gg.campground.homeServer", "self", client, did_document_storage, &DNS_RESOLVER).await?;
+                    
+                    if home_server.value.did != "" && home_server.value.did.starts_with("did:") {
+                        match handle {
+                            Some(handle) => {
+                                // Validate that the handle resolves back to the DID
+                                let resolved = resolve_subject(client, &DNS_RESOLVER, handle).await?;
+                                if resolved == actor {
+                                    let actor = Actor {
+                                        did: actor.clone(),
+                                        handle: Some(handle.clone()),
+                                        home_server: home_server.value.did.clone(),
+                                        indexed_at: chrono::Utc::now().naive_utc().to_string()
+                                    };
+                                    to_insert.push(actor.clone());
+                                    db_actors.push(actor);
+                                }
+                            },
+                            None => {
+                                let actor = Actor {
+                                    did: actor.clone(),
+                                    handle: None,
+                                    home_server: home_server.value.did.clone(),
+                                    indexed_at: chrono::Utc::now().naive_utc().to_string()
+                                };
+                                to_insert.push(actor.clone());
+                                db_actors.push(actor);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !to_insert.is_empty() {
+        diesel::insert_into(crate::schema::appview::actor::table)
+            .values(&to_insert)
+            .execute(&mut conn)
+            .expect("Error saving new actors");
+    }
+
+    Ok(db_actors)
+}
+
 pub async fn get_actor(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: &str) -> Result<Actor> {
     let mut conn = establish_connection().unwrap();
 

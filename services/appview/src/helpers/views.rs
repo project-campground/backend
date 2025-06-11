@@ -1,7 +1,7 @@
-use atproto_identity::model::Document;
+use appview_schema::models::appview::Actor;
 use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic, ProfileViewDetailed};
 use chrono::{DateTime, Utc};
-use common::{get_handle, get_blob_ref};
+use common::get_blob_ref;
 
 pub fn parse_datetime(datetime: Option<DateTime<Utc>>) -> Option<String> {
     match datetime {
@@ -10,10 +10,13 @@ pub fn parse_datetime(datetime: Option<DateTime<Utc>>) -> Option<String> {
     }
 }
 
-pub fn profile_view_basic(did_doc: &Document, profile: &Profile) -> ProfileViewBasic {
+pub fn profile_view_basic(actor: &Actor, profile: &Profile) -> ProfileViewBasic {
     ProfileViewBasic {
-        did: did_doc.id.clone(),
-        handle: get_handle(did_doc).unwrap(),
+        did: actor.did.clone(),
+        handle: match &actor.handle {
+            Some(handle) => handle.clone(),
+            None => "handle.invalid".to_string()
+        },
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
         created_at: parse_datetime(profile.created_at),
@@ -24,10 +27,13 @@ pub fn profile_view_basic(did_doc: &Document, profile: &Profile) -> ProfileViewB
     }
 }
 
-pub fn profile_view(did_doc: &Document, profile: &Profile) -> ProfileView {
+pub fn profile_view(actor: &Actor, profile: &Profile) -> ProfileView {
     ProfileView {
-        did: did_doc.id.clone(),
-        handle: get_handle(did_doc).unwrap(),
+        did: actor.did.clone(),
+        handle: match &actor.handle {
+            Some(handle) => handle.clone(),
+            None => "handle.invalid".to_string()
+        },
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
         banner: get_blob_ref(&profile.banner),
@@ -41,10 +47,13 @@ pub fn profile_view(did_doc: &Document, profile: &Profile) -> ProfileView {
     }
 }
 
-pub fn profile_view_detailed(did_doc: &Document, profile: &Profile) -> ProfileViewDetailed {
+pub fn profile_view_detailed(actor: &Actor, profile: &Profile) -> ProfileViewDetailed {
     ProfileViewDetailed {
-        did: did_doc.id.clone(),
-        handle: get_handle(did_doc).unwrap(),
+        did: actor.did.clone(),
+        handle: match &actor.handle {
+            Some(handle) => handle.clone(),
+            None => "handle.invalid".to_string()
+        },
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
         banner: get_blob_ref(&profile.banner),

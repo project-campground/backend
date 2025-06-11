@@ -5,8 +5,8 @@ pub mod appview {
         appview.actor (did) {
             did -> Varchar,
             handle -> Nullable<Varchar>,
-            homeserver -> Varchar,
             indexedat -> Varchar,
+            homeserver -> Varchar,
         }
     }
 
@@ -20,6 +20,13 @@ pub mod appview {
             avatarcid -> Nullable<Varchar>,
             bannercid -> Nullable<Varchar>,
             indexedat -> Varchar,
+            tagline -> Nullable<Varchar>,
+            createdat -> Nullable<Varchar>,
+            firstseen -> Varchar,
+            location -> Nullable<Varchar>,
+        }
+    }
+
     diesel::table! {
         appview.setting (name) {
             name -> Varchar,

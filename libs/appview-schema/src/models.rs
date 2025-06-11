@@ -54,6 +54,14 @@ pub mod appview {
         pub banner_cid: Option<String>,
         #[diesel(column_name = indexedat)]
         pub indexed_at: String,
+        #[diesel(column_name = createdat)]
+        pub created_at: Option<String>,
+        #[diesel(column_name = tagline)]
+        pub tagline: Option<String>,
+        #[diesel(column_name = firstseen)]
+        pub first_seen: String,
+        #[diesel(column_name = location)]
+        pub location: Option<String>,
     }
 
 }
