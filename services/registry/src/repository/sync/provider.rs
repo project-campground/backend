@@ -4,12 +4,12 @@
  * Modified to work with our own DB
  * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
  */
-use rsky_pds::car::read_car_bytes;
-use rsky_pds::repo::block_map::BlockMap;
+use crate::car::read_car_bytes;
+use crate::repository::block_map::BlockMap;
 use rsky_pds::repo::cid_set::CidSet;
 use rsky_pds::repo::error::DataStoreError;
-use rsky_pds::repo::util;
-use rsky_pds::repo::types::{Commit, RecordPath};
+use crate::repository::util;
+use crate::repository::types::{Commit, RecordPath};
 use crate::repository::mst::MST;
 use crate::repository::storage::RepoReader;
 use anyhow::Result;
@@ -30,7 +30,7 @@ pub async fn get_records(
     })?;
     let data: Commit = serde_cbor::value::from_value(commit.obj)?;
     car.set(commit_cid, commit.bytes);
-    let mut mst = MST::load(storage.clone(), data.data, None)?;
+    let mut mst = MST::load(storage.clone(), *data.data, None)?;
     let cids_for_paths = paths
         .into_iter()
         .map(|p| mst.cids_for_path(util::format_data_key(p.collection, p.rkey)))

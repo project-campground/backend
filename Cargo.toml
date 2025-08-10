@@ -1,9 +1,14 @@
 [workspace]
 members = [
-    "./services/registry",
+    # "./services/registry",
     "./services/discovery",
     "./libs/did-method-plc",
     "./libs/deadpool-surrealdb",
     "./libs/campground-lexicon",
+    "./libs/appview-schema",
+    "./libs/discovery-schema",
+    "./libs/common",
+    "./services/appview",
+    "./cmd/appview_consumer",
 ]
 resolver = "2"

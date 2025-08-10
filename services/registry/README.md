@@ -1,3 +1,6 @@
+> [!WARNING]
+> This service is no longer in use, we now use an Appview implementation instead.
+
 # Campground Registry
 This service is an [ATProto][] PDS implemented in rust, extended with lexicons for campground.
 

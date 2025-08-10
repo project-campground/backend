@@ -1,0 +1,23 @@
+[package]
+name = "appview_consumer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
+appview-schema = { version = "*", path = "../../libs/appview-schema" }
+diesel = { version = "=2.1.5", features = ["chrono", "postgres", "r2d2"] }
+tokio-tungstenite = { version = "0.18.0", features = ["native-tls"] }
+common = { version = "*", path = "../../libs/common" }
+reqwest = { version = "0.12.5", features = ["json"] }
+tokio = { version = "1.28.2",features = ["full"] }
+atproto-identity = "0.6.0"
+hickory-resolver = "0.25"
+serde_json = "1.0.118"
+lazy_static = "1.5.0"
+dotenvy = "0.15.7"
+futures = "0.3.28"
+serde = "1.0.203"
+chrono = "0.4.24"
+anyhow = "1.0.90"
+url = "2.3.1"

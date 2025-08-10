@@ -8,7 +8,7 @@ use crate::repository::ActorStore;
 use rsky_pds::common::ContentType;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use crate::repository::aws::s3::S3BlobStore;
-use rsky_pds::repo::types::{BlobConstraint, PreparedBlobRef};
+use crate::repository::types::{BlobConstraint, PreparedBlobRef};
 use anyhow::Result;
 use aws_config::SdkConfig;
 use rocket::data::Data;

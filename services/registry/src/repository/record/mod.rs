@@ -10,13 +10,13 @@
     models::{self, Backlink, Record}
 };
 use rsky_pds::common;
-use rsky_pds::repo::util::cbor_to_lex_record;
+use crate::repository::util::cbor_to_lex_record;
 use anyhow::{bail, Result};
 use diesel::*;
 use futures::{stream, StreamExt};
 use std::env;
 use std::str::FromStr;
-use rsky_pds::repo::types::{Ids, Lex, RepoRecord, WriteOpAction};
+use crate::repository::types::{Ids, Lex, RepoRecord, WriteOpAction};
 use rsky_pds::storage::Ipld;
 use lexicon_cid::Cid;
 use rsky_lexicon::com::atproto::admin::StatusAttr;

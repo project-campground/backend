@@ -4,22 +4,22 @@
  * Modified to work with our own DB
  * License: https://github.com/blacksky-algorithms/rsky/blob/main/LICENSE
  */
-use rsky_pds::repo::block_map::{BlockMap, BlocksAndMissing};
+use crate::repository::block_map::{BlockMap, BlocksAndMissing};
 use rsky_pds::storage::{ObjAndBytes, CidAndRev};
-use rsky_pds::repo::types::{CommitData, RepoRecord};
+use crate::repository::types::{CommitData, RepoRecord};
 use serde_cbor::Value as CborValue;
 use std::str::FromStr;
 use anyhow::{bail, Result};
 use futures::try_join;
 use lexicon_cid::Cid;
 use crate::database::{establish_connection, RepoBlock, RepoRoot, models};
-use rsky_pds::car::read_car_bytes;
+use crate::car::read_car_bytes;
 use rsky_pds::common;
 use rsky_pds::repo::error::DataStoreError;
 use rsky_pds::storage::RepoRootError::RepoRootNotFoundError;
 use rsky_pds::repo::cid_set::CidSet;
-use rsky_pds::repo::util::cbor_to_lex_record;
-use rsky_pds::repo::parse;
+use crate::repository::util::cbor_to_lex_record;
+use crate::repository::parse;
 use diesel::dsl::sql;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Text};

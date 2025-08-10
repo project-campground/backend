@@ -8,7 +8,7 @@ use crate::auth_verifier;
 use crate::auth_verifier::OptionalAccessOrAdminToken;
 use crate::repository::aws::s3::S3BlobStore;
 use crate::repository::ActorStore;
-use rsky_pds::car::read_car_bytes;
+use crate::car::read_car_bytes;
 use rsky_pds::models::{ErrorCode, ErrorMessageResponse};
 use anyhow::{bail, Result};
 use aws_config::SdkConfig;

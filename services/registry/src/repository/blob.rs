@@ -9,9 +9,9 @@ use crate::database::models;
 use rsky_pds::common::ipld::sha256_raw_to_cid;
 use rsky_pds::common::now;
 use crate::repository::aws::s3::S3BlobStore;
-use rsky_pds::repo::blob_refs::BlobRef;
+use crate::repository::blob_refs::BlobRef;
 use rsky_pds::repo::error::BlobError;
-use rsky_pds::repo::types::{PreparedBlobRef, PreparedWrite};
+use crate::repository::types::{PreparedBlobRef, PreparedWrite};
 use rsky_pds::{common, image};
 use anyhow::{bail, Result};
 use aws_sdk_s3::operation::get_object::GetObjectError;
@@ -338,17 +338,22 @@ impl BlobReader {
             .select(models::Blob::as_select())
             .first(conn)
             .optional()?;
+        println!("found: {:?}", found);
         if let Some(found) = found {
             verify_blob(&blob, &found).await?;
+            println!("blob: {:?}", blob.cid.to_string());
             if let Some(ref temp_key) = found.temp_key {
+                println!("temp_key: {:?}", temp_key.clone());
                 self.blobstore
                     .make_permanent(temp_key.clone(), blob.cid)
                     .await?;
+                println!("made permanent: {:?}", blob.cid.to_string());
             }
             update(BlobSchema::blob)
                 .filter(BlobSchema::tempKey.eq(found.temp_key))
                 .set(BlobSchema::tempKey.eq::<Option<String>>(None))
                 .execute(conn)?;
+            println!("updated: {:?}", blob.cid.to_string());
             Ok(())
         } else {
             bail!("Cound not find blob: {:?}", blob.cid.to_string())
