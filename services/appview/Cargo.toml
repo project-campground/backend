@@ -7,7 +7,7 @@ edition = "2024"
 rsky-lexicon = { version = ">=0.1.0", git = "https://github.com/blacksky-algorithms/rsky" }
 lexicon_cid = { package = "cid", version = "0.11.1", features = ["serde-codec"] }
 campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
-diesel = { version = "=2.1.5", features = ["chrono", "postgres", "r2d2"] }
+diesel = { version = "=2.1.5", features = ["chrono", "postgres", "r2d2", "serde_json"] }
 appview-schema = { version = "*", path = "../../libs/appview-schema" }
 atrium-oauth-client = { git = "https://github.com/sugyan/atrium" }
 common = { version = "*", path = "../../libs/common" }

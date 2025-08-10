@@ -17,6 +17,76 @@ pub mod appview {
         pub name: String,
         pub value: Option<String>
     }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(did))]
+    #[diesel(table_name = crate::schema::appview::account)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct Account {
+        pub did: String,
+        pub settings: serde_json::Value,
+        #[diesel(column_name = socialconnections)]
+        pub social_connections: serde_json::Value,
+        pub activities: serde_json::Value,
+        pub status: String,
+        #[diesel(column_name = statustext)]
+        pub status_text: Option<String>,
+        #[diesel(column_name = statusemoji)]
+        pub status_emoji: Option<String>,
+        #[diesel(column_name = lastseen)]
+        pub last_seen: chrono::NaiveDateTime,
+        pub email: Option<String>,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(did))]
+    #[diesel(table_name = crate::schema::appview::block)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct Block {
+        pub id: i64,
+        pub did: String,
+        #[diesel(column_name = targetdid)]
+        pub target_did: String,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(did))]
+    #[diesel(table_name = crate::schema::appview::friend)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct Friend {
+        pub id: i64,
+        pub did: String,
+        #[diesel(column_name = targetdid)]
+        pub target_did: String,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(seq))]
+    #[diesel(table_name = crate::schema::appview::event_seq)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct EventSequence {
+        pub seq: i64,
+        #[diesel(column_name = homeserver)]
+        pub home_server: String,
+        #[diesel(column_name = eventtype)]
+        pub event_type: String,
+        pub event: serde_json::Value,
+        pub invalidated: i16,
+        #[diesel(column_name = sequencedat)]
+        pub sequenced_at: chrono::NaiveDateTime,
+    }
     
     #[derive(
         Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,

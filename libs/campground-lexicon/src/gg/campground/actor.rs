@@ -9,18 +9,11 @@ use crate::gg::campground::activity::Activity;
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
-pub enum ProfileStatusType {
+pub enum ProfileStatus {
     Online,
     DoNotDisturb,
     Idle,
     Offline,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProfileStatus {
-    pub activities: Vec<Activity>,
-    pub status_type: Option<ProfileStatusType>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -49,6 +42,21 @@ pub enum ProfileLabels {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "$type")]
+#[serde(rename = "gg.campground.actor.defs#privateProfileView")]
+#[serde(rename_all = "camelCase")]
+pub struct PrivateProfileView {
+    pub did: String,
+    pub status: Option<ProfileStatus>,
+    pub status_text: Option<String>,
+    pub status_emoji: Option<String>,
+    pub activities: Vec<Activity>,
+    pub social_connections: Vec<SocialConnection>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "$type")]
+#[serde(rename = "gg.campground.actor.defs#profileViewBasic")]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileViewBasic {
     pub did: String,
@@ -63,6 +71,8 @@ pub struct ProfileViewBasic {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "$type")]
+#[serde(rename = "gg.campground.actor.defs#profileView")]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileView {
     pub did: String,
@@ -80,6 +90,8 @@ pub struct ProfileView {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(tag = "$type")]
+#[serde(rename = "gg.campground.actor.defs#profileViewDetailed")]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileViewDetailed {
     pub did: String,
@@ -103,6 +115,12 @@ pub struct ProfileViewDetailed {
 #[serde(rename_all = "camelCase")]
 pub struct GetProfilesOutput {
     pub profiles: Vec<ProfileViewDetailed>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetPrivateProfilesOutput {
+    pub profiles: Vec<PrivateProfileView>,
 }
 
 /// Metadata about the requesting account's relationship with the subject account.

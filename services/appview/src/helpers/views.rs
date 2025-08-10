@@ -2,8 +2,8 @@
     allow(dead_code)
 ]
 
-use appview_schema::models::appview::Actor;
-use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic, ProfileViewDetailed};
+use appview_schema::models::appview::{Account, Actor};
+use campground_lexicon::gg::campground::{activity::Activity, actor::{PrivateProfileView, Profile, ProfileStatus, ProfileView, ProfileViewBasic, ProfileViewDetailed}, socials::SocialConnection};
 use chrono::{DateTime, Utc};
 use common::get_blob_ref;
 
@@ -71,5 +71,28 @@ pub fn profile_view_detailed(actor: &Actor, profile: &Profile) -> ProfileViewDet
         viewer: None,
         social_connections: None,
         location: None,
+    }
+}
+
+pub fn private_profile_view(account: &Account) -> PrivateProfileView {
+    PrivateProfileView {
+        did: account.did.clone(),
+        status: Some(match account.status.as_str() {
+            "online" => ProfileStatus::Online,
+            "offline" => ProfileStatus::Offline,
+            "donotdisturb" => ProfileStatus::DoNotDisturb,
+            "idle" => ProfileStatus::Idle,
+            _ => ProfileStatus::Offline
+        }),
+        status_text: account.status_text.clone(),
+        status_emoji: account.status_emoji.clone(),
+        activities: match serde_json::from_value::<Vec<Activity>>(account.activities.clone()) {
+            Ok(activities) => activities,
+            Err(_) => vec![]
+        },
+        social_connections: match serde_json::from_value::<Vec<SocialConnection>>(account.social_connections.clone()) {
+            Ok(social_connections) => social_connections,
+            Err(_) => vec![]
+        },
     }
 }
