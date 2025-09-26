@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_imports)]
 use std::sync::LazyLock;
 use rocket::{figment::Figment, serde::Deserialize};
-use atrium_oauth_client::OAuthClientMetadata;
+use atrium_oauth::OAuthClientMetadata;
 use lazy_static::lazy_static;
 use rocket::Config;
 
