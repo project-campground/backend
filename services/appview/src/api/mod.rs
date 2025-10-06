@@ -1,3 +1,6 @@
+use atrium_api::did_doc::{DidDocument, Service, VerificationMethod};
+use rsky_crypto::utils::encode_did_key;
+
 use crate::config::CORE_CONFIG;
 
 macro_rules! merge_routes {
@@ -25,13 +28,46 @@ async fn oauth_client_metadata() -> String {
     serde_json::to_string(&CORE_CONFIG.oauth_metadata()).unwrap()
 }
 
+#[get("/.well-known/did.json")]
+async fn did() -> String {
+    let doc = DidDocument {
+        id: CORE_CONFIG.did().clone(),
+        also_known_as: None,
+        context: Some(vec![
+            "https://www.w3.org/ns/did/v1".to_string(),
+            "https://w3id.org/security/multikey/v1".to_string(),
+            "https://w3id.org/security/suites/secp256k1-2019/v1".to_string()
+        ]),
+        verification_method: Some(vec![
+            VerificationMethod {
+                id: format!("{}#atproto", CORE_CONFIG.did()),
+                r#type: "Multikey".to_string(),
+                controller: CORE_CONFIG.did(),
+                public_key_multibase: Some(
+                    encode_did_key(&CORE_CONFIG.verification_keypair().public_key()).replace("did:key:", "")
+                )
+            }
+        ]),
+        service: Some(vec![
+            Service {
+                id: format!("{}#campground_appview", CORE_CONFIG.did()),
+                r#type: "CampgroundAppview".to_string(),
+                service_endpoint: CORE_CONFIG.public_url()
+            }
+        ])
+    };
+
+    serde_json::to_string(&doc).unwrap()
+}
+
 pub fn routes() -> Vec<rocket::Route> {
     merge_routes!(
         gg::routes(), 
         rocket::routes![
             robots,
             index,
-            oauth_client_metadata
+            oauth_client_metadata,
+            did
         ]
     )
 }

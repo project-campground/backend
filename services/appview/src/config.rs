@@ -1,7 +1,8 @@
 #![allow(dead_code, unused_imports)]
 use std::sync::LazyLock;
 use rocket::{figment::Figment, serde::Deserialize};
-use atrium_oauth_client::OAuthClientMetadata;
+use secp256k1::{Keypair, Secp256k1};
+use atrium_oauth::OAuthClientMetadata;
 use lazy_static::lazy_static;
 use rocket::Config;
 
@@ -25,6 +26,7 @@ pub struct CoreConfig {
     pub terms_of_service_url: Option<String>,
     pub contact_email_address: Option<String>,
     pub dev_mode: Option<bool>,
+    pub verification_key: String,
 }
 
 impl CoreConfig {
@@ -52,6 +54,13 @@ impl CoreConfig {
 
     pub fn dev_mode(&self) -> bool {
         self.dev_mode.unwrap_or(cfg!(debug_assertions))
+    }
+
+    pub fn verification_keypair(&self) -> Keypair {
+        let secp = Secp256k1::new();
+        let secret_key = hex::decode(self.verification_key.clone()).expect("Failed to decode verification key");
+        let secret_key = secp256k1::SecretKey::from_slice(&secret_key).expect("Failed to create secret key");
+        Keypair::from_secret_key(&secp, &secret_key)
     }
 
     pub fn oauth_metadata(&self) -> OAuthClientMetadata {
