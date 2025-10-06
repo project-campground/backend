@@ -33,11 +33,12 @@ async fn did() -> String {
     let doc = DidDocument {
         id: CORE_CONFIG.did().clone(),
         also_known_as: None,
-        context: Some(vec![
-            "https://www.w3.org/ns/did/v1".to_string(),
-            "https://w3id.org/security/multikey/v1".to_string(),
-            "https://w3id.org/security/suites/secp256k1-2019/v1".to_string()
-        ]),
+        context: None,
+        // context: Some(vec![
+        //     "https://www.w3.org/ns/did/v1".to_string(),
+        //     "https://w3id.org/security/multikey/v1".to_string(),
+        //     "https://w3id.org/security/suites/secp256k1-2019/v1".to_string()
+        // ]),
         verification_method: Some(vec![
             VerificationMethod {
                 id: format!("{}#atproto", CORE_CONFIG.did()),
@@ -50,7 +51,7 @@ async fn did() -> String {
         ]),
         service: Some(vec![
             Service {
-                id: format!("{}#campground_appview", CORE_CONFIG.did()),
+                id: "#campground_appview".to_string(),
                 r#type: "CampgroundAppview".to_string(),
                 service_endpoint: CORE_CONFIG.public_url()
             }
