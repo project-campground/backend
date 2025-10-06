@@ -2,8 +2,8 @@
 members = [
     # "./services/registry",
     "./services/discovery",
-    "./libs/did-method-plc",
-    "./libs/deadpool-surrealdb",
+    # "./libs/did-method-plc",
+    # "./libs/deadpool-surrealdb",
     "./libs/campground-lexicon",
     "./libs/appview-schema",
     "./libs/discovery-schema",

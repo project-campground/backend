@@ -2,7 +2,8 @@
 port = 3984
 
 [default.core]
-# hostname = "example.com
+# hostname = "example.com"
+verification_key = "hex-encoded secp256k1 private key here"
 frontend = "https://app.campground.gg"
 
 [default.database]
