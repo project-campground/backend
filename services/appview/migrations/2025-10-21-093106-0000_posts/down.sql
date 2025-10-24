@@ -1,0 +1,1 @@
+DROP TABLE appview.profile_post;

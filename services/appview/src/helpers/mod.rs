@@ -21,3 +21,4 @@ pub fn lower_list<T>(list: Vec<T>) -> Vec<String>
 }
 
 pub mod views;
+pub mod posts;

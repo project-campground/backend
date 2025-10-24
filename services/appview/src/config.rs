@@ -22,6 +22,7 @@ pub struct CoreConfig {
     pub hostname: Option<String>,
     pub frontend: String,
     pub did: Option<String>,
+    pub port: Option<u16>,
     pub privacy_policy_url: Option<String>,
     pub terms_of_service_url: Option<String>,
     pub contact_email_address: Option<String>,
