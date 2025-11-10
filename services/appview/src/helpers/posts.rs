@@ -22,6 +22,7 @@ pub fn profile_post_view_basic(actor: &Actor, profile: &Profile, profile_post: &
     return ProfilePostViewBasic {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
+        parent_uri: profile_post.parent_uri.clone(),
         content: profile_post.content.clone(),
         author: profile_view_basic(actor, profile),
         tags: profile_post.tags.clone(),
@@ -39,6 +40,7 @@ pub fn profile_post_view_detailed(actor: &Actor, profile: &Profile, profile_post
     return ProfilePostViewDetailed {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
+        parent_uri: profile_post.parent_uri.clone(),
         content: profile_post.content.clone(),
         author: profile_view_basic(actor, profile),
         tags: profile_post.tags.iter().filter(|x| x.is_some()).map(|x| x.clone().unwrap()).collect(),

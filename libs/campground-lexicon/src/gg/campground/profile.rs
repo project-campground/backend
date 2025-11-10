@@ -22,6 +22,7 @@ pub struct ProfilePost {
 pub struct ProfilePostViewBasic {
     pub cid: String,
     pub uri: String,
+    pub parent_uri: Option<String>,
     pub content: String,
     pub author: ProfileViewBasic,
     pub tags: Vec<Option<String>>,
@@ -36,6 +37,7 @@ pub struct ProfilePostViewBasic {
 pub struct ProfilePostViewDetailed {
     pub cid: String,
     pub uri: String,
+    pub parent_uri: Option<String>,
     pub content: String,
     pub author: ProfileViewBasic,
     pub replies: Vec<ProfilePostViewBasic>,

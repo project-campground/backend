@@ -63,6 +63,7 @@ pub async fn get_profile_posts(client: &Client, did_document_storage: &LruDidDoc
                     )
             )
             // .load(&mut conn)
+            .order_by(profile_post::indexedat.desc())
             .load::<ProfilePost>(&mut conn)
         } else {
             profile_post::table.filter(
@@ -73,6 +74,7 @@ pub async fn get_profile_posts(client: &Client, did_document_storage: &LruDidDoc
                             .is_null()
                     )
             )
+            .order_by(profile_post::indexedat.desc())
             .load::<ProfilePost>(&mut conn)
         };
 
@@ -89,13 +91,45 @@ pub async fn get_profile_posts(client: &Client, did_document_storage: &LruDidDoc
             .filter(|x| x.value.parent_uri == parent_uri)
             .filter(|x| !post_uris.contains(&x.uri));
 
+    let post_record_uris: Vec<String> = post_records.records.iter().map(|x| x.uri.clone()).collect();
+    let posts_to_remove: Vec<String> =
+        post_uris
+            .iter()
+            .filter(|&x| !post_record_uris.contains(x))
+            .map(|x| x.clone())
+            .collect();
+
     for post in posts_to_add {
         let inserted = insert_post_record_into_db(post, author_did).await?;
         // To add to response
-        posts.push(inserted);
+        posts.insert(0, inserted);
     }
-    
-    Ok(posts)
+
+    let filtered_posts: Vec<ProfilePost> = posts
+        .iter()
+        .filter(|x| !posts_to_remove.contains(&x.uri))
+        .map(|x| x.clone())
+        .collect();
+
+    delete_post_records_from_db(posts_to_remove).await?;
+
+    Ok(filtered_posts)
+}
+
+pub async fn delete_post_records_from_db(uris: Vec<String>) -> Result<usize, &'static str> {
+    let mut conn = establish_connection().unwrap();
+    let deleted_count =
+        diesel::delete(
+            crate::schema::appview::profile_post::table
+                .filter(
+                    profile_post::uri
+                        .eq_any(uris)
+                )
+        )
+        .execute(&mut conn)
+        .map_err(|e| { println!("Err: {}", e); "Error inserting into db" })?;
+
+    Ok(deleted_count)
 }
 
 pub async fn insert_post_record_into_db(post_record: &GetRecordResponse<ProfilePostRecord>, author_did: &str) -> Result<ProfilePost, &'static str> {
@@ -163,19 +197,19 @@ pub fn populate_profile_posts_with_authors(posts: Vec<ProfilePost>, author_profi
 }
 pub async fn get_profile_post(client: &Client, did_document_storage: &LruDidDocumentStorage, uri: &str) -> Result<(Actor, ProfilePost), &'static str> {
     let mut conn = establish_connection().unwrap();
-    
+
     let post_uri = if uri.starts_with("at://") { uri.to_string() } else { format!("at://{}", uri) };
     let split_uri: Vec<&str> = post_uri.split('/').collect();
-    
+
     let author_did = split_uri[2].to_string();
-    
+
     // TODO: Resolve handles to DIDs
     if !author_did.starts_with("did:") {
         return Err("Invalid author DID");
     }
-    
+
     let author_actor = get_actor(client, did_document_storage, split_uri[2]).await.map_err(|_| "Error fetching actor")?;
-    
+
     // at://did:.../gg.campground.profile.posts/...
     let fetch_format = match split_uri[..] {
         [_, _, did, "gg.campground.profile.post", post_tid]
