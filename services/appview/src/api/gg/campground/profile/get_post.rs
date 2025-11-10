@@ -16,7 +16,7 @@ use crate::{
 
 #[get("/xrpc/gg.campground.profile.getPost?<uri>")]
 pub async fn get_post(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str) -> Result<Json<ProfilePostViewDetailed>> {
-    let main_post = profile_posts::get_profile_post(client, did_document_storage, uri).await.map_err(|e| { println!("ERR: {}", e); XRPCError::NotFound })?;
+    let main_post = profile_posts::get_profile_post(client, did_document_storage, uri).await.map_err(|e| XRPCError::NotFound)?;
 
     let replies = profile_posts::get_profile_posts(client, did_document_storage, uri.to_string()).await.map_err(|_| XRPCError::NotFound)?;
     

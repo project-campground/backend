@@ -20,7 +20,6 @@ use crate::{
 #[get("/xrpc/gg.campground.actor.getProfile?<actor>")]
 pub async fn get_profile(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str) -> Result<Json<ProfileViewDetailed>> {
     let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor).await.map_err(|_| XRPCError::NotFound)?;
-    println!("{:?}, {:?}", db_profile.tagline, db_profile.description);
     let record = Profile {
         display_name: db_profile.display_name,
         description: db_profile.description,
