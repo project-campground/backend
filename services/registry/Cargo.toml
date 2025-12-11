@@ -19,7 +19,7 @@ rsky-pds = { version = "*", git = "https://github.com/blacksky-algorithms/rsky" 
 lexicon_cid = { package = "cid", version = "0.10.1", features = ["serde-codec"] }
 campground-lexicon = { version = "*", path = "../../libs/campground-lexicon" }
 aws-config = { version = "1.1.8", features = ["behavior-version-latest"] }
-diesel = { version = "=2.1.5", features = ["chrono", "postgres"] }
+diesel = { version = "=2.3.1", features = ["chrono", "postgres"] }
 serde_ipld_dagcbor = { version = "0.6.1" , features = ["codec"] }
 ipld-cbor = { package = "libipld-cbor", version = "0.16.0" }
 atrium-ipld = { package = "ipld-core", version = "0.4.1" }

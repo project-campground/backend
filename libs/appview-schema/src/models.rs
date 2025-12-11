@@ -47,6 +47,7 @@ pub mod appview {
         pub creator: String,
         #[diesel(column_name = displayname)]
         pub display_name: Option<String>,
+        #[diesel(column_name = description)]
         pub description: Option<String>,
         #[diesel(column_name = avatarcid)]
         pub avatar_cid: Option<String>,
@@ -54,14 +55,39 @@ pub mod appview {
         pub banner_cid: Option<String>,
         #[diesel(column_name = indexedat)]
         pub indexed_at: String,
-        #[diesel(column_name = createdat)]
-        pub created_at: Option<String>,
         #[diesel(column_name = tagline)]
         pub tagline: Option<String>,
-        #[diesel(column_name = firstseen)]
-        pub first_seen: String,
         #[diesel(column_name = location)]
         pub location: Option<String>,
+        #[diesel(column_name = createdat)]
+        pub created_at: Option<String>,
+        #[diesel(column_name = firstseen)]
+        pub first_seen: String,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(uri))]
+    #[diesel(table_name = crate::schema::appview::profile_post)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct ProfilePost {
+        pub uri: String,
+        pub cid: String,
+        pub author: String,
+        #[diesel(column_name = parenturi)]
+        pub parent_uri: Option<String>,
+
+        pub content: String,
+        pub replies: Vec<Option<String>>,
+
+        #[diesel(column_name = indexedat)]
+        pub indexed_at: String,
+        #[diesel(column_name = createdat)]
+        pub created_at: String,
+        #[diesel(column_name = updatedat)]
+        pub updated_at: Option<String>,
     }
 
 }

@@ -20,10 +20,24 @@ pub mod appview {
             avatarcid -> Nullable<Varchar>,
             bannercid -> Nullable<Varchar>,
             indexedat -> Varchar,
+            location -> Nullable<Varchar>,
             tagline -> Nullable<Varchar>,
             createdat -> Nullable<Varchar>,
             firstseen -> Varchar,
-            location -> Nullable<Varchar>,
+        }
+    }
+
+    diesel::table! {
+        appview.profile_post (uri) {
+            uri -> Varchar,
+            cid -> Varchar,
+            author -> Varchar,
+            parenturi -> Nullable<Varchar>,
+            content -> Varchar,
+            replies -> Array<Nullable<Text>>,
+            indexedat -> Varchar,
+            createdat -> Varchar,
+            updatedat -> Nullable<Varchar>,
         }
     }
 
@@ -34,9 +48,5 @@ pub mod appview {
         }
     }
 
-    diesel::allow_tables_to_appear_in_same_query!(
-        actor,
-        profile,
-        setting,
-    );
+    diesel::allow_tables_to_appear_in_same_query!(actor, profile, profile_post, setting,);
 }
