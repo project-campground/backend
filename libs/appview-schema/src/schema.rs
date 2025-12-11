@@ -17,25 +17,24 @@ pub mod appview {
             creator -> Varchar,
             displayname -> Nullable<Varchar>,
             description -> Nullable<Varchar>,
-            tagline -> Nullable<Varchar>,
             avatarcid -> Nullable<Varchar>,
             bannercid -> Nullable<Varchar>,
             indexedat -> Varchar,
+            location -> Nullable<Varchar>,
+            tagline -> Nullable<Varchar>,
             createdat -> Nullable<Varchar>,
             firstseen -> Varchar,
-            location -> Nullable<Varchar>,
         }
     }
 
     diesel::table! {
         appview.profile_post (uri) {
             uri -> Varchar,
-            parenturi -> Nullable<Varchar>,
             cid -> Varchar,
             author -> Varchar,
+            parenturi -> Nullable<Varchar>,
             content -> Varchar,
             replies -> Array<Nullable<Text>>,
-            tags -> Array<Nullable<Text>>,
             indexedat -> Varchar,
             createdat -> Varchar,
             updatedat -> Nullable<Varchar>,

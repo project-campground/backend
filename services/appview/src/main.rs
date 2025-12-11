@@ -142,6 +142,7 @@ async fn main() -> Result<()> {
 mod xrpc;
 mod database;
 mod helpers;
+mod util;
 mod config;
 mod api;
 pub use appview_schema::schema;

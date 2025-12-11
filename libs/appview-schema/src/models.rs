@@ -49,20 +49,20 @@ pub mod appview {
         pub display_name: Option<String>,
         #[diesel(column_name = description)]
         pub description: Option<String>,
-        #[diesel(column_name = tagline)]
-        pub tagline: Option<String>,
         #[diesel(column_name = avatarcid)]
         pub avatar_cid: Option<String>,
         #[diesel(column_name = bannercid)]
         pub banner_cid: Option<String>,
         #[diesel(column_name = indexedat)]
         pub indexed_at: String,
+        #[diesel(column_name = tagline)]
+        pub tagline: Option<String>,
+        #[diesel(column_name = location)]
+        pub location: Option<String>,
         #[diesel(column_name = createdat)]
         pub created_at: Option<String>,
         #[diesel(column_name = firstseen)]
         pub first_seen: String,
-        #[diesel(column_name = location)]
-        pub location: Option<String>,
     }
 
     #[derive(
@@ -74,14 +74,13 @@ pub mod appview {
     #[serde(rename_all = "camelCase")]
     pub struct ProfilePost {
         pub uri: String,
-        #[diesel(column_name = parenturi)]
-        pub parent_uri: Option<String>,
         pub cid: String,
         pub author: String,
+        #[diesel(column_name = parenturi)]
+        pub parent_uri: Option<String>,
 
         pub content: String,
         pub replies: Vec<Option<String>>,
-        pub tags: Vec<Option<String>>,
 
         #[diesel(column_name = indexedat)]
         pub indexed_at: String,
