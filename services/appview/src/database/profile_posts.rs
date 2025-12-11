@@ -42,53 +42,6 @@ pub fn resolve_post_uri(uri: &str) -> Result<(String, String, Option<String>), &
 }
 
 pub async fn fill_profile_posts_with_records(client: &Client, did_document_storage: &LruDidDocumentStorage, author_did: String, parent_uri: Option<String>, posts: Vec<ProfilePost>) -> Result<Vec<ProfilePost>, &'static str> {
-    // let split_uri: Vec<&str> = post_uri.split('/').collect();
-
-    // let author_did = split_uri[2];
-
-    // // TODO: Resolve handles to DIDs
-    // if !author_did.starts_with("did:") {
-    //     return Err("Invalid author DID");
-    // }
-
-    // // at://did:.../gg.campground.profile.posts/...
-    // let fetch_format = match split_uri[..] {
-    //     [_, _, did, "gg.campground.profile.post", _] | [_, _, did, "gg.campground.profile.post"]
-    //         => format!("at://{}/gg.campground.profile.post/%", did),
-    //     [_, _, _, _, _] | [_, _, _, _]
-    //         => { return Err("Invalid record uri") }
-    //     _
-    //         => { return Err("Invalid URI format") }
-    // };
-
-    // let post_query = 
-    //     if split_uri.len() > 4 {
-    //         profile_post::table.filter(
-    //             profile_post::parenturi
-    //                 .eq(
-    //                     post_uri.clone()
-    //                 )
-    //         )
-    //         // .load(&mut conn)
-    //         .order_by(profile_post::indexedat.desc())
-    //         .limit(limit)
-    //         .offset(offset)
-    //         .load::<ProfilePost>(&mut conn)
-    //     } else {
-    //         profile_post::table.filter(
-    //             profile_post::uri
-    //                 .like(fetch_format)
-    //                 .and(
-    //                     profile_post::parenturi
-    //                         .is_null()
-    //                 )
-    //         )
-    //         .order_by(profile_post::indexedat.desc())
-    //         .limit(limit)
-    //         .offset(offset)
-    //         .load::<ProfilePost>(&mut conn)
-    //     };
-    // let mut posts = post_query.expect("Error loading profile post");
     let mut new_post_list = posts.clone();
 
     // TODO: Firehose auto-update?
@@ -102,8 +55,6 @@ pub async fn fill_profile_posts_with_records(client: &Client, did_document_stora
         .await
         .map_err(|_| "Failed to fetch post records")
         .unwrap();
-
-    // let parent_uri = if split_uri.len() > 4 { Some(post_uri.clone()) } else { None };
     
     // Because Rust
     let post_uris: Vec<String> = posts.iter().map(|x| x.uri.clone()).clone().collect();
@@ -147,14 +98,6 @@ pub async fn fill_profile_posts_with_records(client: &Client, did_document_stora
     Ok(new_post_list)
 }
 pub async fn get_single_profile_post<T>(client: &Client, did_document_storage: &LruDidDocumentStorage, post_query: Result<T, diesel::result::Error>, author_did: &str, post_tid: &str, _fn: fn(ProfilePost) -> T) -> Result<(Actor, T), &'static str> {
-    // let mut conn = establish_connection().unwrap();
-
-    // let post_query = 
-    //     profile_post::table.filter(
-    //         profile_post::uri
-    //             .eq(uri)
-    //     )
-    //     .first::<ProfilePost>(&mut conn);
     let author_actor = get_actor(client, did_document_storage, author_did).await.map_err(|_| "Error fetching actor")?;
 
     match post_query {
@@ -181,30 +124,6 @@ pub async fn get_single_profile_post<T>(client: &Client, did_document_storage: &
 
 pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>) -> Result<usize, &'static str> {
     let mut conn = establish_connection().unwrap();
-    // // To not try updating a lot of entries at once
-    // let uris_to_parent_uris =
-    //     profile_post::table
-    //         .filter(
-    //             profile_post::uri
-    //                 .eq(uri.clone())
-    //                 .and(
-    //                     profile_post::parenturi
-    //                         .is_not_null()
-    //                 )
-    //         )
-    //         .select(
-    //             (
-    //                 profile_post::uri,
-    //                 profile_post::parenturi,
-    //             )
-    //         )
-    //         .load::<(String, Option<String>)>(&mut conn)
-    //         .expect("Could not fetch parent uris");
-
-    // To remove multiple:
-    // sql("ARRAY(SELECT unnest FROM (SELECT unnest(replies)) WHERE unnest <> all(")
-    //     .bind::<Array<VarChar>, _>(uris.clone())
-    //     .sql("))")
 
     // To have an up-to-date reply list
     if parent_uri.is_some() {
