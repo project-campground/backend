@@ -58,7 +58,8 @@ pub async fn get_actors(client: &Client, did_document_storage: &LruDidDocumentSt
                                         did: actor.clone(),
                                         handle: Some(handle.clone()),
                                         home_server: home_server.value.did.clone(),
-                                        indexed_at: chrono::Utc::now().naive_utc().to_string()
+                                        indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                                        campsites: vec![],
                                     };
                                     to_insert.push(actor.clone());
                                     db_actors.push(actor);
@@ -69,7 +70,8 @@ pub async fn get_actors(client: &Client, did_document_storage: &LruDidDocumentSt
                                     did: actor.clone(),
                                     handle: None,
                                     home_server: home_server.value.did.clone(),
-                                    indexed_at: chrono::Utc::now().naive_utc().to_string()
+                                    indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                                    campsites: vec![],
                                 };
                                 to_insert.push(actor.clone());
                                 db_actors.push(actor);
@@ -178,7 +180,8 @@ pub async fn index_actor(client: &Client, did_document_storage: &LruDidDocumentS
                 did: did.clone(),
                 handle: Some(handle.clone()),
                 home_server: home_server.value.did.clone(),
-                indexed_at: chrono::Utc::now().naive_utc().to_string()
+                indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                campsites: vec![],
             };
             diesel::insert_into(crate::schema::appview::actor::table)
                 .values(&actor)
@@ -195,7 +198,8 @@ pub async fn index_actor(client: &Client, did_document_storage: &LruDidDocumentS
                 did: did.clone(),
                 handle: None,
                 home_server: home_server.value.did.clone(),
-                indexed_at: chrono::Utc::now().naive_utc().to_string()
+                indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                campsites: vec![]
             };
             diesel::insert_into(crate::schema::appview::actor::table)
                 .values(&actor)

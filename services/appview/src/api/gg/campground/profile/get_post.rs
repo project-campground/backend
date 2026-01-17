@@ -19,32 +19,20 @@ use crate::{
     }
 };
 
-#[get("/xrpc/gg.campground.profile.getPost?<uri>&<offset>", rank = 2)]
-pub async fn get_post_default_limit(auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, offset: i64) -> Result<Json<ProfilePostViewDetailed>> {
-    get_post(auth, client, did_document_storage, uri, 50, offset).await
-}
-
-#[get("/xrpc/gg.campground.profile.getPost?<uri>&<limit>", rank = 3)]
-pub async fn get_post_default_offset(auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: i64) -> Result<Json<ProfilePostViewDetailed>> {
-    get_post(auth, client, did_document_storage, uri, limit, 0).await
-}
-
-#[get("/xrpc/gg.campground.profile.getPost?<uri>", rank = 4)]
-pub async fn get_post_default(auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str) -> Result<Json<ProfilePostViewDetailed>> {
-    get_post(auth, client, did_document_storage, uri, 50, 0).await
-}
-
 #[get("/xrpc/gg.campground.profile.getPost?<uri>&<limit>&<offset>")]
-pub async fn get_post(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: i64, offset: i64) -> Result<Json<ProfilePostViewDetailed>> {
+pub async fn get_post(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<ProfilePostViewDetailed>> {
+    let limit = limit.unwrap_or(50);
+    let offset = offset.unwrap_or(0);
+
     if limit > 100 || limit < 1 || offset < 0 {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("Expected 'limit' query to be between (and including) 1 and 100, as well as 'offset' query to be positive integer or 0".to_string()));
     }
 
     let (resolved_uri, author_did, post_tid) = profile_posts::resolve_post_uri(uri)
-        .map_err(|_| XRPCError::BadRequest)?;
+        .map_err(|_| XRPCError::BadRequest("Incorrect 'uri' URI format".to_string()))?;
 
     if post_tid.is_none() {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("Expected post TID in the 'uri' query (at://.../.../post_tid_here".to_string()));
     }
 
     let mut conn = establish_connection().unwrap();

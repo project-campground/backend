@@ -25,7 +25,7 @@ use crate::{
 pub async fn get_profiles(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actors: Vec<&str>) -> Result<Json<GetProfilesOutput>> {
     let actors = deduplicate_list(lower_list(actors));
     if actors.len() > 25 || actors.len() == 0 {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("actors query must have at least 1 actor and less than or equal to 25".to_string()));
     }
     let mut profile_views: Vec<ProfileViewDetailed> = vec![];
     let db_profiles = profiles::get_profiles(client, did_document_storage, actors).await.map_err(|_| XRPCError::InternalServerError)?;
@@ -68,7 +68,7 @@ pub async fn get_profiles(_auth: OptionalAuthorization, client: &State<Client>, 
     }
 
     if profile_views.len() == 0 {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("".to_string()));
     }
 
     return Ok(Json(GetProfilesOutput { profiles: profile_views }))

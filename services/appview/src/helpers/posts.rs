@@ -7,16 +7,10 @@ use std::str::FromStr;
 use appview_schema::models::appview::{Actor, ProfilePost};
 use campground_lexicon::gg::campground::actor::Profile;
 use campground_lexicon::gg::campground::profile::{ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented};
-use chrono::{DateTime, Utc};
+use chrono::DateTime;
 
+use crate::helpers::util::parse_datetime;
 use crate::helpers::views::profile_view_basic;
-
-pub fn parse_datetime(datetime: Option<DateTime<Utc>>) -> Option<String> {
-    match datetime {
-        Some(dt) => Some(dt.to_rfc3339()),
-        None => None,
-    }
-}
 
 pub fn profile_post_view_basic(actor: &Actor, profile: &Profile, profile_post: &ProfilePost) -> ProfilePostViewBasic {
     return ProfilePostViewBasic {

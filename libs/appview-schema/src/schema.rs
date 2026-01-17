@@ -7,6 +7,62 @@ pub mod appview {
             handle -> Nullable<Varchar>,
             indexedat -> Varchar,
             homeserver -> Varchar,
+            campsites -> Array<Nullable<Text>>,
+        }
+    }
+
+    diesel::table! {
+        appview.bonfire (id) {
+            id -> Varchar,
+            campsiteid -> Varchar,
+            name -> Varchar,
+            description -> Varchar,
+            avataruri -> Nullable<Varchar>,
+            banneruri -> Nullable<Varchar>,
+            priority -> Int4,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        appview.campsite (id) {
+            id -> Varchar,
+            name -> Varchar,
+            vanityurl -> Nullable<Varchar>,
+            description -> Varchar,
+            avataruri -> Nullable<Varchar>,
+            banneruri -> Nullable<Varchar>,
+            tags -> Array<Nullable<Text>>,
+            memberdids -> Array<Nullable<Text>>,
+            owner -> Varchar,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        appview.campsite_invite (id) {
+            id -> Varchar,
+            campsiteid -> Varchar,
+            allowedamount -> Nullable<Int4>,
+            expiresat -> Nullable<Timestamp>,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        appview.campsite_member (userid, campsiteid) {
+            userid -> Varchar,
+            campsiteid -> Varchar,
+            joinedat -> Timestamp,
+            usedinviteid -> Nullable<Varchar>,
+            nickname -> Nullable<Varchar>,
         }
     }
 
@@ -48,5 +104,64 @@ pub mod appview {
         }
     }
 
-    diesel::allow_tables_to_appear_in_same_query!(actor, profile, profile_post, setting,);
+    diesel::table! {
+        appview.tent (id) {
+            id -> Uuid,
+            campsiteid -> Varchar,
+            bonfireid -> Varchar,
+            categoryid -> Nullable<Uuid>,
+            name -> Varchar,
+            #[sql_name = "type"]
+            type_ -> Int4,
+            viewtype -> Int4,
+            description -> Varchar,
+            priority -> Int4,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        appview.tent_category (id) {
+            id -> Uuid,
+            campsiteid -> Varchar,
+            bonfireid -> Varchar,
+            name -> Varchar,
+            description -> Varchar,
+            priority -> Int4,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        appview.tent_message (id) {
+            id -> Uuid,
+            campsiteid -> Varchar,
+            tentid -> Uuid,
+            content -> Varchar,
+            replyingto -> Array<Nullable<Uuid>>,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedat -> Nullable<Timestamp>,
+        }
+    }
+
+    diesel::allow_tables_to_appear_in_same_query!(
+        actor,
+        bonfire,
+        campsite,
+        campsite_invite,
+        campsite_member,
+        profile,
+        profile_post,
+        setting,
+        tent,
+        tent_category,
+        tent_message,
+    );
 }

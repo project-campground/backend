@@ -1,0 +1,45 @@
+use appview_schema::models::appview::Campsite;
+use atproto_identity::storage_lru::LruDidDocumentStorage;
+use campground_lexicon::gg::campground::{actor::GetMeOutput, campsite::CampsiteViewBasic};
+use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
+use rocket::{serde::json::Json,State};
+use reqwest::Client;
+
+use crate::{
+    database::{establish_connection, profiles},
+    helpers::{campsites::campsite_view_basic, views::{profile_record, profile_view_basic}},
+    xrpc::{
+        auth::Authorization,
+        error::{Result, XRPCError}
+    }
+};
+
+#[get("/xrpc/gg.campground.actor.getMe")]
+pub async fn get_me(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>) -> Result<Json<GetMeOutput>> {
+    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?;
+
+    let mut conn = establish_connection().unwrap();
+    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor_did.as_str())
+        .await
+        .map_err(|_| XRPCError::Unauthorized)?;
+
+    let campsite_ids_filtered: Vec<String> = actor
+        .campsites
+        .iter()
+        .filter_map(|x| x.clone())
+        .collect();
+
+    let campsites = if actor.campsites.is_empty() {
+        vec![]
+    } else {
+        crate::schema::appview::campsite::table
+            .filter(crate::schema::appview::campsite::id.eq_any(campsite_ids_filtered))
+            .load::<Campsite>(&mut conn)
+            .expect("Error loading campsites")
+            .iter()
+            .map(campsite_view_basic)
+            .collect::<Vec<CampsiteViewBasic>>()
+    };
+
+    return Ok(Json(GetMeOutput { campsites, profile: profile_view_basic(&actor, &profile_record(db_profile)) }));
+}

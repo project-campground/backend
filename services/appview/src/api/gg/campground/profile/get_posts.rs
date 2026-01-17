@@ -12,24 +12,18 @@ use crate::{
     }
 };
 
-#[get("/xrpc/gg.campground.profile.getPosts?<actor>", rank = 3)]
-pub async fn get_posts_defaults(auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str) -> Result<Json<GetProfilePostsOutput>> {
-    get_posts(auth, client, did_document_storage, actor, 50, 0, false).await
-}
-
-#[get("/xrpc/gg.campground.profile.getPosts?<actor>&<offset>", rank = 2)]
-pub async fn get_posts_defaults_with_offset(auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str, offset: i64) -> Result<Json<GetProfilePostsOutput>> {
-    get_posts(auth, client, did_document_storage, actor, 50, offset, false).await
-}
-
 #[get("/xrpc/gg.campground.profile.getPosts?<actor>&<limit>&<offset>&<replies>")]
-pub async fn get_posts(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str, limit: i64, offset: i64, replies: bool) -> Result<Json<GetProfilePostsOutput>> {
+pub async fn get_posts(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str, limit: Option<i64>, offset: Option<i64>, replies: Option<bool>) -> Result<Json<GetProfilePostsOutput>> {
+    let limit = limit.unwrap_or(50);
+    let offset = offset.unwrap_or(0);
+    let replies = replies.unwrap_or(false);
+
     if limit > 100 || limit < 1 || offset < 0 {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("Expected 'limit' query to be between (and including) 1 and 100, as well as 'offset' query to be positive integer or 0".to_string()));
     }
 
     if !actor.starts_with("did:") {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("Incorrect 'actor' query Atprotocol DID format".to_string()));
     }
 
     let conn = establish_connection().unwrap();

@@ -76,9 +76,9 @@ async fn all_options() {
 #[catch(default)]
 async fn default_catcher(status: Status, _request: &Request<'_>) -> XRPCError {
     match status.code {
-        400 => XRPCError::BadRequest,
+        400 => XRPCError::BadRequest("Bad request".to_string()),
         401 => XRPCError::Unauthorized,
-        403 => XRPCError::Forbidden,
+        403 => XRPCError::Forbidden("Forbidden".to_string()),
         404 => XRPCError::NotFound,
         413 => XRPCError::PayloadTooLarge,
         429 => XRPCError::TooManyRequests,
@@ -140,6 +140,7 @@ async fn main() -> Result<()> {
 }
 
 mod xrpc;
+mod xws;
 mod database;
 mod helpers;
 mod util;

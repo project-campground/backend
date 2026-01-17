@@ -1,4 +1,4 @@
-use crate::gg::campground::socials::SocialConnection;
+use crate::gg::campground::{campsite::CampsiteViewBasic, socials::SocialConnection};
 use rsky_lexicon::com::atproto::{
     label::{Label, SelfLabels},
     repo::Blob,
@@ -103,6 +103,13 @@ pub struct ProfileViewDetailed {
 #[serde(rename_all = "camelCase")]
 pub struct GetProfilesOutput {
     pub profiles: Vec<ProfileViewDetailed>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetMeOutput {
+    pub campsites: Vec<CampsiteViewBasic>,
+    pub profile: ProfileViewBasic,
 }
 
 /// Metadata about the requesting account's relationship with the subject account.

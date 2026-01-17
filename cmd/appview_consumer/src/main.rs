@@ -112,7 +112,8 @@ async fn discover_actor(actor: &str, force: Option<bool>) -> Result<()> {
                 did: did.clone(),
                 handle: Some(handle.clone()),
                 home_server: home_server.value.did.clone(),
-                indexed_at: chrono::Utc::now().naive_utc().to_string()
+                indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                campsites: vec![],
             };
             diesel::insert_into(crate::schema::appview::actor::table)
                 .values(&actor)
@@ -129,7 +130,8 @@ async fn discover_actor(actor: &str, force: Option<bool>) -> Result<()> {
                 did: did.clone(),
                 handle: None,
                 home_server: home_server.value.did.clone(),
-                indexed_at: chrono::Utc::now().naive_utc().to_string()
+                indexed_at: chrono::Utc::now().naive_utc().to_string(),
+                campsites: vec![],
             };
             diesel::insert_into(crate::schema::appview::actor::table)
                 .values(&actor)

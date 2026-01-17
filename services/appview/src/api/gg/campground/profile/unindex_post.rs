@@ -15,10 +15,10 @@ use crate::{
 #[post("/xrpc/gg.campground.profile.unindexPost?<uri>")]
 pub async fn unindex_post(auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str) -> Result<Json<ProfilePostViewBasic>> {
     let (resolved_uri, author_did, post_tid) = profile_posts::resolve_post_uri(uri)
-        .map_err(|_| XRPCError::BadRequest)?;
+        .map_err(|_| XRPCError::BadRequest("Incorrect 'uri' URI format".to_string()))?;
 
     if post_tid.is_none() {
-        return Err(XRPCError::BadRequest);
+        return Err(XRPCError::BadRequest("Expected post TID in the 'uri' query (at://.../.../post_tid_here".to_string()));
     }
 
     let mut conn = establish_connection().unwrap();
@@ -33,8 +33,8 @@ pub async fn unindex_post(auth: OptionalAuthorization, client: &State<Client>, d
     let (actor, main_post) = profile_posts::get_single_profile_post(client, did_document_storage, post_query, author_did.as_str(), post_tid.unwrap().as_str(), |x| x).await.map_err(|_| XRPCError::NotFound)?;
     let (_, db_profile) = profiles::get_profile(client, did_document_storage, actor.did.as_str()).await.map_err(|_| XRPCError::NotFound)?;
 
-    if auth.1.jose.issuer.is_none() {
-        return Err(XRPCError::Forbidden);
+    if auth.1.jose.issuer.map_or(false, |x| x != actor.did) {
+        return Err(XRPCError::Forbidden("Only author of the post can unindex it".to_string()));
     }
 
     delete_post_record_from_db(main_post.uri.clone(), main_post.parent_uri.clone()).await.map_err(|_| XRPCError::InternalServerError)?;

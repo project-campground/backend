@@ -21,8 +21,7 @@ pub fn get_authors_from_posts(posts: Vec<ProfilePost>, collect_parent_authors: b
                     { None }
             ])
                 .iter()
-                .filter(|y| y.is_some())
-                .map(|y| y.as_ref().unwrap().clone())
+                .filter_map(|y| y.clone())
                 .collect::<Vec<String>>()
         })
         .collect::<HashSet<String>>()
