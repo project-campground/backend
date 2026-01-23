@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::actor::ProfileViewBasic;
+use crate::gg::campground::{actor::ProfileViewBasic, campsite::CampsitePermissionView};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -44,7 +44,9 @@ pub struct TentViewDetailed {
     pub view_type: i32,
 
     pub priority: i32,
-    
+
+    pub permissions: Vec<CampsitePermissionView>,
+
     pub created_by: String,
     pub created_at: String,
     pub updated_by: String,

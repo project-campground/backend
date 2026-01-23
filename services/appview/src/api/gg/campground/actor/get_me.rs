@@ -15,11 +15,9 @@ use crate::{
 };
 
 #[get("/xrpc/gg.campground.actor.getMe")]
-pub async fn get_me(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>) -> Result<Json<GetMeOutput>> {
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?;
-
+pub async fn get_me(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>) -> Result<Json<GetMeOutput>> {
     let mut conn = establish_connection().unwrap();
-    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor_did.as_str())
+    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, auth.actor_did.as_str())
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 

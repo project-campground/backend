@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::TentCategory, schema::appview::{tent, tent_category}};
+use appview_schema::{models::appview::TentCategory, schema::appview::{campsite_permission, tent, tent_category}};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -13,9 +13,9 @@ use crate::{
     }
 };
 
-#[post("/xrpc/gg.campground.tent.deleteCategory?<id>")]
-pub async fn delete_category(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, id: &str) -> Result<Json<TentCategoryView>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?;
+#[post("/xrpc/gg.campground.tent.deleteCategory?<category_id>")]
+pub async fn delete_category(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, category_id: &str) -> Result<Json<TentCategoryView>> {    
+    let actor_did = auth.actor_did;
 
     let mut conn = establish_connection().unwrap();
     let actor = get_actor(client, did_document_storage, actor_did.as_str())
@@ -23,8 +23,8 @@ pub async fn delete_category(auth: Authorization, client: &State<Client>, did_do
         .map_err(|_| XRPCError::Unauthorized)?;
 
     // Can be given invalid UUID; Be descriptive
-    let category_id_uuid = Uuid::try_parse(id)
-        .map_err(|_| XRPCError::BadRequest("Expected 'id' query to be a valid UUID".to_string()))
+    let category_id_uuid = Uuid::try_parse(category_id)
+        .map_err(|_| XRPCError::BadRequest("Expected 'category_id' query to be a valid UUID".to_string()))
         ?;
     let category = &tent_category::table
         .filter(
@@ -43,6 +43,13 @@ pub async fn delete_category(auth: Authorization, client: &State<Client>, did_do
         .filter(
             tent_category::id
                 .eq(category.id)
+        )
+        .execute(&mut conn)
+        .map_err(|_| XRPCError::InternalServerError)?;
+    diesel::delete(campsite_permission::table)
+        .filter(
+            campsite_permission::tentid
+                .eq(category_id_uuid)
         )
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;

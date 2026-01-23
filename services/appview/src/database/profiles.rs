@@ -73,6 +73,9 @@ pub async fn get_profiles(client: &Client, did_document_storage: &LruDidDocument
 pub async fn get_profile(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: &str) -> Result<(Actor, Profile)> {
     let actor = get_actor(client, did_document_storage, actor).await?;
 
+    get_profile_from_actor(client, did_document_storage, actor).await
+}
+pub async fn get_profile_from_actor(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: Actor) -> Result<(Actor, Profile)> {
     let mut conn = establish_connection().unwrap();
     let db_profile = crate::schema::appview::profile::table
         .filter(crate::schema::appview::profile::creator.eq(&actor.did))

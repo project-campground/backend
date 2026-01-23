@@ -1,42 +1,20 @@
 use appview_schema::{models::appview::{Actor, CampsiteMember, Profile}, schema::appview::{campsite_member, profile}};
-use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::campsite::{CampsiteMemberViewBasic, GetMembersOutput};
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use rocket::{serde::json::Json,State};
-use reqwest::Client;
+use rocket::serde::json::Json;
 
 use crate::{
-    database::{actors::get_actor, establish_connection}, helpers::{campsites::campsite_member_view_basic, deduplicate_list, lower_list}, xrpc::{
-        auth::Authorization,
-        error::{Result, XRPCError}
+    database::establish_connection, helpers::{campsites::campsite_member_view_basic, deduplicate_list, lower_list}, xrpc::{
+        campsite::CampsiteInfoBasic, error::{Result, XRPCError}
     }
 };
 
 #[get("/xrpc/gg.campground.campsite.getMembers?<campsite_id>&<limit>&<offset>", rank = 1)]
-pub async fn get_members_any(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput>> {
+pub async fn get_members_any(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
 
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?;
     let mut conn = establish_connection().unwrap();
-
-    let actor = get_actor(client, did_document_storage, actor_did.as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
-
-    // Not in the campsite to view that
-    if !actor.campsites.contains(&Some(campsite_id.to_string())) {
-        return Err(XRPCError::Forbidden("User cannot view campsite that they are not member of".to_string()));
-    }
-
-    // Make sure campsite exists
-    let campsite_count = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::id.eq(campsite_id))
-        .execute(&mut conn)
-        .expect("Error loading campsites");
-    if campsite_count < 1 {
-        return Err(XRPCError::NotFound);
-    }
 
     let members = crate::schema::appview::campsite_member::table
         .filter(
@@ -74,33 +52,13 @@ pub async fn get_members_any(auth: Authorization, client: &State<Client>, did_do
 }
 
 #[get("/xrpc/gg.campground.campsite.getMembers?<campsite_id>&<actors>", rank = 2)]
-pub async fn get_members_given(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, actors: Vec<&str>) -> Result<Json<GetMembersOutput>> {
+pub async fn get_members_given(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, actors: Vec<&str>) -> Result<Json<GetMembersOutput>> {
     let actors = deduplicate_list(lower_list(actors));
     if actors.len() > 25 || actors.len() == 0 {
         return Err(XRPCError::BadRequest("actors query must have at least 1 actor and less than or equal to 25".to_string()));
     }
 
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?;
     let mut conn = establish_connection().unwrap();
-
-    let actor = get_actor(client, did_document_storage, actor_did.as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
-
-    // Not in the campsite to view that
-    if !actor.campsites.contains(&Some(campsite_id.to_string())) {
-        return Err(XRPCError::Forbidden("User cannot view campsite that they are not member of".to_string()));
-    }
-
-    // Make sure campsite exists
-    let campsite_count = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::id.eq(campsite_id))
-        .execute(&mut conn)
-        .expect("Error loading campsites");
-    if campsite_count < 1 {
-        return Err(XRPCError::NotFound);
-    }
-
 
     let members = crate::schema::appview::campsite_member::table
         .filter(

@@ -20,26 +20,36 @@ const BEARER: &str = "Bearer ";
 /// JWT authorization extractor that validates tokens against cached DID documents.
 ///
 /// Contains JWT header, validated claims, original token.
-pub struct Authorization(pub Header, pub Claims, pub String);
+pub struct Authorization<'a> {
+    pub header: Header,
+    pub claims: Claims,
+    pub token: String,
+    pub actor_did: String,
+    pub client: &'a State<Client>,
+    pub did_document_storage: &'a State<LruDidDocumentStorage>,
+}
 
 /// JWT authorization extractor that validates tokens against cached DID documents.
 /// Does not trigger an unauthorized error on failure.
 /// 
 /// Contains JWT header, validated claims, original token, and validation status.
-pub struct OptionalAuthorization(pub Header, pub Claims, pub String, pub bool);
+pub enum OptionalAuthorization<'a> {
+    Unauthorized,
+    Authorized(Authorization<'a>),
+}
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for OptionalAuthorization {
+impl<'r, 'a> FromRequest<'r> for OptionalAuthorization<'a> where 'r: 'a {
     type Error = AuthError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let auth_header = match req.headers().get_one("Authorization") {
             Some(header) => header,
-            None => return Outcome::Success(OptionalAuthorization(Header::default(), Claims::default(), "".to_string(), false))
+            None => return Outcome::Success(OptionalAuthorization::Unauthorized)
         };
         let token = match auth_header.strip_prefix(BEARER) {
             Some(token) => token.to_string(),
-            None => return Outcome::Success(OptionalAuthorization(Header::default(), Claims::default(), "".to_string(), false))
+            None => return Outcome::Success(OptionalAuthorization::Unauthorized)
         };
 
         let http_client = req.guard::<&State<Client>>().await.unwrap();
@@ -47,15 +57,15 @@ impl<'r> FromRequest<'r> for OptionalAuthorization {
 
         match validate_jwt(&token, &did_document_storage, &*http_client).await {
             Ok((header, claims)) => {
-                Outcome::Success(OptionalAuthorization(header, claims, token, true))
+                Outcome::Success(OptionalAuthorization::Authorized(Authorization { header, claims: claims.clone(), token, actor_did: claims.jose.issuer.unwrap(), client: http_client, did_document_storage }))
             },
-            Err(_e) => Outcome::Success(OptionalAuthorization(Header::default(), Claims::default(), "".to_string(), false))
+            Err(_e) => Outcome::Success(OptionalAuthorization::Unauthorized)
         }
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for Authorization {
+impl<'r, 'a> FromRequest<'r> for Authorization<'a> where 'r: 'a {
     type Error = AuthError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
@@ -73,7 +83,7 @@ impl<'r> FromRequest<'r> for Authorization {
 
         match validate_jwt(&token, &did_document_storage, &*http_client).await {
             Ok((header, claims)) => {
-                Outcome::Success(Authorization(header, claims, token))
+                Outcome::Success(Authorization { client: http_client, did_document_storage, header, claims: claims.clone(), token, actor_did: claims.jose.issuer.unwrap() })
             },
             Err(_e) => Outcome::Error((Status::Unauthorized, AuthError::AuthRequired))
         }

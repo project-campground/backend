@@ -11,14 +11,11 @@ use rsky_lexicon::com::atproto::repo::Blob;
 use crate::{
     database::profiles,
     helpers::views::profile_view_detailed,
-    xrpc::{
-        auth::OptionalAuthorization,
-        error::{Result, XRPCError}
-    }
+    xrpc::error::{Result, XRPCError}
 };
 
 #[get("/xrpc/gg.campground.actor.getProfile?<actor>")]
-pub async fn get_profile(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str) -> Result<Json<ProfileViewDetailed>> {
+pub async fn get_profile(client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str) -> Result<Json<ProfileViewDetailed>> {
     let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor).await.map_err(|_| XRPCError::NotFound)?;
     let record = Profile {
         display_name: db_profile.display_name,

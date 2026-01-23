@@ -1,16 +1,13 @@
-use appview_schema::models::appview::Tent;
-use atproto_identity::storage_lru::LruDidDocumentStorage;
+use appview_schema::models::appview::{Bonfire, Tent};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::{serde::json::Json,State};
-use reqwest::Client;
+use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, tents::tent_view_basic}, xrpc::{
-    auth::Authorization,
-    error::{Result, XRPCError}
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, roles::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+    campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
@@ -25,9 +22,7 @@ pub struct CreateTentBody {
 }
 
 #[post("/xrpc/gg.campground.tent.createTent?<campsite_id>&<bonfire_id>", data = "<body>")]
-pub async fn create_tent(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, bonfire_id: &str, body: Json<CreateTentBody>) -> Result<Json<TentViewBasic>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?.clone();
-
+pub async fn create_tent(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &str, body: Json<CreateTentBody>) -> Result<Json<TentViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -48,11 +43,8 @@ pub async fn create_tent(auth: Authorization, client: &State<Client>, did_docume
         };
 
     let mut conn = establish_connection().unwrap();
-    let actor = &get_actor(client, did_document_storage, actor_did.clone().as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
 
-    let bonfire_count = crate::schema::appview::bonfire::table
+    crate::schema::appview::bonfire::table
         .filter(
             crate::schema::appview::bonfire::id
                 .eq(bonfire_id)
@@ -61,29 +53,24 @@ pub async fn create_tent(auth: Authorization, client: &State<Client>, did_docume
                         .eq(campsite_id)
                 )
         )
-        .count()
-        .first::<i64>(&mut conn)
+        .first::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    if bonfire_count < 1 {
-        return Err(XRPCError::NotFound);
+    if !has_tent_perms_or_owner(auth.campsite.clone(), bonfire_id.to_string(), category_id.clone(), None, auth.member.clone(), CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
     let existing_tent_count = crate::schema::appview::tent::table
         .filter(
             crate::schema::appview::tent::campsiteid
                 .eq(campsite_id)
-                .and(
-                    crate::schema::appview::tent::bonfireid
-                        .eq(bonfire_id)
-                )
         )
         .count()
         .first::<i64>(&mut conn)
         .expect("Error loading bonfires");
     
-    if existing_tent_count >= 250 {
-        return Err(XRPCError::Forbidden("Cannot create more than 250 tent in a bonfire".to_string()));
+    if existing_tent_count >= 500 {
+        return Err(XRPCError::Forbidden("Cannot create more than 500 tents in a campsite".to_string()));
     }
 
     let current_date = Utc::now().naive_utc();
@@ -100,9 +87,9 @@ pub async fn create_tent(auth: Authorization, client: &State<Client>, did_docume
                 r#type: inner_body.r#type,
                 view_type: inner_body.view_type,
                 priority: inner_body.priority,
-                created_by: actor.did.clone(),
+                created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: actor.did.clone(),
+                updated_by: auth.actor.did.clone(),
                 updated_at: current_date,
             }
         )

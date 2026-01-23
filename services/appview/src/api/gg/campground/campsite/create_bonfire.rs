@@ -1,15 +1,12 @@
 use appview_schema::models::appview::Bonfire;
-use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::{serde::json::Json,State};
-use reqwest::Client;
+use rocket::serde::json::Json;
 use serde::Deserialize;
 
-use crate::{database::{actors::get_actor, establish_connection}, helpers::campsites::bonfire_view_basic, xrpc::{
-    auth::Authorization,
-    error::{Result, XRPCError}
+use crate::{database::establish_connection, helpers::{campsites::bonfire_view_basic, roles::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+    campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
@@ -21,9 +18,7 @@ pub struct CreateBonfireBody {
 }
 
 #[post("/xrpc/gg.campground.campsite.createBonfire?<campsite_id>", data = "<body>")]
-pub async fn create_bonfire(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, body: Json<CreateBonfireBody>) -> Result<Json<BonfireViewBasic>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?.clone();
-
+pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<CreateBonfireBody>) -> Result<Json<BonfireViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -31,19 +26,11 @@ pub async fn create_bonfire(auth: Authorization, client: &State<Client>, did_doc
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
     }
 
-    let mut conn = establish_connection().unwrap();
-    let actor = &get_actor(client, did_document_storage, actor_did.clone().as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
-
-    let campsite_count = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::id.eq(campsite_id))
-        .execute(&mut conn)
-        .expect("Error loading campsites");
-
-    if campsite_count < 1 {
-        return Err(XRPCError::NotFound);
+    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::MANAGE_BONFIRES, 0).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
+
+    let mut conn = establish_connection().unwrap();
 
     let existing_bonfire_count = crate::schema::appview::bonfire::table
         .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
@@ -66,9 +53,9 @@ pub async fn create_bonfire(auth: Authorization, client: &State<Client>, did_doc
                 avatar_uri: None,
                 banner_uri: None,
                 priority: inner_body.priority,
-                created_by: actor.did.clone(),
+                created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: actor.did.clone(),
+                updated_by: auth.actor.did.clone(),
                 updated_at: current_date,
             }
         )

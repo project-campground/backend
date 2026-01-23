@@ -25,4 +25,5 @@ pub mod views;
 pub mod campsites;
 pub mod tents;
 pub mod api;
+pub mod roles;
 pub mod posts;

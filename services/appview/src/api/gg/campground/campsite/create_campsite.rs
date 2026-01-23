@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::{Bonfire, Campsite, CampsiteMember, Tent}, schema::appview::actor};
+use appview_schema::{models::appview::{Bonfire, Campsite, CampsiteMember, CampsiteRole, Tent}, schema::appview::actor};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::campsite::CreateCampsiteOutput;
 use chrono::Utc;
@@ -9,7 +9,7 @@ use rsky_common::tid::Ticker;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_view_detailed}, tents::tent_view_basic}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}, tents::tent_view_basic}, xrpc::{
     auth::Authorization,
     error::{Result, XRPCError}
 }};
@@ -24,9 +24,7 @@ pub struct CreateCampsiteBody {
 }
 
 #[post("/xrpc/gg.campground.campsite.createCampsite", data = "<body>")]
-pub async fn create_campsite(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, body: Json<CreateCampsiteBody>) -> Result<Json<CreateCampsiteOutput>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?.clone();
-
+pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, body: Json<CreateCampsiteBody>) -> Result<Json<CreateCampsiteOutput>> {    
     let inner_body = &body.into_inner();
     let vanity_url = &inner_body.vanity_url.clone();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
@@ -40,7 +38,7 @@ pub async fn create_campsite(auth: Authorization, client: &State<Client>, did_do
     }
 
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = &get_profile(client, did_document_storage, actor_did.clone().as_str())
+    let (actor, profile) = &get_profile(client, did_document_storage, auth.actor_did.clone().as_str())
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 
@@ -87,6 +85,27 @@ pub async fn create_campsite(auth: Authorization, client: &State<Client>, did_do
         )
         .get_result::<Campsite>(&mut conn)
         .expect("Error inserting campsite");
+    let default_role = &diesel::insert_into(crate::schema::appview::campsite_role::table)
+        .values(
+            CampsiteRole {
+                id: Uuid::new_v4(),
+                campsite_id: campsite.id.clone(),
+                name: "Member".to_string(),
+                display_separately: false,
+                mentionable: false,
+                color: 0,
+                color_secondary: 0,
+                campsite_permissions: 0b00,
+                tent_permissions: 0b11,
+                priority: 0,
+                created_by: actor.did.clone(),
+                created_at: current_date,
+                updated_by: actor.did.clone(),
+                updated_at: current_date,
+            }
+        )
+        .get_result::<CampsiteRole>(&mut conn)
+        .expect("Error inserting default role");
     let owner_member = &diesel::insert_into(crate::schema::appview::campsite_member::table)
         .values(
             CampsiteMember {
@@ -95,6 +114,7 @@ pub async fn create_campsite(auth: Authorization, client: &State<Client>, did_do
                 joined_at: current_date,
                 nickname: None,
                 used_invite_id: None,
+                roles: vec![Some(default_role.id)],
             }
         )
         .get_result::<CampsiteMember>(&mut conn)
@@ -106,7 +126,7 @@ pub async fn create_campsite(auth: Authorization, client: &State<Client>, did_do
 
     diesel::update(actor::table)
         .filter(
-            actor::did.eq(actor_did)
+            actor::did.eq(auth.actor_did)
         )
         .set(
             actor::campsites.eq(new_campsite_list)
@@ -153,7 +173,7 @@ pub async fn create_campsite(auth: Authorization, client: &State<Client>, did_do
         .get_result::<Tent>(&mut conn)
         .expect("Error inserting default tent");
 
-    let campsite_view = campsite_view_detailed(campsite, vec![ bonfire_view_basic(home_bonfire) ]);
+    let campsite_view = campsite_view_detailed(campsite, vec![ bonfire_view_basic(home_bonfire) ], vec![ campsite_role_view_basic(default_role) ]);
 
     return Ok(Json(CreateCampsiteOutput { campsite: campsite_view, default_tent: tent_view_basic(general_tent), owner_member: campsite_member_view_basic(owner_member, profile, actor) }));
 }

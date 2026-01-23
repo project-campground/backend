@@ -12,18 +12,18 @@ use crate::{
     }
 };
 
-#[get("/xrpc/gg.campground.campsite.getCampsites?<ids>")]
-pub async fn get_campsites(_auth: Authorization, _client: &State<Client>, _did_document_storage: &State<LruDidDocumentStorage>, ids: Vec<&str>) -> Result<Json<GetCampsitesOutput>> {
+#[get("/xrpc/gg.campground.campsite.getCampsites?<campsite_ids>")]
+pub async fn get_campsites(_auth: Authorization<'_>, _client: &State<Client>, _did_document_storage: &State<LruDidDocumentStorage>, campsite_ids: Vec<&str>) -> Result<Json<GetCampsitesOutput>> {
     let mut conn = establish_connection().unwrap();
 
-    let ids = deduplicate_list(lower_list(ids));
+    let campsite_ids = deduplicate_list(lower_list(campsite_ids));
 
-    if ids.len() > 25 || ids.len() == 0 {
+    if campsite_ids.len() > 25 || campsite_ids.len() == 0 {
         return Err(XRPCError::BadRequest("ids query must have at least 1 campsite and less than or equal to 25".to_string()));
     }
 
     let campsites = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::id.eq_any(ids))
+        .filter(crate::schema::appview::campsite::id.eq_any(campsite_ids))
         .load::<Campsite>(&mut conn)
         .expect("Error loading campsites")
         .iter()

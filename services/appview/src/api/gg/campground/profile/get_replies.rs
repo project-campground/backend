@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[get("/xrpc/gg.campground.profile.getReplies?<uri>&<limit>&<offset>")]
-pub async fn get_replies(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetProfilePostRepliesOutput>> {
+pub async fn get_replies(_auth: OptionalAuthorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetProfilePostRepliesOutput>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
 

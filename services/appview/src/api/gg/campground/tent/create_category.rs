@@ -1,16 +1,13 @@
 use appview_schema::models::appview::TentCategory;
-use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::{serde::json::Json,State};
-use reqwest::Client;
+use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
-    auth::Authorization,
-    error::{Result, XRPCError}
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
+    campsite::CampsiteInfoBasic, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
@@ -22,9 +19,7 @@ pub struct CreateCategoryBody {
 }
 
 #[post("/xrpc/gg.campground.tent.createCategory?<campsite_id>&<bonfire_id>", data = "<body>")]
-pub async fn create_category(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, bonfire_id: &str, body: Json<CreateCategoryBody>) -> Result<Json<TentCategoryView>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?.clone();
-
+pub async fn create_category(auth: CampsiteInfoBasic<'_>, campsite_id: &str, bonfire_id: &str, body: Json<CreateCategoryBody>) -> Result<Json<TentCategoryView>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -33,9 +28,6 @@ pub async fn create_category(auth: Authorization, client: &State<Client>, did_do
     }
 
     let mut conn = establish_connection().unwrap();
-    let actor = &get_actor(client, did_document_storage, actor_did.clone().as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
 
     let bonfire_count = crate::schema::appview::bonfire::table
         .filter(
@@ -82,9 +74,9 @@ pub async fn create_category(auth: Authorization, client: &State<Client>, did_do
                 name: inner_body.name.clone(),
                 description: inner_body.description.clone(),
                 priority: inner_body.priority,
-                created_by: actor.did.clone(),
+                created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: actor.did.clone(),
+                updated_by: auth.actor.did.clone(),
                 updated_at: current_date,
             }
         )

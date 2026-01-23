@@ -63,6 +63,46 @@ pub mod appview {
             joinedat -> Timestamp,
             usedinviteid -> Nullable<Varchar>,
             nickname -> Nullable<Varchar>,
+            roles -> Array<Nullable<Uuid>>,
+        }
+    }
+
+    diesel::table! {
+        appview.campsite_permission (id) {
+            id -> Uuid,
+            campsiteid -> Varchar,
+            roleid -> Nullable<Uuid>,
+            userid -> Nullable<Varchar>,
+            bonfireid -> Nullable<Varchar>,
+            categoryid -> Nullable<Uuid>,
+            tentid -> Nullable<Uuid>,
+            allowedcampsitepermissions -> Int8,
+            deniedcampsitepermissions -> Int8,
+            allowedtentpermissions -> Int8,
+            deniedtentpermissions -> Int8,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        appview.campsite_role (id) {
+            id -> Uuid,
+            campsiteid -> Varchar,
+            name -> Varchar,
+            displayseparately -> Bool,
+            mentionable -> Bool,
+            campsitepermissions -> Int8,
+            tentpermissions -> Int8,
+            color -> Int4,
+            colorsecondary -> Int4,
+            priority -> Int4,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
         }
     }
 
@@ -157,6 +197,8 @@ pub mod appview {
         campsite,
         campsite_invite,
         campsite_member,
+        campsite_permission,
+        campsite_role,
         profile,
         profile_post,
         setting,

@@ -20,7 +20,7 @@ use crate::{
 };
 
 #[get("/xrpc/gg.campground.profile.getPost?<uri>&<limit>&<offset>")]
-pub async fn get_post(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<ProfilePostViewDetailed>> {
+pub async fn get_post(_auth: OptionalAuthorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<ProfilePostViewDetailed>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
 

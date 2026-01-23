@@ -1,5 +1,5 @@
-use appview_schema::models::appview::{Actor, Profile, Tent, TentCategory, TentMessage};
-use campground_lexicon::gg::campground::{actor::ProfileViewBasic, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
+use appview_schema::models::appview::{Actor, CampsitePermission, Profile, Tent, TentCategory, TentMessage};
+use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::CampsitePermissionView, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
 use uuid::Uuid;
 
 use crate::helpers::{util::serialize_datetime, views::{profile_view_basic_deleted_actor, profile_view_basic_deleted_profile, profile_view_basic_from_db}};
@@ -39,7 +39,7 @@ pub fn tent_view_basic(tent: &Tent) -> TentViewBasic {
     };
 }
 
-pub fn tent_view_detailed(tent: &Tent) -> TentViewDetailed {
+pub fn tent_view_detailed(tent: &Tent, permissions: Vec<CampsitePermissionView>) -> TentViewDetailed {
     return TentViewDetailed {
         id: tent.id.clone(),
         campsite_id: tent.campsite_id.clone(),
@@ -55,7 +55,8 @@ pub fn tent_view_detailed(tent: &Tent) -> TentViewDetailed {
         created_by: tent.created_by.clone(),
         created_at: serialize_datetime(tent.created_at),
         updated_by: tent.updated_by.clone(),
-        updated_at: serialize_datetime(tent.updated_at)
+        updated_at: serialize_datetime(tent.updated_at),
+        permissions,
     };
 }
 

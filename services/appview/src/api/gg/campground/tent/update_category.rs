@@ -22,9 +22,9 @@ pub struct UpdateCategoryBody {
     priority: Option<i32>,
 }
 
-#[post("/xrpc/gg.campground.tent.updateCategory?<id>", data = "<body>")]
-pub async fn update_category(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, id: &str, body: Json<UpdateCategoryBody>) -> Result<Json<TentCategoryView>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?.clone();
+#[post("/xrpc/gg.campground.tent.updateCategory?<category_id>", data = "<body>")]
+pub async fn update_category(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, category_id: &str, body: Json<UpdateCategoryBody>) -> Result<Json<TentCategoryView>> {    
+    let actor_did = auth.actor_did;
 
     let inner_body = &body.into_inner();
     if inner_body.name.clone().map_or(false, |x| x.len() < 3 || x.len() > 48) {
@@ -34,8 +34,8 @@ pub async fn update_category(auth: Authorization, client: &State<Client>, did_do
     }
 
     // Can be given invalid UUID; Be descriptive
-    let category_id_uuid = Uuid::try_parse(id)
-        .map_err(|_| XRPCError::BadRequest("Expected 'id' query to be a valid UUID".to_string()))
+    let category_id_uuid = Uuid::try_parse(category_id)
+        .map_err(|_| XRPCError::BadRequest("Expected 'category_id' query to be a valid UUID".to_string()))
         ?;
 
     let mut conn = establish_connection().unwrap();

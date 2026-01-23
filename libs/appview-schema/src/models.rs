@@ -149,6 +149,93 @@ pub mod appview {
         pub used_invite_id: Option<String>,
 
         pub nickname: Option<String>,
+
+        pub roles: Vec<Option<Uuid>>,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(id))]
+    #[diesel(table_name = crate::schema::appview::campsite_role)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct CampsiteRole {
+        pub id: Uuid,
+
+        #[diesel(column_name = campsiteid)]
+        pub campsite_id: String,
+        
+        pub name: String,
+        #[diesel(column_name = displayseparately)]
+        pub display_separately: bool,
+        #[diesel(column_name = mentionable)]
+        pub mentionable: bool,
+
+        #[diesel(column_name = campsitepermissions)]
+        pub campsite_permissions: i64,
+        #[diesel(column_name = tentpermissions)]
+        pub tent_permissions: i64,
+
+        pub color: i32,
+        #[diesel(column_name = colorsecondary)]
+        pub color_secondary: i32,
+
+        pub priority: i32,
+
+        #[diesel(column_name = createdby)]
+        pub created_by: String,
+        #[diesel(column_name = createdat)]
+        pub created_at: NaiveDateTime,
+        
+        #[diesel(column_name = updatedby)]
+        pub updated_by: String,
+        #[diesel(column_name = updatedat)]
+        pub updated_at: NaiveDateTime,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(id))]
+    #[diesel(table_name = crate::schema::appview::campsite_permission)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct CampsitePermission {
+        pub id: Uuid,
+        #[diesel(column_name = campsiteid)]
+        pub campsite_id: String,
+
+        #[diesel(column_name = roleid)]
+        pub role_id: Option<Uuid>,
+        #[diesel(column_name = userid)]
+        pub user_id: Option<String>,
+
+        #[diesel(column_name = bonfireid)]
+        pub bonfire_id: Option<String>,
+        #[diesel(column_name = categoryid)]
+        pub category_id: Option<Uuid>,
+        #[diesel(column_name = tentid)]
+        pub tent_id: Option<Uuid>,
+
+        #[diesel(column_name = allowedcampsitepermissions)]
+        pub allowed_campsite_permissions: i64,
+        #[diesel(column_name = deniedcampsitepermissions)]
+        pub denied_campsite_permissions: i64,
+        #[diesel(column_name = allowedtentpermissions)]
+        pub allowed_tent_permissions: i64,
+        #[diesel(column_name = deniedtentpermissions)]
+        pub denied_tent_permissions: i64,
+
+        #[diesel(column_name = createdby)]
+        pub created_by: String,
+        #[diesel(column_name = createdat)]
+        pub created_at: NaiveDateTime,
+        
+        #[diesel(column_name = updatedby)]
+        pub updated_by: String,
+        #[diesel(column_name = updatedat)]
+        pub updated_at: NaiveDateTime,
     }
 
     #[derive(

@@ -1,16 +1,16 @@
+#![
+    allow(unused_variables)
+]
 use appview_schema::{models::appview::{Bonfire, Tent, TentCategory}, schema::appview};
-use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::{serde::json::Json,State};
-use reqwest::Client;
+use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, tents::tent_view_basic}, xrpc::{
-    auth::Authorization,
-    error::{Result, XRPCError}
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, roles::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+    campsite::TentInfo, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
@@ -23,10 +23,8 @@ pub struct UpdateTentBody {
     priority: Option<i32>,
 }
 
-#[post("/xrpc/gg.campground.tent.updateTent?<id>", data = "<body>")]
-pub async fn update_tent(auth: Authorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, id: &str, body: Json<UpdateTentBody>) -> Result<Json<TentViewBasic>> {    
-    let actor_did = auth.1.jose.issuer.ok_or(XRPCError::Unauthorized)?.clone();
-
+#[post("/xrpc/gg.campground.tent.updateTent?<tent_id>", data = "<body>")]
+pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTentBody>) -> Result<Json<TentViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.clone().map_or(false, |x| x.len() < 3 || x.len() > 48) {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -34,6 +32,9 @@ pub async fn update_tent(auth: Authorization, client: &State<Client>, did_docume
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
     }
 
+    if !has_tent_perms_or_owner(auth.campsite.clone(), auth.tent.bonfire_id.clone(), auth.tent.category_id.clone(), Some(auth.tent.id), auth.member.clone(), CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    }
     let remove_category = inner_body.category_id.clone().map_or(false, |x| x == "");
     let category_id =
         if inner_body.category_id.is_none() || remove_category {
@@ -43,38 +44,17 @@ pub async fn update_tent(auth: Authorization, client: &State<Client>, did_docume
                 .map_err(|_| XRPCError::BadRequest("Invalid category_id UUID format".to_string()))?)
         };
 
-    // Can be given invalid UUID; Be descriptive
-    let tent_id_uuid = Uuid::try_parse(id)
-        .map_err(|_| XRPCError::BadRequest("Expected 'id' query to be a valid UUID".to_string()))
-        ?;
-
     let mut conn = establish_connection().unwrap();
-    let actor = &get_actor(client, did_document_storage, actor_did.clone().as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
 
-    let tent = &crate::schema::appview::tent::table
-        .filter(
-            crate::schema::appview::tent::id
-                .eq(tent_id_uuid)
-        )
-        .first::<Tent>(&mut conn)
-        .map_err(|x|
-            match x {
-                diesel::result::Error::NotFound => XRPCError::NotFound,
-                _ => XRPCError::InternalServerError,
-            }
-        )?;
-
-    let moved_bonfire = inner_body.bonfire_id.clone().unwrap_or(tent.bonfire_id.clone());
+    let moved_bonfire = inner_body.bonfire_id.clone().unwrap_or(auth.tent.bonfire_id.clone());
 
     // To make sure they are not moving to category that doesn't exist
-    if !remove_category && category_id.map_or(false, |x| Some(x) != tent.category_id) {
-        check_category_existence(tent.campsite_id.clone(), moved_bonfire.clone(), category_id.unwrap()).await?;
-    } else if moved_bonfire != tent.bonfire_id {
-        check_bonfire_existence(tent.campsite_id.clone(), moved_bonfire.clone()).await?
+    if !remove_category && category_id.map_or(false, |x| Some(x) != auth.tent.category_id) {
+        check_category_existence(auth.tent.campsite_id.clone(), moved_bonfire.clone(), category_id.unwrap()).await?;
+    } else if moved_bonfire != auth.tent.bonfire_id {
+        check_bonfire_existence(auth.tent.campsite_id.clone(), moved_bonfire.clone()).await?
     }
-    let moved_category = if remove_category { None } else { category_id.or(tent.category_id) };
+    let moved_category = if remove_category { None } else { category_id.or(auth.tent.category_id.clone()) };
 
     let current_date = Utc::now().naive_utc();
     
@@ -82,17 +62,17 @@ pub async fn update_tent(auth: Authorization, client: &State<Client>, did_docume
         .filter(
             appview::tent::id
                 .eq(
-                    tent.id
+                    auth.tent.id.clone()
                 )
         )
         .set((
             // All the new settings
             appview::tent::name
-                .eq(inner_body.name.clone().unwrap_or(tent.name.clone())),
+                .eq(inner_body.name.clone().unwrap_or(auth.tent.name)),
             appview::tent::description
-                .eq(inner_body.description.clone().unwrap_or(tent.description.clone())),
+                .eq(inner_body.description.clone().unwrap_or(auth.tent.description)),
             appview::tent::priority
-                .eq(inner_body.priority.clone().unwrap_or(tent.priority.clone())),
+                .eq(inner_body.priority.clone().unwrap_or(auth.tent.priority)),
             appview::tent::categoryid
                 .eq(moved_category),
             appview::tent::bonfireid
@@ -101,7 +81,7 @@ pub async fn update_tent(auth: Authorization, client: &State<Client>, did_docume
             appview::tent::updatedat
                 .eq(current_date),
             appview::tent::updatedby
-                .eq(actor.did.clone()),
+                .eq(auth.actor.did.clone()),
         ))
         .load::<Tent>(&mut conn)
         .expect("Error updating tent");

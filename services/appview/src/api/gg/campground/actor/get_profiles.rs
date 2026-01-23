@@ -16,13 +16,12 @@ use crate::{
         views::profile_view_detailed
     },
     xrpc::{
-        auth::OptionalAuthorization,
         error::{Result, XRPCError}
     }
 };
 
 #[get("/xrpc/gg.campground.actor.getProfiles?<actors>")]
-pub async fn get_profiles(_auth: OptionalAuthorization, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actors: Vec<&str>) -> Result<Json<GetProfilesOutput>> {
+pub async fn get_profiles(client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actors: Vec<&str>) -> Result<Json<GetProfilesOutput>> {
     let actors = deduplicate_list(lower_list(actors));
     if actors.len() > 25 || actors.len() == 0 {
         return Err(XRPCError::BadRequest("actors query must have at least 1 actor and less than or equal to 25".to_string()));

@@ -1,5 +1,6 @@
-use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteMember, Profile};
-use campground_lexicon::gg::campground::{campsite::{BonfireViewBasic, BonfireViewDetailed, CampsiteMemberViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
+use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
+use campground_lexicon::gg::campground::{campsite::{BonfireViewBasic, BonfireViewDetailed, CampsiteMemberViewBasic, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
+use uuid::Uuid;
 
 use crate::helpers::{util::serialize_datetime, views::profile_view_basic_from_db};
 
@@ -16,6 +17,7 @@ pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
             .filter_map(|x| x.clone())
             .collect(),
         member_count: campsite.member_dids.len(),
+        owner: campsite.owner.clone(),
         created_by: campsite.created_by.clone(),
         created_at: serialize_datetime(campsite.created_at),
         updated_by: campsite.updated_by.clone(),
@@ -23,7 +25,7 @@ pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
     };
 }
 
-pub fn campsite_view_detailed(campsite: &Campsite, bonfires: Vec<BonfireViewBasic>) -> CampsiteViewDetailed {
+pub fn campsite_view_detailed(campsite: &Campsite, bonfires: Vec<BonfireViewBasic>, roles: Vec<CampsiteRoleViewBasic>) -> CampsiteViewDetailed {
     return CampsiteViewDetailed {
         id: campsite.id.clone(),
         name: campsite.name.clone(),
@@ -36,11 +38,13 @@ pub fn campsite_view_detailed(campsite: &Campsite, bonfires: Vec<BonfireViewBasi
             .filter_map(|x| x.clone())
             .collect(),
         member_count: campsite.member_dids.len(),
+        owner: campsite.owner.clone(),
         created_by: campsite.created_by.clone(),
         created_at: serialize_datetime(campsite.created_at),
         updated_by: campsite.updated_by.clone(),
         updated_at: serialize_datetime(campsite.updated_at),
         bonfires: bonfires,
+        roles: roles,
     };
 }
 
@@ -51,6 +55,53 @@ pub fn campsite_member_view_basic(campsite_member: &CampsiteMember, profile: &Pr
         campsite_id: campsite_member.campsite_id.clone(),
         joined_at: serialize_datetime(campsite_member.joined_at),
         nickname: campsite_member.nickname.clone(),
+        roles: campsite_member.roles
+            .iter()
+            .filter_map(|&x| x)
+            .collect::<Vec<Uuid>>()
+    };
+}
+
+pub fn campsite_role_view_basic(role: &CampsiteRole) -> CampsiteRoleViewBasic {
+    return CampsiteRoleViewBasic {
+        id: role.id.clone(),
+        campsite_id: role.campsite_id.clone(),
+        name: role.name.clone(),
+        display_separately: role.display_separately.clone(),
+        mentionable: role.mentionable.clone(),
+        color: role.color,
+        color_secondary: role.color_secondary,
+        campsite_permissions: role.campsite_permissions,
+        tent_permissions: role.tent_permissions,
+        priority: role.priority,
+        created_by: role.created_by.clone(),
+        created_at: serialize_datetime(role.created_at),
+        updated_by: role.updated_by.clone(),
+        updated_at: serialize_datetime(role.updated_at),
+    };
+}
+
+pub fn campsite_permission_view(permission: CampsitePermission) -> CampsitePermissionView {
+    return CampsitePermissionView {
+        id: permission.id.clone(),
+        campsite_id: permission.campsite_id.clone(),
+
+        bonfire_id: permission.bonfire_id.clone(),
+        category_id: permission.category_id.clone(),
+        tent_id: permission.tent_id.clone(),
+
+        user_id: permission.user_id.clone(),
+        role_id: permission.role_id.clone(),
+
+        allowed_campsite_permissions: permission.allowed_campsite_permissions,
+        denied_campsite_permissions: permission.denied_campsite_permissions,
+        allowed_tent_permissions: permission.allowed_tent_permissions,
+        denied_tent_permissions: permission.denied_tent_permissions,
+
+        created_by: permission.created_by.clone(),
+        created_at: serialize_datetime(permission.created_at),
+        updated_by: permission.updated_by.clone(),
+        updated_at: serialize_datetime(permission.updated_at),
     };
 }
 
