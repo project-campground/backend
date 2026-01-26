@@ -3,11 +3,15 @@ pub fn routes() -> Vec<rocket::Route> {
         actor::routes(),
         profile::routes(),
         campsite::routes(),
-        tent::routes()
+        tent::routes(),
+        membership::routes(),
+        permission::routes()
     )
 }
 
 mod actor;
 mod profile;
 mod campsite;
+mod membership;
+mod permission;
 mod tent;

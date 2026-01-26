@@ -9,7 +9,7 @@ use rsky_common::tid::Ticker;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}, tents::tent_view_basic}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}, roles::CampsiteRoleFlag, tents::tent_view_basic}, xrpc::{
     auth::Authorization,
     error::{Result, XRPCError}
 }};
@@ -31,10 +31,10 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
     } else if inner_body.description.len() > 200 {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
-    } else if vanity_url.clone().map_or(false, |x| x.len() > 32) {
-        return Err(XRPCError::BadRequest("Expected 'vanity_url' property to have a string of up to 32 characters".to_string()));
-    } else if inner_body.tags.clone().map_or(false, |x| x.len() > 20 || x.iter().any(|y| y.len() > 32)) {
-        return Err(XRPCError::BadRequest("Expected 'tags' property to have up to 20 values and value to be a string of length up to 32 characters".to_string()));
+    } else if vanity_url.clone().map_or(false, |x| x.len() < 1 || x.len() > 32) {
+        return Err(XRPCError::BadRequest("Expected 'vanity_url' property to have a string of length 3 to 32 characters".to_string()));
+    } else if inner_body.tags.clone().map_or(false, |x| x.len() > 10 || x.iter().any(|y| y.len() > 20)) {
+        return Err(XRPCError::BadRequest("Expected 'tags' property to have up to 10 values and value to be a string of length up to 20 characters".to_string()));
     }
 
     let mut conn = establish_connection().unwrap();
@@ -102,6 +102,8 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
                 created_at: current_date,
                 updated_by: actor.did.clone(),
                 updated_at: current_date,
+                flags: CampsiteRoleFlag::DEFAULT_ROLE,
+                members: vec![Some(actor.did.clone())]
             }
         )
         .get_result::<CampsiteRole>(&mut conn)
@@ -173,7 +175,7 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
         .get_result::<Tent>(&mut conn)
         .expect("Error inserting default tent");
 
-    let campsite_view = campsite_view_detailed(campsite, vec![ bonfire_view_basic(home_bonfire) ], vec![ campsite_role_view_basic(default_role) ]);
+    let campsite_view = campsite_view_detailed(campsite, vec![ bonfire_view_basic(home_bonfire) ], vec![ campsite_role_view_basic(default_role) ], campsite_member_view_basic(owner_member, profile, actor));
 
-    return Ok(Json(CreateCampsiteOutput { campsite: campsite_view, default_tent: tent_view_basic(general_tent), owner_member: campsite_member_view_basic(owner_member, profile, actor) }));
+    return Ok(Json(CreateCampsiteOutput { campsite: campsite_view, default_tent: tent_view_basic(general_tent) }));
 }

@@ -43,23 +43,13 @@ impl<'r, 'a> FromRequest<'r> for OptionalAuthorization<'a> where 'r: 'a {
     type Error = AuthError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let auth_header = match req.headers().get_one("Authorization") {
-            Some(header) => header,
-            None => return Outcome::Success(OptionalAuthorization::Unauthorized)
-        };
-        let token = match auth_header.strip_prefix(BEARER) {
-            Some(token) => token.to_string(),
-            None => return Outcome::Success(OptionalAuthorization::Unauthorized)
-        };
-
-        let http_client = req.guard::<&State<Client>>().await.unwrap();
-        let did_document_storage = req.guard::<&State<LruDidDocumentStorage>>().await.unwrap();
-
-        match validate_jwt(&token, &did_document_storage, &*http_client).await {
-            Ok((header, claims)) => {
-                Outcome::Success(OptionalAuthorization::Authorized(Authorization { header, claims: claims.clone(), token, actor_did: claims.jose.issuer.unwrap(), client: http_client, did_document_storage }))
-            },
-            Err(_e) => Outcome::Success(OptionalAuthorization::Unauthorized)
+        match req.guard::<Authorization>().await {
+            Outcome::Success(value) =>
+                Outcome::Success(OptionalAuthorization::Authorized(value)),
+            Outcome::Forward(value) =>
+                Outcome::Forward(value),
+            Outcome::Error(value) =>
+                Outcome::Success(OptionalAuthorization::Unauthorized),
         }
     }
 }

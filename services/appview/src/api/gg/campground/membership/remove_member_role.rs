@@ -5,7 +5,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use diesel::pg::expression::dsl::array_remove;
 
-use crate::{api::gg::campground::campsite::add_member_role::ensure_no_higher_role, database::establish_connection, helpers::{api::handle_select_first_error, roles::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -15,7 +15,7 @@ pub struct RemoveMemberRoleBody {
     member_ids: Vec<String>,
 }
 
-#[post("/xrpc/gg.campground.campsite.removeMemberRoles?<campsite_id>&<role_id>", data = "<body>")]
+#[post("/xrpc/gg.campground.membership.removeMemberRoles?<campsite_id>&<role_id>", data = "<body>")]
 pub async fn remove_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &str, body: Json<RemoveMemberRoleBody>) -> Result<Json<usize>> {    
     let inner_body = &body.into_inner();
     let member_ids_length = inner_body.member_ids.len();
@@ -42,7 +42,11 @@ pub async fn remove_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_
 
     let given_role = given_role.unwrap();
 
-    ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role, auth.member.roles.clone())?;
+    if given_role.flags & CampsiteRoleFlag::DEFAULT_ROLE != 0 {
+        return Err(XRPCError::Forbidden("Cannot remove default role from a member".to_string()));
+    }
+
+    ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
     if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::GIVE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));

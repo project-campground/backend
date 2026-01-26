@@ -44,6 +44,7 @@ pub struct CampsiteViewDetailed {
 
     pub bonfires: Vec<BonfireViewBasic>,
     pub roles: Vec<CampsiteRoleViewBasic>,
+    pub member: CampsiteMemberViewBasic,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -55,6 +56,43 @@ pub struct CampsiteMemberViewBasic {
     pub joined_at: String,
     pub nickname: Option<String>,
     pub roles: Vec<Uuid>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampsiteInviteViewBasic {
+    pub id: Uuid,
+    pub campsite_id: String,
+    pub allowed_amount: Option<i32>,
+    pub expires_at: Option<String>,
+    pub created_at: String,
+    pub created_by: String,
+    pub used: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampsiteInviteViewDetailed {
+    pub id: Uuid,
+    pub campsite: CampsiteViewBasic,
+    pub allowed_amount: Option<i32>,
+    pub expires_at: Option<String>,
+    pub created_at: String,
+    pub created_by: String,
+    pub used: i32,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampsiteBanView {
+    pub user: ProfileViewBasic,
+    pub user_id: String,
+    pub campsite_id: String,
+    pub reason: Option<String>,
+    pub created_at: String,
+    pub created_by: String,
+    pub updated_at: String,
+    pub updated_by: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -77,6 +115,7 @@ pub struct CampsiteRoleViewBasic {
     pub name: String,
     pub display_separately: bool,
     pub mentionable: bool,
+    pub flags: i32,
 
     pub campsite_permissions: i64,
     pub tent_permissions: i64,
@@ -164,6 +203,18 @@ pub struct GetCampsiteRolesOutput {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GetCampsiteInvitesOutput {
+    pub invites: Vec<CampsiteInviteViewBasic>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetCampsiteBansOutput {
+    pub bans: Vec<CampsiteBanView>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GetMembersOutput {
     pub members: Vec<CampsiteMemberViewBasic>,
 }
@@ -173,5 +224,4 @@ pub struct GetMembersOutput {
 pub struct CreateCampsiteOutput {
     pub campsite: CampsiteViewDetailed,
     pub default_tent: TentViewBasic,
-    pub owner_member: CampsiteMemberViewBasic
 }

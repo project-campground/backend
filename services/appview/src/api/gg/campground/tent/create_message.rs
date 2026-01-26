@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, roles::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic}, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic}, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };

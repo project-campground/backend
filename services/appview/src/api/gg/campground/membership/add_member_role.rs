@@ -5,7 +5,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use diesel::dsl::not;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, roles::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::ensure_no_higher_role}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -15,7 +15,7 @@ pub struct AddMemberRoleBody {
     member_ids: Vec<String>,
 }
 
-#[post("/xrpc/gg.campground.campsite.addMemberRoles?<campsite_id>&<role_id>", data = "<body>")]
+#[post("/xrpc/gg.campground.membership.addMemberRoles?<campsite_id>&<role_id>", data = "<body>")]
 pub async fn add_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &str, body: Json<AddMemberRoleBody>) -> Result<Json<usize>> {    
     let inner_body = &body.into_inner();
     let member_ids_length = inner_body.member_ids.len();
@@ -42,7 +42,7 @@ pub async fn add_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id:
 
     let given_role = given_role.unwrap();
 
-    ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role, auth.member.roles.clone())?;
+    ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
     if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::GIVE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
@@ -76,23 +76,4 @@ pub async fn add_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id:
         .map_err(handle_select_first_error)?;
     
     return Ok(Json(updated_members));
-}
-
-pub fn ensure_no_higher_role(is_owner: bool, all_roles: &mut Vec<CampsiteRole>, given_role: &CampsiteRole, member_roles: Vec<Option<Uuid>>) -> Result<(), XRPCError> {
-    if is_owner {
-        return Ok(());
-    }
-
-    // Can't give role higher than they have or the same priority
-    all_roles.sort_by(|a, b| a.priority.cmp(&b.priority));
-
-    let highest_role = all_roles
-        .iter()
-        .find(|x| member_roles.contains(&Some(x.id)));
-
-    return if highest_role.map_or(false, |x| x.priority <= given_role.priority) {
-        Err(XRPCError::Forbidden("The given role is higher or the same priority as your highest role".to_string()))
-    } else {
-        Ok(())
-    }
 }

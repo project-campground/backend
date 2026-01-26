@@ -46,13 +46,26 @@ pub mod appview {
     }
 
     diesel::table! {
+        appview.campsite_ban (campsiteid, userid) {
+            campsiteid -> Varchar,
+            userid -> Varchar,
+            reason -> Nullable<Varchar>,
+            createdby -> Varchar,
+            createdat -> Timestamp,
+            updatedby -> Varchar,
+            updatedat -> Timestamp,
+        }
+    }
+
+    diesel::table! {
         appview.campsite_invite (id) {
-            id -> Varchar,
+            id -> Uuid,
             campsiteid -> Varchar,
             allowedamount -> Nullable<Int4>,
             expiresat -> Nullable<Timestamp>,
             createdby -> Varchar,
             createdat -> Timestamp,
+            used -> Int4,
         }
     }
 
@@ -61,7 +74,7 @@ pub mod appview {
             userid -> Varchar,
             campsiteid -> Varchar,
             joinedat -> Timestamp,
-            usedinviteid -> Nullable<Varchar>,
+            usedinviteid -> Nullable<Uuid>,
             nickname -> Nullable<Varchar>,
             roles -> Array<Nullable<Uuid>>,
         }
@@ -103,6 +116,8 @@ pub mod appview {
             createdat -> Timestamp,
             updatedby -> Varchar,
             updatedat -> Timestamp,
+            members -> Array<Nullable<Text>>,
+            flags -> Int4,
         }
     }
 
@@ -191,10 +206,23 @@ pub mod appview {
         }
     }
 
+    diesel::joinable!(bonfire -> campsite (campsiteid));
+    diesel::joinable!(campsite_ban -> campsite (campsiteid));
+    diesel::joinable!(campsite_invite -> campsite (campsiteid));
+    diesel::joinable!(campsite_member -> campsite (campsiteid));
+    diesel::joinable!(campsite_permission -> campsite (campsiteid));
+    diesel::joinable!(campsite_permission -> tent (tentid));
+    diesel::joinable!(campsite_permission -> tent_category (categoryid));
+    diesel::joinable!(campsite_role -> campsite (campsiteid));
+    diesel::joinable!(tent -> campsite (campsiteid));
+    diesel::joinable!(tent_category -> campsite (campsiteid));
+    diesel::joinable!(tent_message -> tent (tentid));
+
     diesel::allow_tables_to_appear_in_same_query!(
         actor,
         bonfire,
         campsite,
+        campsite_ban,
         campsite_invite,
         campsite_member,
         campsite_permission,

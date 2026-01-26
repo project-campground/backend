@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Actor, CampsitePermission, Profile, Tent, TentCategory, TentMessage};
+use appview_schema::models::appview::{Actor, Profile, Tent, TentCategory, TentMessage};
 use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::CampsitePermissionView, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
 use uuid::Uuid;
 

@@ -5,7 +5,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, roles::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -59,11 +59,11 @@ pub async fn update_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_i
         )
         .set((
             appview::bonfire::name
-                .eq(name.clone()),
+                .eq(name),
             appview::bonfire::description
-                .eq(description.clone()),
+                .eq(description),
             appview::bonfire::priority
-                .eq(priority.clone()),
+                .eq(priority),
             appview::bonfire::updatedby
                 .eq(auth.actor.did.clone()),
             appview::bonfire::updatedat

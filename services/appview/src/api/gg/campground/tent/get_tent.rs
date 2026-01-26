@@ -14,7 +14,7 @@ use crate::{
 #[get("/xrpc/gg.campground.tent.getTent?<tent_id>")]
 pub async fn get_tent(auth: Authorization<'_>, tent_id: &str) -> Result<Json<TentViewDetailed>> {
     let mut conn = establish_connection().unwrap();
-    
+
     let uuid = Uuid::try_parse(tent_id)
         .map_err(|_| XRPCError::BadRequest("Invalid 'tent_id' format. Expected UUID".to_string()))?;
 
@@ -48,6 +48,7 @@ pub async fn get_tent(auth: Authorization<'_>, tent_id: &str) -> Result<Json<Ten
                                 )
                         )
                         .and(
+                            
                             campsite_permission::userid
                                 .is_null()
                                 .or(

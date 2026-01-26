@@ -26,4 +26,5 @@ pub mod campsites;
 pub mod tents;
 pub mod api;
 pub mod roles;
+pub mod permissions;
 pub mod posts;

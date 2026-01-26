@@ -1,157 +1,31 @@
 #![
     allow(dead_code)
 ]
-use appview_schema::{models::appview::{Campsite, CampsiteMember, CampsitePermission, CampsiteRole}, schema::appview::campsite_permission};
-use diesel::{BoolExpressionMethods, ExpressionMethods, PgSortExpressionMethods, QueryDsl, RunQueryDsl, dsl::sql, sql_types::Bool};
+use appview_schema::models::appview::CampsiteRole;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::api::handle_select_first_error, xrpc::error::XRPCError};
+use crate::xrpc::error::XRPCError;
 
-pub struct CampsitePermissionConsts {
-}
-impl CampsitePermissionConsts {
-    pub const MANAGE_CAMPSITE: i64 = 0b1;
-    pub const MANAGE_BONFIRES: i64 = 0b10;
-    pub const MANAGE_TENTS: i64 = 0b100;
-    pub const MANAGE_ROLES: i64 = 0b1000;
-    pub const GIVE_ROLES: i64 = 0b10000;
-    pub const MUTE_MEMBERS: i64 = 0b100000;
-    pub const KICK_MEMBERS: i64 = 0b1000000;
-    pub const BAN_MEMBERS: i64 = 0b10000000;
-    pub const MANAGE_SELF_IDENTITY: i64 = 0b100000000;
-    pub const MANAGE_OTHERS_IDENTITY: i64 = 0b1000000000;
-}
-pub struct TentPermissionConsts {
-}
-impl TentPermissionConsts {
-    pub const VIEW_CONTENT: i64 = 0b1;
-    pub const CREATE_CONTENT: i64 = 0b10;
-    pub const PIN_CONTENT: i64 = 0b100;
-    pub const MANAGE_CONTENT: i64 = 0b1000;
-    pub const MENTION_EVERYONE: i64 = 0b10000;
-    pub const CREATE_PRIVATE_CONTENT: i64 = 0b100000;
+pub struct CampsiteRoleFlag { }
+impl CampsiteRoleFlag {
+    pub const DEFAULT_ROLE: i32 = 0b1;
 }
 
-pub async fn has_role_permissions(campsite_id: String, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
-    let roles = get_roles_from_db(campsite_id.clone())?;
-    
-    let (campsite_perms_from_role, tent_perms_from_role) = get_role_permissions_from_roles(member, roles.clone());
-    
-    Ok((tent_perms & tent_perms_from_role == tent_perms) && (campsite_perms & campsite_perms_from_role == campsite_perms))
-}
-pub async fn has_role_perms_or_owner(campsite: Campsite, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
-    if campsite.owner == member.user_id { Ok(true) } else { has_role_permissions(campsite.id, member, campsite_perms, tent_perms).await }
-}
-pub async fn has_full_tent_perms(campsite_id: String, bonfire_id: String, category_id: Option<Uuid>, tent_id: Option<Uuid>, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
-    let roles = member.roles.iter().filter_map(|&x| x).collect();
-    let (_perms, given_camp_perms, given_tent_perms) = get_tent_permissions(campsite_id.clone(), bonfire_id, category_id, tent_id, member.user_id.clone(), roles).await?;
-    
-    // Has all the needed perms
-    if (given_camp_perms.0 & campsite_perms) == campsite_perms && (given_tent_perms.0 & tent_perms) == tent_perms {
-        return Ok(true);
-        // One of the perms is denied
-    } else if (given_camp_perms.1 & campsite_perms) != 0 || (given_tent_perms.1 & tent_perms) != 0 {
-        return Ok(false);
+pub fn ensure_no_higher_role(is_owner: bool, all_roles: &mut Vec<CampsiteRole>, given_role_priority: i32, member_roles: Vec<Option<Uuid>>) -> Result<(), XRPCError> {
+    if is_owner {
+        return Ok(());
     }
-    
-    let roles = get_roles_from_db(campsite_id.clone())?;
-    let (role_camp_perms, role_tent_perms) = get_role_permissions_from_roles(member, roles);
-    
-    Ok((role_camp_perms & campsite_perms) == campsite_perms && (role_tent_perms & tent_perms) == tent_perms)
-}
-pub async fn has_tent_perms_or_owner(campsite: Campsite, bonfire_id: String, category_id: Option<Uuid>, tent_id: Option<Uuid>, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
-    if campsite.owner == member.user_id { Ok(true) } else { has_full_tent_perms(campsite.id, bonfire_id, category_id, tent_id, member, campsite_perms, tent_perms).await }
-}
-pub async fn get_tent_permissions(campsite_id: String, bonfire_id: String, category_id: Option<Uuid>, tent_id: Option<Uuid>, actor: String, role_ids: Vec<Uuid>) -> Result<(Vec<CampsitePermission>, (i64, i64), (i64, i64)), XRPCError> {
-    let campsite_perms = fetch_tent_permissions(campsite_id, bonfire_id, category_id, tent_id, actor, role_ids.clone()).await?;
-    
-    // (campsite(allowed, disallowed), tent(allowed, disallowed))
-    let mut aggregated_perms = ((0i64, 0i64), (0i64, 0i64));
-    campsite_perms
-        .iter()
-        .for_each(|perm| {
-            flip_perms(&mut aggregated_perms.0, perm.allowed_campsite_permissions, perm.denied_campsite_permissions);
-            flip_perms(&mut aggregated_perms.1, perm.allowed_tent_permissions, perm.denied_tent_permissions);
-        });
 
-        Ok((campsite_perms, aggregated_perms.0, aggregated_perms.1))
-}
-pub async fn fetch_tent_permissions(campsite_id: String, bonfire_id: String, category_id: Option<Uuid>, tent_id: Option<Uuid>, actor: String, role_ids: Vec<Uuid>) -> Result<Vec<CampsitePermission>, XRPCError> {
-    let mut conn = establish_connection().unwrap();
-    campsite_permission::table
-        .filter(
-            campsite_permission::campsiteid
-                .eq(
-                    campsite_id
-                )
-                // Of who
-                .and(
-                    campsite_permission::roleid
-                        .eq_any(role_ids)
-                        .or(
-                            campsite_permission::userid
-                                .eq(actor)
-                        )
-                )
-                // Where
-                .and(
-                    campsite_permission::bonfireid
-                        .eq(
-                            bonfire_id
-                        )
-                        .or(
-                            sql::<Bool>(
-                                tent_id
-                                    .map_or(
-                                        "FALSE".to_string(),
-                                        |x| format!("\"campsite_permission\".\"tentid\" = '{}'", x)
-                                    )
-                                    .as_str()
-                            )
-                        )
-                        .or(
-                            sql::<Bool>(
-                                category_id
-                                    .map_or(
-                                        "FALSE".to_string(),
-                                        |x| format!("\"campsite_permission\".\"categoryid\" = '{}'", x)
-                                    )
-                                    .as_str()
-                            )
-                        )
-                )
-        )
-        // Force bonfire, then category, then tent perms to be applied
-        .order((
-            campsite_permission::bonfireid.asc().nulls_last(),
-            campsite_permission::categoryid.asc().nulls_last(),
-            campsite_permission::tentid.asc().nulls_last(),
-        ))
-        .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_select_first_error)
-}
-fn get_role_permissions_from_roles(member: CampsiteMember, roles: Vec<CampsiteRole>) -> (i64, i64) {
-    let member_roles = &roles
+    // Can't give role higher than they have or the same priority
+    all_roles.sort_by(|a, b| a.priority.cmp(&b.priority));
+
+    let highest_role = all_roles
         .iter()
-        .filter(|role|
-            member.roles.contains(&Some(role.id))
-        )
-        .collect::<Vec<&CampsiteRole>>();
-    
-    let campsite_perms = member_roles
-        .iter()
-        .fold(0i64, |camp_perm, role|
-            camp_perm | role.campsite_permissions
-        );
-    let tent_perms = member_roles
-        .iter()
-        .fold(0i64, |tent_perm, role|
-            tent_perm | role.tent_permissions
-        );
-    
-    (campsite_perms, tent_perms)
-}
-fn flip_perms(tuple: &mut (i64, i64), allowed: i64, disallowed: i64) {
-    tuple.0 |= allowed;
-    tuple.1 |= disallowed;
+        .find(|x| member_roles.contains(&Some(x.id)));
+
+    return if highest_role.map_or(false, |x| x.priority <= given_role_priority) {
+        Err(XRPCError::Forbidden("The given role is higher or the same priority as your highest role".to_string()))
+    } else {
+        Ok(())
+    }
 }

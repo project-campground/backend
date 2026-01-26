@@ -146,11 +146,61 @@ pub mod appview {
         pub joined_at: NaiveDateTime,
 
         #[diesel(column_name = usedinviteid)]
-        pub used_invite_id: Option<String>,
+        pub used_invite_id: Option<Uuid>,
 
         pub nickname: Option<String>,
 
         pub roles: Vec<Option<Uuid>>,
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(userid, campsiteid))]
+    #[diesel(table_name = crate::schema::appview::campsite_ban)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct CampsiteBan {
+        #[diesel(column_name = userid)]
+        pub user_id: String,
+        #[diesel(column_name = campsiteid)]
+        pub campsite_id: String,
+
+        pub reason: Option<String>,
+
+        #[diesel(column_name = createdby)]
+        pub created_by: String,
+        #[diesel(column_name = createdat)]
+        pub created_at: NaiveDateTime,
+        #[diesel(column_name = updatedby)]
+        pub updated_by: String,
+        #[diesel(column_name = updatedat)]
+        pub updated_at: NaiveDateTime
+    }
+
+    #[derive(
+        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+    )]
+    #[diesel(primary_key(id))]
+    #[diesel(table_name = crate::schema::appview::campsite_invite)]
+    #[diesel(check_for_backend(diesel::pg::Pg))]
+    #[serde(rename_all = "camelCase")]
+    pub struct CampsiteInvite {
+        pub id: Uuid,
+        #[diesel(column_name = campsiteid)]
+        pub campsite_id: String,
+
+        #[diesel(column_name = allowedamount)]
+        pub allowed_amount: Option<i32>,
+
+        #[diesel(column_name = expiresat)]
+        pub expires_at: Option<NaiveDateTime>,
+        #[diesel(column_name = createdby)]
+        pub created_by: String,
+        #[diesel(column_name = createdat)]
+        pub created_at: NaiveDateTime,
+
+        pub used: i32,
     }
 
     #[derive(
@@ -192,6 +242,9 @@ pub mod appview {
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
+
+        pub members: Vec<Option<String>>,
+        pub flags: i32,
     }
 
     #[derive(

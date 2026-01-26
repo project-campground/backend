@@ -4,12 +4,12 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQ
 use rocket::serde::json::Json;
 
 use crate::{
-    database::establish_connection, helpers::{campsites::campsite_member_view_basic, deduplicate_list, lower_list}, xrpc::{
+    database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_member_view_basic, deduplicate_list, lower_list}, xrpc::{
         campsite::CampsiteInfoBasic, error::{Result, XRPCError}
     }
 };
 
-#[get("/xrpc/gg.campground.campsite.getMembers?<campsite_id>&<limit>&<offset>", rank = 1)]
+#[get("/xrpc/gg.campground.membership.getMembers?<campsite_id>&<limit>&<offset>", rank = 1)]
 pub async fn get_members_any(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
@@ -89,7 +89,7 @@ pub async fn get_members_given(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, 
             (campsite_member::all_columns, profile::all_columns, crate::schema::appview::actor::all_columns)
         )
         .load::<(CampsiteMember, Profile, Actor)>(&mut conn)
-        .expect("Error loading members")
+        .map_err(handle_select_first_error)?
         .iter()
         .map(|a| campsite_member_view_basic(&a.0, &a.1, &a.2))
         .collect::<Vec<CampsiteMemberViewBasic>>();

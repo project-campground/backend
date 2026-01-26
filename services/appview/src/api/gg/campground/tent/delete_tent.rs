@@ -7,7 +7,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::serde::json::Json;
 
 use crate::{
-    database::establish_connection, helpers::{roles::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+    database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };

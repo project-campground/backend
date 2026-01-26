@@ -3,9 +3,10 @@ use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
+use rsky_common::tid::Ticker;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{campsites::bonfire_view_basic, roles::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -22,7 +23,8 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
-    } else if inner_body.description.len() > 200 {
+    }
+    else if inner_body.description.len() > 200 {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
     }
 
@@ -43,10 +45,13 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
 
     let current_date = Utc::now().naive_utc();
 
+    let mut ticker = Ticker::new();
+    let bonfire_id = ticker.next(None);
+
     let bonfire = &diesel::insert_into(crate::schema::appview::bonfire::table)
         .values(
             Bonfire {
-                id: campsite_id.to_string(),
+                id: bonfire_id.to_string(),
                 campsite_id: campsite_id.to_string(),
                 name: inner_body.name.clone(),
                 description: inner_body.description.clone(),

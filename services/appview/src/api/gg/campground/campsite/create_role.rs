@@ -6,7 +6,7 @@ use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{campsites::campsite_role_view_basic, roles::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::ensure_no_higher_role}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -32,18 +32,20 @@ pub async fn create_role(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<C
     
     let mut conn = establish_connection().unwrap();
     
-    let existing_role_count = crate::schema::appview::bonfire::table
-        .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
-        .execute(&mut conn)
-        .expect("Error loading roles");
+    let mut existing_roles = crate::schema::appview::campsite_role::table
+        .filter(crate::schema::appview::campsite_role::campsiteid.eq(campsite_id))
+        .load::<CampsiteRole>(&mut conn)
+        .map_err(handle_select_first_error)?;
 
-    if existing_role_count >= 150 {
+    if existing_roles.len() >= 150 {
         return Err(XRPCError::Forbidden("Cannot create more than 150 roles in a campsite".to_string()));
     }
 
-    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_role_perms_or_owner(auth.campsite.clone(), auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
+
+    ensure_no_higher_role(auth.actor.did == auth.campsite.owner, &mut existing_roles, inner_body.priority, auth.member.roles.clone())?;
 
     let current_date = Utc::now().naive_utc();
 
@@ -64,10 +66,12 @@ pub async fn create_role(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<C
                 created_at: current_date,
                 updated_by: auth.actor.did.clone(),
                 updated_at: current_date,
+                flags: 0,
+                members: vec![],
             }
         )
         .get_result::<CampsiteRole>(&mut conn)
-        .expect("Error inserting bonfire");
+        .map_err(handle_select_first_error)?;
 
     return Ok(Json(campsite_role_view_basic(role)));
 }
