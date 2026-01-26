@@ -8,7 +8,7 @@ use crate::{api::gg::campground::permission::update_role_permission::{UpdatePerm
 }};
 
 #[allow(unused_variables)]
-#[post("/xrpc/gg.campground.permission.updatePermission?<tent_id>&<actor>", data = "<body>")]
+#[post("/xrpc/gg.campground.permission.updatePermission?<tent_id>&<actor>", data = "<body>", rank = 4)]
 pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
@@ -16,7 +16,7 @@ pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, acto
 
     let mut conn = establish_connection().unwrap();
 
-    if !has_full_tent_perms(&auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_full_tent_perms(&auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -32,7 +32,7 @@ pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, acto
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let permission = create_or_modify_permission(
+    let permission = &create_or_modify_permission(
         &auth.actor.did,
         &auth.tent.campsite_id,
         None,
@@ -44,19 +44,19 @@ pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, acto
         inner_body.allowed_tent_permissions,
         inner_body.denied_campsite_permissions,
         inner_body.denied_tent_permissions,
-        campsite_permission::userid
+        &campsite_permission::userid
             .eq(actor)
             .and(
                 campsite_permission::tentid
                     .eq(auth.tent.id)
             ),
-    );
+    )?;
     
     Ok(Json(campsite_permission_view(permission)))
 }
 
 #[allow(unused_variables)]
-#[post("/xrpc/gg.campground.permission.updatePermission?<category_id>&<actor>", data = "<body>")]
+#[post("/xrpc/gg.campground.permission.updatePermission?<category_id>&<actor>", data = "<body>", rank = 5)]
 pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
@@ -64,7 +64,7 @@ pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id
 
     let mut conn = establish_connection().unwrap();
 
-    if !has_full_tent_perms(&auth.campsite.id, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_full_tent_perms(&auth.campsite.id, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -80,7 +80,7 @@ pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let permission = create_or_modify_permission(
+    let permission = &create_or_modify_permission(
         &auth.actor.did,
         &auth.category.campsite_id,
         None,
@@ -92,19 +92,19 @@ pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id
         inner_body.allowed_tent_permissions,
         inner_body.denied_campsite_permissions,
         inner_body.denied_tent_permissions,
-        campsite_permission::userid
+        &campsite_permission::userid
             .eq(actor)
             .and(
                 campsite_permission::categoryid
                     .eq(auth.category.id)
             ),
-    );
+    )?;
     
     Ok(Json(campsite_permission_view(permission)))
 }
 
 #[allow(unused_variables)]
-#[post("/xrpc/gg.campground.permission.updatePermission?<bonfire_id>&<actor>", data = "<body>")]
+#[post("/xrpc/gg.campground.permission.updatePermission?<bonfire_id>&<actor>", data = "<body>", rank = 6)]
 pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, bonfire_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
@@ -112,7 +112,7 @@ pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, bonfire_id: &
 
     let mut conn = establish_connection().unwrap();
 
-    if !has_full_tent_perms(&auth.campsite.id, &bonfire_id, None, None, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_full_tent_perms(&auth.campsite.id, &bonfire_id, None, None, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -128,7 +128,7 @@ pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, bonfire_id: &
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let permission = create_or_modify_permission(
+    let permission = &create_or_modify_permission(
         &auth.actor.did,
         &auth.bonfire.campsite_id,
         Some(auth.bonfire.id.clone()),
@@ -140,13 +140,13 @@ pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, bonfire_id: &
         inner_body.allowed_tent_permissions,
         inner_body.denied_campsite_permissions,
         inner_body.denied_tent_permissions,
-        campsite_permission::userid
+        &campsite_permission::userid
             .eq(actor)
             .and(
                 campsite_permission::bonfireid
                     .eq(auth.bonfire.id)
             ),
-    );
+    )?;
     
     Ok(Json(campsite_permission_view(permission)))
 }

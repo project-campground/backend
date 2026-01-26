@@ -51,14 +51,14 @@ pub async fn create_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         return Err(XRPCError::BadRequest("Expected 'replies' parameters to have valid UUIDs".to_string()));
     }
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), auth.tent.bonfire_id.clone(), auth.tent.category_id.clone(), Some(auth.tent.id), auth.member.clone(), 0, TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::CREATE_CONTENT).await? {
+    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::CREATE_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
     let replies_query: Vec<TentMessage> = tent_message::table
         .filter(
             crate::schema::appview::tent_message::tentid
-                .eq(auth.tent.id.clone())
+                .eq(auth.tent.id)
                 .and(
                     crate::schema::appview::tent_message::id
                         .eq_any(uuids.clone())

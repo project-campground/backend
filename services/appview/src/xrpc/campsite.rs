@@ -135,7 +135,7 @@ fn fetch_uuid_from_req<'r>(req: &'r Request<'_>, name: &str) -> Outcome<Uuid, Ca
     );
 
     Uuid::parse_str(id)
-        .outcome(|e| Outcome::Error((Status::BadRequest, CampsiteError::InvalidId)))
+        .outcome(|_| Outcome::Error((Status::BadRequest, CampsiteError::InvalidId)))
 }
 #[rocket::async_trait]
 impl<'r, 'a> FromRequest<'r> for TentInfo<'a> where 'r: 'a {
@@ -147,7 +147,7 @@ impl<'r, 'a> FromRequest<'r> for TentInfo<'a> where 'r: 'a {
         let actor = try_outcome!(
             get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
                 .await
-                .outcome(|e| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
+                .outcome(|_| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
         );
 
         let tent_id = try_outcome!(fetch_uuid_from_req(req, "tent_id"));
@@ -195,7 +195,7 @@ impl<'r, 'a> FromRequest<'r> for CategoryInfo<'a> where 'r: 'a {
         let actor = try_outcome!(
             get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
                 .await
-                .outcome(|e| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
+                .outcome(|_| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
         );
 
         let category_id = try_outcome!(fetch_uuid_from_req(req, "category_id"));
@@ -243,7 +243,7 @@ impl<'r, 'a> FromRequest<'r> for BonfireInfo<'a> where 'r: 'a {
         let actor = try_outcome!(
             get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
                 .await
-                .outcome(|e| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
+                .outcome(|_| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
         );
 
         let bonfire_id = try_outcome!(

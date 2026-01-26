@@ -24,7 +24,7 @@ pub async fn ban_member(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &str, 
     if inner_body.reason.clone().map_or(false, |x| x.len() > 200) {
         
     }
-    else if !has_role_perms_or_owner(auth.campsite.clone(), auth.member.clone(), CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
+    else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

@@ -1,11 +1,11 @@
 use appview_schema::{models::appview::Campsite, schema::appview};
 use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -19,7 +19,7 @@ pub struct UpdateCampsiteBody {
 }
 
 #[post("/xrpc/gg.campground.campsite.updateCampsite?<campsite_id>", data = "<body>")]
-pub async fn update_campsite(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &str, body: Json<UpdateCampsiteBody>) -> Result<Json<CampsiteViewBasic>> {    
+pub async fn update_campsite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<UpdateCampsiteBody>) -> Result<Json<CampsiteViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.clone().map_or(false, |x| x.len() < 3 || x.len() > 48) {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -31,7 +31,7 @@ pub async fn update_campsite(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_
         return Err(XRPCError::BadRequest("Expected 'tags' property to have up to 10 values and value to be a string of length up to 20 characters".to_string()));
     }
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), bonfire_id.to_string(), None, None, auth.member.clone(), CampsitePermissionConsts::MANAGE_CAMPSITE, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_CAMPSITE, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -69,7 +69,7 @@ pub async fn update_campsite(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_
             appview::campsite::vanityurl
                 .eq(new_vanity_url),
             appview::campsite::updatedby
-                .eq(auth.actor.did.clone()),
+                .eq(&auth.actor.did),
             appview::campsite::updatedat
                 .eq(current_date),
         ))

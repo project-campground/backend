@@ -1,7 +1,7 @@
 use appview_schema::{models::appview::TentCategory, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
 

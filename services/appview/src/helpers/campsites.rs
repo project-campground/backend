@@ -120,7 +120,7 @@ pub fn campsite_role_view_basic(role: &CampsiteRole) -> CampsiteRoleViewBasic {
     };
 }
 
-pub fn campsite_permission_view(permission: CampsitePermission) -> CampsitePermissionView {
+pub fn campsite_permission_view(permission: &CampsitePermission) -> CampsitePermissionView {
     return CampsitePermissionView {
         id: permission.id.clone(),
         campsite_id: permission.campsite_id.clone(),

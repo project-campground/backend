@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::{CampsiteMember, CampsiteRole}, schema::appview::{self, campsite_member, campsite_role}};
-use diesel::{BoolExpressionMethods, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use diesel::pg::expression::dsl::array_remove;
 use uuid::Uuid;
 
@@ -7,13 +7,13 @@ use crate::{database::establish_connection, helpers::{api::handle_select_first_e
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
-#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>&<actor>")]
+#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>&<actor>", rank = 1)]
 pub async fn remove_member(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &str) -> Result<()> {    
     if actor == auth.actor.did {
         return remove_self(auth, campsite_id).await;
     }
 
-    if !has_role_perms_or_owner(auth.campsite.clone(), auth.member.clone(), CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -40,7 +40,7 @@ pub async fn remove_member(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &st
 
     remove_campsite_member(campsite_id, actor)
 }
-#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>")]
+#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>", rank = 2)]
 pub async fn remove_self(auth: CampsiteInfo<'_>, campsite_id: &str) -> Result<()> {    
     remove_campsite_member(campsite_id, &auth.actor.did)
 }

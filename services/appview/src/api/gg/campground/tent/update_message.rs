@@ -49,7 +49,7 @@ pub async fn update_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
                 .eq(msg_id_uuid)
                 .and(
                     tent_message::tentid
-                        .eq(auth.tent.id.clone())
+                        .eq(auth.tent.id)
                 )
         )
         .first::<TentMessage>(&mut conn)
@@ -62,7 +62,7 @@ pub async fn update_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
 
     let content = body.content.clone();
 
-    if msg.created_by != auth.actor.did.clone() {
+    if msg.created_by != auth.actor.did {
         return Err(XRPCError::Forbidden("Cannot update message not created by the user".to_string()));
     } else if content == msg.content {
         return Err(XRPCError::BadRequest("Message already has the same content".to_string()));
@@ -76,12 +76,12 @@ pub async fn update_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
                 .eq(msg_id_uuid)
                 .and(
                     tent_message::tentid
-                        .eq(auth.tent.id.clone())
+                        .eq(auth.tent.id)
                 )
         )
         .set((
             tent_message::content
-                .eq(body.content.clone()),
+                .eq(&body.content),
             tent_message::updatedat
                 .eq(updated_at)
         ))

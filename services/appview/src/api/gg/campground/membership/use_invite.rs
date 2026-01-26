@@ -74,7 +74,7 @@ pub async fn use_invite(auth: Authorization<'_>, invite_id: &str) -> Result<()> 
     diesel::update(campsite_invite::table)
         .filter(
             campsite_invite::id
-                .eq(invite.id.clone())
+                .eq(&invite.id)
         )
         .set(
             campsite_invite::used

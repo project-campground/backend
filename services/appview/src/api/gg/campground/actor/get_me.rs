@@ -7,7 +7,7 @@ use reqwest::Client;
 
 use crate::{
     database::{establish_connection, profiles},
-    helpers::{campsites::campsite_view_basic, views::{profile_record, profile_view_basic}},
+    helpers::{api::handle_all_db_errors, campsites::campsite_view_basic, views::{profile_record, profile_view_basic}},
     xrpc::{
         auth::Authorization,
         error::{Result, XRPCError}
@@ -33,7 +33,7 @@ pub async fn get_me(auth: Authorization<'_>, client: &State<Client>, did_documen
         crate::schema::appview::campsite::table
             .filter(crate::schema::appview::campsite::id.eq_any(campsite_ids_filtered))
             .load::<Campsite>(&mut conn)
-            .expect("Error loading campsites")
+            .map_err(handle_all_db_errors)?
             .iter()
             .map(campsite_view_basic)
             .collect::<Vec<CampsiteViewBasic>>()

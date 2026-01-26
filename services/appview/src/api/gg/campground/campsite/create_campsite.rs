@@ -43,7 +43,7 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
         .map_err(|_| XRPCError::Unauthorized)?;
 
     let existing_campsite_count = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::owner.eq(actor.did.clone()))
+        .filter(crate::schema::appview::campsite::owner.eq(&actor.did))
         .execute(&mut conn)
         .expect("Error loading owner's campsites");
     

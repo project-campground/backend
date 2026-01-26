@@ -16,7 +16,7 @@ impl<T> OptionConversionOutcome<T> for Option<T> {
         }
     }
 }
-impl<T, E> ResultConversionOutcome<T, E> for Result<T, E> {
+impl<T, E: std::fmt::Debug> ResultConversionOutcome<T, E> for Result<T, E> {
     fn outcome<OE>(self, error: fn(E) -> Outcome<T, OE>) -> Outcome<T, OE> {
         if self.is_ok() {
             Outcome::Success(self.unwrap())

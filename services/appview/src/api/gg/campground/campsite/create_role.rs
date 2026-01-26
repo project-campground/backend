@@ -41,7 +41,7 @@ pub async fn create_role(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<C
         return Err(XRPCError::Forbidden("Cannot create more than 150 roles in a campsite".to_string()));
     }
 
-    if !has_role_perms_or_owner(auth.campsite.clone(), auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -64,7 +64,7 @@ pub async fn create_role(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<C
                 priority: inner_body.priority,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: auth.actor.did.clone(),
+                updated_by: auth.actor.did,
                 updated_at: current_date,
                 flags: 0,
                 members: vec![],

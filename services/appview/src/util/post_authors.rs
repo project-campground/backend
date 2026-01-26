@@ -6,7 +6,7 @@ use crate::database::{
     models::appview::ProfilePost,
 };
 
-pub fn get_authors_from_posts(posts: Vec<ProfilePost>, collect_parent_authors: bool) -> HashSet<String> {
+pub fn get_authors_from_posts(posts: &Vec<ProfilePost>, collect_parent_authors: bool) -> HashSet<String> {
     posts
         .iter()
         // at://did:.../
@@ -27,11 +27,11 @@ pub fn get_authors_from_posts(posts: Vec<ProfilePost>, collect_parent_authors: b
         .collect::<HashSet<String>>()
 }
 
-pub fn populate_profile_posts_with_authors(posts: Vec<ProfilePost>, author_profiles: Vec<(Actor, Profile)>) -> Vec<(Actor, Profile, ProfilePost)> {
+pub fn populate_profile_posts_with_authors(posts: Vec<ProfilePost>, author_profiles: &Vec<(Actor, Profile)>) -> Vec<(Actor, Profile, ProfilePost)> {
     populate_profile_posts_with_authors_from_iter(posts.into_iter().clone(), author_profiles)
 }
 
-pub fn populate_profile_posts_with_authors_from_iter<I>(posts: I, author_profiles: Vec<(Actor, Profile)>) -> Vec<(Actor, Profile, ProfilePost)>
+pub fn populate_profile_posts_with_authors_from_iter<I>(posts: I, author_profiles: &Vec<(Actor, Profile)>) -> Vec<(Actor, Profile, ProfilePost)>
     where I: Iterator<Item = ProfilePost>
 {
     return posts

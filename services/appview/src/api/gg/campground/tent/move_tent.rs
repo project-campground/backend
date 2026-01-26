@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::{Bonfire, Tent, TentCategory}, schema::appview};
+use appview_schema::{models::appview::{Bonfire, Campsite, CampsiteMember, Tent, TentCategory}, schema::appview};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -28,7 +28,7 @@ pub async fn move_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<MoveTentBod
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
     }
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), auth.tent.bonfire_id.clone(), auth.tent.category_id.clone(), Some(auth.tent.id), auth.member.clone(), CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     let remove_category = inner_body.category_id.clone().map_or(false, |x| x == "");
@@ -46,9 +46,9 @@ pub async fn move_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<MoveTentBod
 
     // To make sure they are not moving to category that doesn't exist
     if !remove_category && category_id.map_or(false, |x| Some(x) != auth.tent.category_id) {
-        check_category_existence(auth.tent.campsite_id.clone(), moved_bonfire.clone(), category_id.unwrap()).await?;
+        check_category_existence(&auth.campsite, &auth.member, &moved_bonfire, category_id.unwrap()).await?;
     } else if moved_bonfire != auth.tent.bonfire_id {
-        check_bonfire_existence(auth.tent.campsite_id.clone(), moved_bonfire.clone()).await?
+        check_bonfire_existence(&auth.campsite, &auth.member, &moved_bonfire).await?
     }
     let moved_category = if remove_category { None } else { category_id.or(auth.tent.category_id.clone()) };
 
@@ -68,20 +68,20 @@ pub async fn move_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<MoveTentBod
             appview::tent::categoryid
                 .eq(moved_category),
             appview::tent::bonfireid
-                .eq(moved_bonfire.clone()),
+                .eq(&moved_bonfire),
             // Mandatory
             appview::tent::updatedat
                 .eq(current_date),
             appview::tent::updatedby
-                .eq(auth.actor.did.clone()),
+                .eq(&auth.actor.did),
         ))
         .load::<Tent>(&mut conn)
-        .expect("Error updating tent");
+        .map_err(handle_select_first_error)?;
 
     return Ok(Json(tent_view_basic(updated_tent.first().unwrap())));
 }
 
-async fn check_category_existence(campsite_id: String, moved_bonfire_id: String, category_id: Uuid) -> Result<String, XRPCError> {    
+async fn check_category_existence(campsite: &Campsite, member: &CampsiteMember, moved_bonfire_id: &str, category_id: Uuid) -> Result<String, XRPCError> {    
     let mut conn = establish_connection().unwrap();
 
     let tent_categories = &crate::schema::appview::tent_category::table
@@ -95,19 +95,23 @@ async fn check_category_existence(campsite_id: String, moved_bonfire_id: String,
     if tent_categories.len() == 0 {
         return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not exist".to_string()));
     }
-
+    
     let tent_category = tent_categories.first().unwrap();
 
-    if tent_category.campsite_id != campsite_id {
+    if tent_category.campsite_id != campsite.id {
         return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not belong to the same campsite as tent".to_string()));
     } else if tent_category.bonfire_id != moved_bonfire_id {
         return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not belong to the same bonfire as supplied in 'bonfire_id' or already existing bonfire".to_string()));
     }
 
+    if !has_tent_perms_or_owner(campsite, moved_bonfire_id, Some(category_id), None, member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    }
+
     return Ok(tent_category.bonfire_id.clone());
 }
 
-async fn check_bonfire_existence(campsite_id: String, moved_bonfire_id: String) -> Result<(), XRPCError> {    
+pub async fn check_bonfire_existence(campsite: &Campsite, member: &CampsiteMember, moved_bonfire_id: &str) -> Result<(), XRPCError> {    
     let mut conn = establish_connection().unwrap();
 
     let bonfires = &crate::schema::appview::bonfire::table
@@ -117,7 +121,7 @@ async fn check_bonfire_existence(campsite_id: String, moved_bonfire_id: String) 
                 .and(
                     crate::schema::appview::bonfire::campsiteid
                         .eq(
-                            campsite_id
+                            &campsite.id
                         )
                 )
         )
@@ -126,6 +130,10 @@ async fn check_bonfire_existence(campsite_id: String, moved_bonfire_id: String) 
 
     if bonfires.len() == 0 {
         return Err(XRPCError::BadRequest("Bonfire supplied in 'bonfire_id' does not exist".to_string()));
+    }
+
+    if !has_tent_perms_or_owner(campsite, moved_bonfire_id, None, None, member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
     return Ok(());

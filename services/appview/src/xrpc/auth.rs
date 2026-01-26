@@ -48,7 +48,7 @@ impl<'r, 'a> FromRequest<'r> for OptionalAuthorization<'a> where 'r: 'a {
                 Outcome::Success(OptionalAuthorization::Authorized(value)),
             Outcome::Forward(value) =>
                 Outcome::Forward(value),
-            Outcome::Error(value) =>
+            Outcome::Error(_value) =>
                 Outcome::Success(OptionalAuthorization::Unauthorized),
         }
     }

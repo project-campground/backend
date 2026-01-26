@@ -76,7 +76,7 @@ pub async fn create_category(auth: CampsiteInfoBasic<'_>, campsite_id: &str, bon
                 priority: inner_body.priority,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: auth.actor.did.clone(),
+                updated_by: auth.actor.did,
                 updated_at: current_date,
             }
         )

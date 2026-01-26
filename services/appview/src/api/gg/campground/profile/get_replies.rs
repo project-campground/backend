@@ -46,16 +46,16 @@ pub async fn get_replies(_auth: OptionalAuthorization<'_>, client: &State<Client
         .load::<ProfilePost>(&mut conn)
         .expect("Error loading profile post");
     let posts =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, author_did, Some(resolved_uri), posts_query)
+        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &author_did, Some(resolved_uri), posts_query)
             .await
             .map_err(|_| XRPCError::InternalServerError)?;
 
     // let posts = profile_posts::get_profile_posts(client, did_document_storage, uri.to_string(), limit, offset).await.map_err(|_| XRPCError::NotFound)?;
-    let actors = post_authors::get_authors_from_posts(posts.clone(), false);
+    let actors = post_authors::get_authors_from_posts(&posts, false);
     let profiles = profiles::get_profiles(client, did_document_storage, actors.into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
 
     let mapped_posts: Vec<ProfilePostViewBasic> =
-        post_authors::populate_profile_posts_with_authors(posts, profiles)
+        post_authors::populate_profile_posts_with_authors(posts, &profiles)
             .iter()
             .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
             .collect();

@@ -54,16 +54,16 @@ async fn get_posts_no_replies(client: &State<Client>, did_document_storage: &Sta
         .load::<ProfilePost>(&mut conn)
         .expect("Error querying posts");
     let posts =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, actor.to_string(), None, posts_query)
+        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &actor, None, posts_query)
         .await
             .map_err(|_| XRPCError::InternalServerError)?;
 
     // let posts = profile_posts::get_profile_posts(client, did_document_storage, uri.to_string(), limit, offset).await.map_err(|_| XRPCError::NotFound)?;
-    let actors = post_authors::get_authors_from_posts(posts.clone(), replies);
+    let actors = post_authors::get_authors_from_posts(&posts, replies);
     let profiles = profiles::get_profiles(client, did_document_storage, actors.into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
 
     let mapped_posts =
-        post_authors::populate_profile_posts_with_authors(posts, profiles)
+        post_authors::populate_profile_posts_with_authors(posts, &profiles)
             .iter()
             .map(|x| profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, &None))
             .collect();
@@ -108,11 +108,11 @@ async fn get_posts_with_replies(client: &State<Client>, did_document_storage: &S
             .map(|x| x.0.clone())
             .collect();
     let posts =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, actor.to_string(), None, posts_query_no_parent)
+        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &actor, None, posts_query_no_parent)
             .await
             .map_err(|_| XRPCError::InternalServerError)?;
 
-    let actors = post_authors::get_authors_from_posts(posts.clone(), replies);
+    let actors = post_authors::get_authors_from_posts(&posts, replies);
     let profiles = profiles::get_profiles(client, did_document_storage, actors.into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
 
     // Now introduce parents
@@ -121,7 +121,7 @@ async fn get_posts_with_replies(client: &State<Client>, did_document_storage: &S
             .into_iter()
             .filter(|x| x.1.is_some())
             .map(|x| x.1.clone().unwrap()),
-        profiles.clone()
+        &profiles
     );
     let mut parents = populated_parents
         .iter()
@@ -129,7 +129,7 @@ async fn get_posts_with_replies(client: &State<Client>, did_document_storage: &S
 
     // now with parents as well
     let mapped_posts =
-        post_authors::populate_profile_posts_with_authors(posts, profiles.clone())
+        post_authors::populate_profile_posts_with_authors(posts, &profiles)
             .iter()
             .map(|x| {
                 // If there is no parent, no point

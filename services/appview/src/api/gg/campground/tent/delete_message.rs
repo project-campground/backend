@@ -35,15 +35,15 @@ pub async fn delete_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
                 .eq(msg_id_uuid)
                 .and(
                     tent_message::tentid
-                        .eq(auth.tent.id.clone())
+                        .eq(auth.tent.id)
                 )
             )
             .first::<TentMessage>(&mut conn)
             .map_err(handle_select_first_error)?;
 
-    let required_perms = if msg.created_by != auth.actor.did.clone() { TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::MANAGE_CONTENT } else { TentPermissionConsts::VIEW_CONTENT };
+    let required_perms = if msg.created_by != auth.actor.did { TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::MANAGE_CONTENT } else { TentPermissionConsts::VIEW_CONTENT };
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), auth.tent.bonfire_id.clone(), auth.tent.category_id.clone(), Some(auth.tent.id), auth.member.clone(), 0, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, TentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -53,7 +53,7 @@ pub async fn delete_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
                 .eq(msg_id_uuid)
                 .and(
                     tent_message::tentid
-                        .eq(auth.tent.id.clone())
+                        .eq(auth.tent.id)
                 )
         )
         .execute(&mut conn)

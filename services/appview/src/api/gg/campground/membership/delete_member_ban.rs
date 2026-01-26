@@ -13,7 +13,7 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, campsite_id: &str, actor:
         return Err(XRPCError::Forbidden("Member cannot ban themselves".to_string()));
     }
 
-    if !has_role_perms_or_owner(auth.campsite.clone(), auth.member.clone(), CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

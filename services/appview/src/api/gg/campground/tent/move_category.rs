@@ -1,11 +1,11 @@
-use appview_schema::{models::appview::{Bonfire, Tent, TentCategory}, schema::appview};
+use appview_schema::{models::appview::{Tent, TentCategory}, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
+use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
     campsite::CategoryInfo, error::{Result, XRPCError}
 }};
 
@@ -30,7 +30,7 @@ pub async fn move_category(auth: CategoryInfo<'_>, category_id: &str, body: Json
 
     // To make sure they are not moving to category that doesn't exist
     if moved_bonfire != auth.category.bonfire_id {
-        check_bonfire_existence(&auth.category.campsite_id, &moved_bonfire)
+        check_bonfire_existence(&auth.campsite, &auth.member, &moved_bonfire)
             .await?;
     }
     let current_date = Utc::now().naive_utc();
@@ -47,7 +47,7 @@ pub async fn move_category(auth: CategoryInfo<'_>, category_id: &str, body: Json
             appview::tent_category::priority
                 .eq(inner_body.priority.clone().unwrap_or(auth.category.priority)),
             appview::tent_category::bonfireid
-                .eq(moved_bonfire.clone()),
+                .eq(&moved_bonfire),
             // Mandatory
             appview::tent_category::updatedat
                 .eq(current_date),
@@ -76,28 +76,4 @@ pub async fn move_category(auth: CategoryInfo<'_>, category_id: &str, body: Json
     }
 
     return Ok(Json(tent_category_view(updated_category.first().unwrap())));
-}
-
-async fn check_bonfire_existence(campsite_id: &str, moved_bonfire_id: &str) -> Result<(), XRPCError> {    
-    let mut conn = establish_connection().unwrap();
-
-    let bonfires = &crate::schema::appview::bonfire::table
-        .filter(
-            crate::schema::appview::bonfire::id
-                .eq(moved_bonfire_id)
-                .and(
-                    crate::schema::appview::bonfire::campsiteid
-                        .eq(
-                            campsite_id
-                        )
-                )
-        )
-        .load::<Bonfire>(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    if bonfires.len() == 0 {
-        return Err(XRPCError::BadRequest("Bonfire supplied in 'bonfire_id' does not exist".to_string()));
-    }
-
-    return Ok(());
 }

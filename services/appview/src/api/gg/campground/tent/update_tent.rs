@@ -1,15 +1,14 @@
 #![
     allow(unused_variables)
 ]
-use appview_schema::{models::appview::{Bonfire, Tent, TentCategory}, schema::appview};
+use appview_schema::{models::appview::Tent, schema::appview};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
-use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+use crate::{database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -34,7 +33,7 @@ pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTen
         return Err(XRPCError::BadRequest("Expected 'view_type' property to be 0".to_string()));
     }
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), auth.tent.bonfire_id.clone(), auth.tent.category_id.clone(), Some(auth.tent.id), auth.member.clone(), CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -61,60 +60,10 @@ pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTen
             appview::tent::updatedat
                 .eq(current_date),
             appview::tent::updatedby
-                .eq(auth.actor.did.clone()),
+                .eq(&auth.actor.did),
         ))
         .load::<Tent>(&mut conn)
         .expect("Error updating tent");
 
     return Ok(Json(tent_view_basic(updated_tent.first().unwrap())));
-}
-
-async fn check_category_existence(campsite_id: String, moved_bonfire_id: String, category_id: Uuid) -> Result<String, XRPCError> {    
-    let mut conn = establish_connection().unwrap();
-
-    let tent_categories = &crate::schema::appview::tent_category::table
-        .filter(
-            crate::schema::appview::tent_category::id
-                .eq(category_id)
-        )
-        .load::<TentCategory>(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    if tent_categories.len() == 0 {
-        return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not exist".to_string()));
-    }
-
-    let tent_category = tent_categories.first().unwrap();
-
-    if tent_category.campsite_id != campsite_id {
-        return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not belong to the same campsite as tent".to_string()));
-    } else if tent_category.bonfire_id != moved_bonfire_id {
-        return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not belong to the same bonfire as supplied in 'bonfire_id' or already existing bonfire".to_string()));
-    }
-
-    return Ok(tent_category.bonfire_id.clone());
-}
-
-async fn check_bonfire_existence(campsite_id: String, moved_bonfire_id: String) -> Result<(), XRPCError> {    
-    let mut conn = establish_connection().unwrap();
-
-    let bonfires = &crate::schema::appview::bonfire::table
-        .filter(
-            crate::schema::appview::bonfire::id
-                .eq(moved_bonfire_id)
-                .and(
-                    crate::schema::appview::bonfire::campsiteid
-                        .eq(
-                            campsite_id
-                        )
-                )
-        )
-        .load::<Bonfire>(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    if bonfires.len() == 0 {
-        return Err(XRPCError::BadRequest("Bonfire supplied in 'bonfire_id' does not exist".to_string()));
-    }
-
-    return Ok(());
 }

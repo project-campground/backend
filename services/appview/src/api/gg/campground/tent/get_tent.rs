@@ -65,7 +65,7 @@ pub async fn get_tent(auth: Authorization<'_>, tent_id: &str) -> Result<Json<Ten
     let permissions = tent_with_perms
         .iter()
         .filter_map(|x| x.1.clone())
-        .map(campsite_permission_view)
+        .map(|x| campsite_permission_view(&x))
         .collect::<Vec<CampsitePermissionView>>();
 
     return Ok(Json(tent_view_detailed(&tent, permissions)));

@@ -36,7 +36,7 @@ pub async fn delete_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &st
 
     ensure_no_higher_role(auth.actor.did == auth.campsite.owner, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
 
-    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

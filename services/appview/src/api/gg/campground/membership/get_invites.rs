@@ -16,7 +16,7 @@ pub async fn get_invites(auth: CampsiteInfo<'_>, campsite_id: &str, limit: Optio
         return Err(XRPCError::BadRequest("Expected limit query to be between and including 1 and 100".to_string()));
     }
 
-    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::MANAGE_INVITES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_INVITES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

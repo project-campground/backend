@@ -35,7 +35,7 @@ pub async fn unindex_post(auth: Authorization<'_>, uri: &str) -> Result<Json<Pro
         return Err(XRPCError::Forbidden("Only author of the post can unindex it".to_string()));
     }
 
-    delete_post_record_from_db(main_post.uri.clone(), main_post.parent_uri.clone()).await.map_err(|_| XRPCError::InternalServerError)?;
+    delete_post_record_from_db(&main_post.uri, main_post.parent_uri.clone()).await.map_err(|_| XRPCError::InternalServerError)?;
 
     return Ok(Json(profile_post_view_basic(&actor, &profile_record(db_profile), &main_post.clone())));
 }

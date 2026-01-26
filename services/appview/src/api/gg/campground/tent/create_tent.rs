@@ -56,7 +56,7 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: 
         .first::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), bonfire_id.to_string(), category_id.clone(), None, auth.member.clone(), CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+    if !has_tent_perms_or_owner(&auth.campsite, &bonfire_id, category_id.clone(), None, &auth.member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -89,7 +89,7 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: 
                 priority: inner_body.priority,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: auth.actor.did.clone(),
+                updated_by: auth.actor.did,
                 updated_at: current_date,
             }
         )

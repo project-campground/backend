@@ -10,7 +10,7 @@ use crate::{database::establish_connection, helpers::{api::handle_select_first_e
 
 #[post("/xrpc/gg.campground.membership.deleteInvite?<campsite_id>&<invite_id>")]
 pub async fn delete_invite(auth: CampsiteInfo<'_>, campsite_id: &str, invite_id: &str) -> Result<Json<CampsiteInviteViewBasic>> {    
-    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::MANAGE_INVITES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_INVITES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

@@ -27,7 +27,7 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_i
 
     if bonfire.is_none() {
         return Err(XRPCError::NotFound);
-    } else if !has_tent_perms_or_owner(auth.campsite.clone(), bonfire_id.to_string(), None, None, auth.member.clone(), CampsitePermissionConsts::MANAGE_BONFIRES, TentPermissionConsts::VIEW_CONTENT).await? {
+    } else if !has_tent_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, TentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

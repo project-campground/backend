@@ -51,7 +51,7 @@ pub async fn update_role(auth: CampsiteInfoBasic<'_>, campsite_id: &str, role_id
         .set((
             // Mandatory
             campsite_role::updatedby
-                .eq(auth.actor.did.clone()),
+                .eq(&auth.actor.did),
             campsite_role::updatedat
                 .eq(current_date),
             // Stuff changed

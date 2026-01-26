@@ -40,7 +40,7 @@ pub async fn update_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_i
         .first::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    if !has_tent_perms_or_owner(auth.campsite.clone(), bonfire_id.to_string(), None, None, auth.member.clone(), CampsitePermissionConsts::MANAGE_BONFIRES, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_tent_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, TentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -65,7 +65,7 @@ pub async fn update_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_i
             appview::bonfire::priority
                 .eq(priority),
             appview::bonfire::updatedby
-                .eq(auth.actor.did.clone()),
+                .eq(&auth.actor.did),
             appview::bonfire::updatedat
                 .eq(current_date),
         ))

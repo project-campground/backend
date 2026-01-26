@@ -27,7 +27,7 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json
         return Err(XRPCError::BadRequest("Expected 'expires_at' property to not result in already expired invite".to_string()));
     }
 
-    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::CREATE_INVITES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::CREATE_INVITES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -40,7 +40,7 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json
                 campsite_id: campsite_id.to_string(),
                 allowed_amount: inner_body.allowed_amount,
                 expires_at: inner_body.expires_at,
-                created_by: auth.actor.did.clone(),
+                created_by: auth.actor.did,
                 created_at: current_date,
                 used: 0,
             }

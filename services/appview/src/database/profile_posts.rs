@@ -41,12 +41,12 @@ pub fn resolve_post_uri(uri: &str) -> Result<(String, String, Option<String>), &
     Ok((uri_formatted, author_did, if split_uri.len() < 5 { None } else { Some(split_uri[4].to_string()) }))
 }
 
-pub async fn fill_profile_posts_with_records(client: &Client, did_document_storage: &LruDidDocumentStorage, author_did: String, parent_uri: Option<String>, posts: Vec<ProfilePost>) -> Result<Vec<ProfilePost>, &'static str> {
+pub async fn fill_profile_posts_with_records(client: &Client, did_document_storage: &LruDidDocumentStorage, author_did: &str, parent_uri: Option<String>, posts: Vec<ProfilePost>) -> Result<Vec<ProfilePost>, &'static str> {
     let mut new_post_list = posts.clone();
 
     // TODO: Firehose auto-update?
     let post_records = fetch_record_list::<ProfilePostRecord>(
-        author_did.as_str(),
+        author_did,
         "gg.campground.profile.post",
         client,
         did_document_storage,
@@ -122,7 +122,7 @@ pub async fn get_single_profile_post<T>(client: &Client, did_document_storage: &
     }
 }
 
-pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>) -> Result<usize, &'static str> {
+pub async fn delete_post_record_from_db(uri: &str, parent_uri: Option<String>) -> Result<usize, &'static str> {
     let mut conn = establish_connection().unwrap();
 
     // To have an up-to-date reply list
@@ -136,7 +136,7 @@ pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>)
                     profile_post::replies
                         .eq(
                             sql("array_remove(replies, ")
-                                .bind::<VarChar, _>(uri.clone())
+                                .bind::<VarChar, _>(uri)
                                 .sql(")")
                         )
                 )
@@ -150,7 +150,7 @@ pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>)
             profile_post::table
                 .filter(
                     profile_post::uri
-                        .eq(uri.clone())
+                        .eq(uri)
                 )
         )
         .execute(&mut conn)

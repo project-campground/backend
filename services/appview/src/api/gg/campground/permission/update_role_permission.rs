@@ -1,7 +1,7 @@
 use appview_schema::{models::appview::{CampsitePermission, CampsiteRole}, schema::appview::{campsite_permission, campsite_role}};
 use campground_lexicon::gg::campground::campsite::CampsitePermissionView;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, expression::NonAggregate, sql_types::BoolOrNullableBool};
 use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -20,7 +20,7 @@ pub struct UpdatePermissionBody {
 }
 
 #[allow(unused_variables)]
-#[post("/xrpc/gg.campground.permission.updatePermission?<tent_id>&<role_id>", data = "<body>")]
+#[post("/xrpc/gg.campground.permission.updatePermission?<tent_id>&<role_id>", data = "<body>", rank = 1)]
 pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
@@ -43,7 +43,7 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent
         return Err(XRPCError::NotFound);
     }
 
-    if !has_full_tent_perms_from_roles(auth.campsite.id.clone(), auth.tent.bonfire_id.clone(), auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &all_roles, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_full_tent_perms_from_roles(&auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &all_roles, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
@@ -51,7 +51,7 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent
 
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
-    let permission = create_or_modify_permission(
+    let permission = &create_or_modify_permission(
         &auth.actor.did,
         &auth.tent.campsite_id,
         None,
@@ -63,19 +63,19 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent
         inner_body.allowed_tent_permissions,
         inner_body.denied_campsite_permissions,
         inner_body.denied_tent_permissions,
-        campsite_permission::roleid
-        .eq(role_id_uuid)
-        .and(
+        &campsite_permission::roleid
+            .eq(role_id_uuid)
+            .and(
                 campsite_permission::tentid
                 .eq(auth.tent.id)
             ),
-    );
+    )?;
     
     Ok(Json(campsite_permission_view(permission)))
 }
 
 #[allow(unused_variables)]
-#[post("/xrpc/gg.campground.permission.updatePermission?<category_id>&<role_id>", data = "<body>")]
+#[post("/xrpc/gg.campground.permission.updatePermission?<category_id>&<role_id>", data = "<body>", rank = 2)]
 pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &str, category_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
@@ -98,7 +98,7 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &s
         return Err(XRPCError::NotFound);
     }
 
-    if !has_full_tent_perms_from_roles(auth.campsite.id.clone(), auth.category.bonfire_id.clone(), Some(auth.category.id.clone()), None, &all_roles, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_full_tent_perms_from_roles(&auth.campsite.id, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &all_roles, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
@@ -106,7 +106,7 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &s
 
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
-    let permission = create_or_modify_permission(
+    let permission = &create_or_modify_permission(
         &auth.actor.did,
         &auth.category.campsite_id,
         None,
@@ -118,19 +118,19 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &s
         inner_body.allowed_tent_permissions,
         inner_body.denied_campsite_permissions,
         inner_body.denied_tent_permissions,
-        campsite_permission::roleid
+        &campsite_permission::roleid
             .eq(role_id_uuid)
             .and(
                 campsite_permission::categoryid
                     .eq(auth.category.id)
             ),
-    );
+    )?;
     
     Ok(Json(campsite_permission_view(permission)))
 }
 
 #[allow(unused_variables)]
-#[post("/xrpc/gg.campground.permission.updatePermission?<bonfire_id>&<role_id>", data = "<body>")]
+#[post("/xrpc/gg.campground.permission.updatePermission?<bonfire_id>&<role_id>", data = "<body>", rank = 3)]
 pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, role_id: &str, bonfire_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
@@ -153,7 +153,7 @@ pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, role_id: &str
         return Err(XRPCError::NotFound);
     }
 
-    if !has_full_tent_perms_from_roles(auth.campsite.id.clone(), auth.bonfire.id.clone(), None, None, &all_roles, auth.member.clone(), CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
+    if !has_full_tent_perms_from_roles(&auth.campsite.id, &auth.bonfire.id, None, None, &all_roles, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
@@ -161,7 +161,7 @@ pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, role_id: &str
 
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
-    let permission = create_or_modify_permission(
+    let permission = &create_or_modify_permission(
         &auth.actor.did,
         &auth.bonfire.campsite_id,
         Some(auth.bonfire.id.clone()),
@@ -173,13 +173,13 @@ pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, role_id: &str
         inner_body.allowed_tent_permissions,
         inner_body.denied_campsite_permissions,
         inner_body.denied_tent_permissions,
-        campsite_permission::roleid
+        &campsite_permission::roleid
             .eq(role_id_uuid)
             .and(
                 campsite_permission::bonfireid
                     .eq(auth.bonfire.id)
             ),
-    );
+    )?;
     
     Ok(Json(campsite_permission_view(permission)))
 }
@@ -192,7 +192,7 @@ pub fn ensure_update_permission_good_request(inner_body: &UpdatePermissionBody) 
     }
 }
 
-pub fn create_or_modify_permission<Predicate>(
+pub fn create_or_modify_permission<Predicate: diesel::Expression + diesel::expression::ValidGrouping<()> + diesel::AppearsOnTable<appview_schema::schema::appview::campsite_permission::table> + diesel::query_builder::QueryFragment<diesel::pg::Pg> + diesel::query_builder::QueryId>(
     actor: &String,
     campsite_id: &String,
     bonfire_id: Option<String>,
@@ -204,20 +204,25 @@ pub fn create_or_modify_permission<Predicate>(
     allowed_tent_permissions: i64,
     denied_campsite_permissions: i64,
     denied_tent_permissions: i64,
-    predicate: Predicate,
-) -> CampsitePermission {
+    predicate: &Predicate,
+) -> Result<CampsitePermission>
+    where 
+          Predicate : Clone,
+          Predicate : NonAggregate,
+          <Predicate as diesel::Expression>::SqlType: BoolOrNullableBool,
+        //   <Predicate as ValidGrouping<()>>::IsAggregate: MixedAggregates<diesel::expression::is_aggregate::No>,
+{
     let mut conn = establish_connection().unwrap();
-    let existing = campsite_permission::table
+    let existing = &campsite_permission::table
         .filter(
-            predicate
+            predicate.clone()
         )
         .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_select_first_error)?
-        .first();
+        .map_err(handle_select_first_error)?;
 
-    if existing.is_none() {
+    if existing.len() < 1 {
         let current_date = Utc::now().naive_utc();
-        diesel::insert_into(campsite_permission::table)
+        Ok(diesel::insert_into(campsite_permission::table)
             .values(CampsitePermission {
                 id: Uuid::new_v4(),
                 campsite_id: campsite_id.clone(),
@@ -239,9 +244,9 @@ pub fn create_or_modify_permission<Predicate>(
             .map_err(handle_select_first_error)?
             .first()
             .unwrap()
-            .clone()
+            .clone())
     } else {
-        diesel::update(campsite_permission::table)
+        Ok(diesel::update(campsite_permission::table)
             .filter(
                 predicate
             )
@@ -264,5 +269,6 @@ pub fn create_or_modify_permission<Predicate>(
                     )
             ))
             .get_result::<CampsitePermission>(&mut conn)
+            .map_err(handle_select_first_error)?)
     }
 }

@@ -6,7 +6,7 @@ use rocket::serde::json::Json;
 use rsky_common::tid::Ticker;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -28,7 +28,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
     }
 
-    if !has_role_perms_or_owner(auth.campsite, auth.member.clone(), CampsitePermissionConsts::MANAGE_BONFIRES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -36,8 +36,9 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
 
     let existing_bonfire_count = crate::schema::appview::bonfire::table
         .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
-        .execute(&mut conn)
-        .expect("Error loading bonfires");
+        .count()
+        .first::<i64>(&mut conn)
+        .map_err(handle_all_db_errors)?;
     
     if existing_bonfire_count >= 20 {
         return Err(XRPCError::Forbidden("Cannot create more than 20 bonfires in a campsite".to_string()));
@@ -60,7 +61,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
                 priority: inner_body.priority,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: auth.actor.did.clone(),
+                updated_by: auth.actor.did,
                 updated_at: current_date,
             }
         )

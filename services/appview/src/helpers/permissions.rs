@@ -32,17 +32,17 @@ impl TentPermissionConsts {
     pub const CREATE_PRIVATE_CONTENT: i64 = 0b100000;
 }
 
-pub async fn has_role_permissions(campsite_id: &str, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
+pub async fn has_role_permissions(campsite_id: &str, member: &CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
     let roles = &get_roles_from_db(campsite_id)?;
     
     let (campsite_perms_from_role, tent_perms_from_role) = get_role_permissions_from_roles(member, roles);
     
     Ok((tent_perms & tent_perms_from_role == tent_perms) && (campsite_perms & campsite_perms_from_role == campsite_perms))
 }
-pub async fn has_role_perms_or_owner(campsite: Campsite, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
+pub async fn has_role_perms_or_owner(campsite: &Campsite, member: &CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
     if campsite.owner == member.user_id { Ok(true) } else { has_role_permissions(&campsite.id, member, campsite_perms, tent_perms).await }
 }
-pub async fn has_role_perms_or_owner_from_roles(campsite: Campsite, member: CampsiteMember, roles: &Vec<CampsiteRole>, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
+pub async fn has_role_perms_or_owner_from_roles(campsite: &Campsite, member: &CampsiteMember, roles: &Vec<CampsiteRole>, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
     if campsite.owner == member.user_id {
         Ok(true)
     } else {
@@ -51,7 +51,7 @@ pub async fn has_role_perms_or_owner_from_roles(campsite: Campsite, member: Camp
         Ok((tent_perms & tent_perms_from_role == tent_perms) && (campsite_perms & campsite_perms_from_role == campsite_perms))
     }
 }
-pub async fn has_full_tent_perms(campsite_id: &str, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
+pub async fn has_full_tent_perms(campsite_id: &str, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, member: &CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
     let member_roles = member.roles.iter().filter_map(|&x| x).collect();
     let (_perms, given_camp_perms, given_tent_perms) = get_tent_permissions(campsite_id, bonfire_id, category_id, tent_id, member.user_id.as_str(), member_roles).await?;
 
@@ -68,9 +68,9 @@ pub async fn has_full_tent_perms(campsite_id: &str, bonfire_id: &str, category_i
     
     Ok((role_camp_perms & campsite_perms) == campsite_perms && (role_tent_perms & tent_perms) == tent_perms)
 }
-pub async fn has_full_tent_perms_from_roles(campsite_id: String, bonfire_id: String, category_id: Option<Uuid>, tent_id: Option<Uuid>, roles: &Vec<CampsiteRole>, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
+pub async fn has_full_tent_perms_from_roles(campsite_id: &str, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, roles: &Vec<CampsiteRole>, member: &CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
     let member_roles = member.roles.iter().filter_map(|&x| x).collect();
-    let (_perms, given_camp_perms, given_tent_perms) = get_tent_permissions(&campsite_id, &bonfire_id, category_id, tent_id, &member.user_id, member_roles).await?;
+    let (_perms, given_camp_perms, given_tent_perms) = get_tent_permissions(campsite_id, bonfire_id, category_id, tent_id, &member.user_id, member_roles).await?;
     
     // Has all the needed perms
     if (given_camp_perms.0 & campsite_perms) == campsite_perms && (given_tent_perms.0 & tent_perms) == tent_perms {
@@ -84,7 +84,7 @@ pub async fn has_full_tent_perms_from_roles(campsite_id: String, bonfire_id: Str
     
     Ok((role_camp_perms & campsite_perms) == campsite_perms && (role_tent_perms & tent_perms) == tent_perms)
 }
-pub async fn has_tent_perms_or_owner(campsite: Campsite, bonfire_id: String, category_id: Option<Uuid>, tent_id: Option<Uuid>, member: CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
+pub async fn has_tent_perms_or_owner(campsite: &Campsite, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, member: &CampsiteMember, campsite_perms: i64, tent_perms: i64) -> Result<bool, XRPCError> {
     if campsite.owner == member.user_id { Ok(true) } else { has_full_tent_perms(&campsite.id, &bonfire_id, category_id, tent_id, member, campsite_perms, tent_perms).await }
 }
 pub async fn get_tent_permissions(campsite_id: &str, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, actor: &str, role_ids: Vec<Uuid>) -> Result<(Vec<CampsitePermission>, (i64, i64), (i64, i64)), XRPCError> {
@@ -155,7 +155,7 @@ pub async fn fetch_tent_permissions(campsite_id: &str, bonfire_id: &str, categor
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_select_first_error)
 }
-fn get_role_permissions_from_roles(member: CampsiteMember, roles: &Vec<CampsiteRole>) -> (i64, i64) {
+fn get_role_permissions_from_roles(member: &CampsiteMember, roles: &Vec<CampsiteRole>) -> (i64, i64) {
     let member_roles = &roles
         .iter()
         .filter(|role|

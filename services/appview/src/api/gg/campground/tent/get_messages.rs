@@ -51,7 +51,7 @@ pub async fn get_messages(auth: TentInfo<'_>, tent_id: &str, limit: Option<i64>,
         )
         .filter(
             crate::schema::appview::tent_message::tentid
-                .eq(auth.tent.id.clone())
+                .eq(auth.tent.id)
         )
         .load::<(TentMessage, Option<Actor>, Option<Profile>)>(&mut conn)
         .expect("Error loading tent messages");

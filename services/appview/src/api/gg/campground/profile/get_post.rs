@@ -60,12 +60,12 @@ pub async fn get_post(_auth: OptionalAuthorization<'_>, client: &State<Client>, 
             .filter(
                 pp1
                     .field(profile_post::uri)
-                    .like(resolved_uri.as_str())
+                    .like(&resolved_uri)
             )
             // .select(((ProfilePost, Option<ProfilePost>), Vec<ProfilePost>)::as_select())
             .first::<(ProfilePost, Option<ProfilePost>)>(&mut conn),
-        author_did.as_str(),
-        post_tid.unwrap().as_str(),
+        &author_did,
+        &post_tid.unwrap(),
         |x| (x, None)
     )
         .await
@@ -87,11 +87,11 @@ pub async fn get_post(_auth: OptionalAuthorization<'_>, client: &State<Client>, 
             .load::<ProfilePost>(&mut conn)
             .expect("Error loading profile post");
     let replies =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, author_did, Some(resolved_uri.clone()), replies_query)
+        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &author_did, Some(resolved_uri.clone()), replies_query)
             .await
             .map_err(|_| XRPCError::InternalServerError)?;
 
-    let mut actors = post_authors::get_authors_from_posts(replies.clone(), true);
+    let mut actors = post_authors::get_authors_from_posts(&replies, true);
     actors.insert(author_actor.did);
 
     // If is a bit more janky
@@ -103,7 +103,7 @@ pub async fn get_post(_auth: OptionalAuthorization<'_>, client: &State<Client>, 
     let profiles = profiles::get_profiles(client, did_document_storage, actors.clone().into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
 
     let mapped_replies =
-        post_authors::populate_profile_posts_with_authors(replies.clone(), profiles.clone())
+        post_authors::populate_profile_posts_with_authors(replies.clone(), &profiles)
             .iter()
             .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
             .collect();
