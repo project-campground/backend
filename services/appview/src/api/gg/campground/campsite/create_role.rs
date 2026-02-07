@@ -1,12 +1,12 @@
-use appview_schema::models::appview::CampsiteRole;
+use appview_schema::models::appview::{Campsite, CampsiteMember, CampsiteRole};
 use campground_lexicon::gg::campground::campsite::CampsiteRoleViewBasic;
 use chrono::Utc;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::RunQueryDsl;
 use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::ensure_no_higher_role}, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}, roles::ensure_no_higher_role}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -31,19 +31,14 @@ pub async fn create_role(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<C
     }
     
     let mut conn = establish_connection().unwrap();
-    
-    let mut existing_roles = crate::schema::appview::campsite_role::table
-        .filter(crate::schema::appview::campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
-        .map_err(handle_select_first_error)?;
+
+    let mut existing_roles = get_roles_from_db(&auth.campsite.id)?;
 
     if existing_roles.len() >= 150 {
         return Err(XRPCError::Forbidden("Cannot create more than 150 roles in a campsite".to_string()));
     }
 
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &existing_roles, inner_body.campsite_permissions, inner_body.tent_permissions)?;
 
     ensure_no_higher_role(auth.actor.did == auth.campsite.owner, &mut existing_roles, inner_body.priority, auth.member.roles.clone())?;
 
@@ -74,4 +69,22 @@ pub async fn create_role(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<C
         .map_err(handle_select_first_error)?;
 
     return Ok(Json(campsite_role_view_basic(role)));
+}
+
+fn ensure_user_has_manage_role_permission(campsite: &Campsite, member: &CampsiteMember, roles: &Vec<CampsiteRole>, given_campsite_permissions: i64, given_tent_permissions: i64) -> Result<(), XRPCError> {
+    if campsite.owner == member.user_id {
+        return Ok(());
+    }
+
+    let (campsite_permissions, tent_permissions) = aggregate_member_permissions(&member, &roles);
+
+    // The user might not even have the permission to manage roles
+    if campsite_permissions & CampsitePermissionConsts::MANAGE_ROLES == 0 {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    } else if (given_campsite_permissions & campsite_permissions != given_campsite_permissions) || (given_tent_permissions & tent_permissions != given_tent_permissions) {
+        // Ensure user does not give themselves Manage Tent permission if they have Give Role & Manage Roles combo
+        return Err(XRPCError::Forbidden("Cannot give role permissions that the member does not have".to_string()));
+    }
+
+    Ok(())
 }

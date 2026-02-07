@@ -207,68 +207,120 @@ pub fn create_or_modify_permission<Predicate: diesel::Expression + diesel::expre
     predicate: &Predicate,
 ) -> Result<CampsitePermission>
     where 
-          Predicate : Clone,
+    Predicate : Clone,
           Predicate : NonAggregate,
           <Predicate as diesel::Expression>::SqlType: BoolOrNullableBool,
-        //   <Predicate as ValidGrouping<()>>::IsAggregate: MixedAggregates<diesel::expression::is_aggregate::No>,
-{
-    let mut conn = establish_connection().unwrap();
-    let existing = &campsite_permission::table
+          //   <Predicate as ValidGrouping<()>>::IsAggregate: MixedAggregates<diesel::expression::is_aggregate::No>,
+          {
+              let mut conn = establish_connection().unwrap();
+              let existing = &campsite_permission::table
         .filter(
             predicate.clone()
         )
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_select_first_error)?;
-
+    
     if existing.len() < 1 {
-        let current_date = Utc::now().naive_utc();
-        Ok(diesel::insert_into(campsite_permission::table)
-            .values(CampsitePermission {
-                id: Uuid::new_v4(),
-                campsite_id: campsite_id.clone(),
-                bonfire_id,
-                category_id,
-                tent_id,
-                role_id,
-                user_id,
-                created_by: actor.clone(),
-                created_at: current_date,
-                updated_by: actor.clone(),
-                updated_at: current_date,
-                allowed_campsite_permissions,
-                allowed_tent_permissions,
-                denied_campsite_permissions,
-                denied_tent_permissions,
-            })
-            .load::<CampsitePermission>(&mut conn)
-            .map_err(handle_select_first_error)?
-            .first()
-            .unwrap()
-            .clone())
+        insert_permission_if_not_empty(actor, campsite_id, bonfire_id, category_id, tent_id, role_id, user_id, allowed_campsite_permissions, allowed_tent_permissions, denied_campsite_permissions, denied_tent_permissions)
     } else {
-        Ok(diesel::update(campsite_permission::table)
-            .filter(
-                predicate
-            )
-            .set((
-                campsite_permission::allowedcampsitepermissions
-                    .eq(
-                        allowed_campsite_permissions
-                    ),
-                campsite_permission::deniedcampsitepermissions
-                    .eq(
-                        denied_campsite_permissions
-                    ),
-                campsite_permission::allowedtentpermissions
-                    .eq(
-                        allowed_campsite_permissions
-                    ),
-                campsite_permission::deniedtentpermissions
-                    .eq(
-                        denied_tent_permissions
-                    )
-            ))
-            .get_result::<CampsitePermission>(&mut conn)
-            .map_err(handle_select_first_error)?)
+        update_or_delete_role_permission(allowed_campsite_permissions, allowed_tent_permissions, denied_campsite_permissions, denied_tent_permissions, existing.first().unwrap().clone(), predicate)
     }
+}
+
+fn insert_permission_if_not_empty(
+    actor: &String,
+    campsite_id: &String,
+    bonfire_id: Option<String>,
+    category_id: Option<Uuid>,
+    tent_id: Option<Uuid>,
+    role_id: Option<Uuid>,
+    user_id: Option<String>,
+    allowed_campsite_permissions: i64,
+    allowed_tent_permissions: i64,
+    denied_campsite_permissions: i64,
+    denied_tent_permissions: i64,
+) -> Result<CampsitePermission, XRPCError> {
+    let current_date = Utc::now().naive_utc();
+    let mut conn = establish_connection().unwrap();
+
+    if allowed_campsite_permissions | allowed_tent_permissions | denied_campsite_permissions | denied_tent_permissions == 0 {
+        return Err(XRPCError::BadRequest("Expected at least one denied or allowed permission".to_string()));
+    }
+
+    Ok(diesel::insert_into(campsite_permission::table)
+        .values(CampsitePermission {
+            id: Uuid::new_v4(),
+            campsite_id: campsite_id.clone(),
+            bonfire_id,
+            category_id,
+            tent_id,
+            role_id,
+            user_id,
+            created_by: actor.clone(),
+            created_at: current_date,
+            updated_by: actor.clone(),
+            updated_at: current_date,
+            allowed_campsite_permissions,
+            allowed_tent_permissions,
+            denied_campsite_permissions,
+            denied_tent_permissions,
+        })
+        .load::<CampsitePermission>(&mut conn)
+        .map_err(handle_select_first_error)?
+        .first()
+        .unwrap()
+        .clone())
+}
+
+fn update_or_delete_role_permission<Predicate: diesel::Expression + diesel::expression::ValidGrouping<()> + diesel::AppearsOnTable<appview_schema::schema::appview::campsite_permission::table> + diesel::query_builder::QueryFragment<diesel::pg::Pg> + diesel::query_builder::QueryId>(
+    allowed_campsite_permissions: i64,
+    allowed_tent_permissions: i64,
+    denied_campsite_permissions: i64,
+    denied_tent_permissions: i64,
+    existing: CampsitePermission,
+    predicate: &Predicate,
+) -> Result<CampsitePermission, XRPCError>
+    where
+        Predicate : Clone,
+        Predicate : NonAggregate,
+        <Predicate as diesel::Expression>::SqlType: BoolOrNullableBool,
+{
+    let mut conn = establish_connection().unwrap();
+    if allowed_campsite_permissions | allowed_tent_permissions | denied_campsite_permissions | denied_tent_permissions == 0 {
+        diesel::delete(
+            campsite_permission::table
+        )
+            .filter(
+                predicate.clone(),
+            )
+            .execute(&mut conn)
+            .map_err(handle_select_first_error)?;
+        return Ok(existing);
+    }
+
+    Ok(diesel::update(campsite_permission::table)
+        .filter(
+            predicate.clone(),
+        )
+        .set((
+            campsite_permission::allowedcampsitepermissions
+            .eq(
+                allowed_campsite_permissions
+                ),
+            campsite_permission::deniedcampsitepermissions
+                .eq(
+                    denied_campsite_permissions
+                ),
+            campsite_permission::allowedtentpermissions
+                .eq(
+                        allowed_campsite_permissions
+                    ),
+            campsite_permission::deniedtentpermissions
+                .eq(
+                    denied_tent_permissions
+                )
+        ))
+        .get_result::<CampsitePermission>(&mut conn)
+        .map_err(handle_select_first_error)?)
+
 }

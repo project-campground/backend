@@ -54,6 +54,7 @@ pub struct ProfileViewBasic {
     pub did: String,
     pub handle: String,
     pub display_name: Option<String>,
+    pub tagline: Option<String>,
     pub status: Option<ProfileStatus>,
     pub activity: Option<Activity>,
     pub avatar: Option<String>,

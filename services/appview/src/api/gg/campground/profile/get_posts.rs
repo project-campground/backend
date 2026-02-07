@@ -6,7 +6,7 @@ use rocket::{serde::json::Json,State};
 use reqwest::Client;
 
 use crate::{
-    database::{DbConnection, establish_connection, profile_posts, profiles}, helpers::{posts::{profile_post_view_basic, profile_post_view_parented}, views::profile_record}, schema::appview::profile_post, util::post_authors, xrpc::{
+    database::{DbConnection, establish_connection, profile_posts, profiles}, helpers::{api::handle_all_db_errors, posts::{profile_post_view_basic, profile_post_view_parented}, views::profile_record}, schema::appview::profile_post, util::post_authors, xrpc::{
         auth::OptionalAuthorization,
         error::{Result, XRPCError}
     }
@@ -39,10 +39,10 @@ pub async fn get_posts(_auth: OptionalAuthorization<'_>, client: &State<Client>,
 }
 
 async fn get_posts_no_replies(client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, uri_format: String, actor: &str, limit: i64, offset: i64, replies: bool, mut conn: DbConnection) -> Result<Json<GetProfilePostsOutput>> {
-    let posts_query =
-        profile_post::table.filter(
+    let mut posts = profile_post::table
+        .filter(
             profile_post::uri
-            .like(uri_format)
+                .like(uri_format)
                 .and(
                     profile_post::parenturi
                         .is_null()
@@ -52,21 +52,19 @@ async fn get_posts_no_replies(client: &State<Client>, did_document_storage: &Sta
         .limit(limit)
         .offset(offset)
         .load::<ProfilePost>(&mut conn)
-        .expect("Error querying posts");
-    let posts =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &actor, None, posts_query)
+        .map_err(handle_all_db_errors)?;
+    profile_posts::fill_profile_posts_with_records(client, did_document_storage, &actor, None, false, &mut posts)
         .await
-            .map_err(|_| XRPCError::InternalServerError)?;
+        .map_err(|_| XRPCError::InternalServerError)?;
 
     // let posts = profile_posts::get_profile_posts(client, did_document_storage, uri.to_string(), limit, offset).await.map_err(|_| XRPCError::NotFound)?;
     let actors = post_authors::get_authors_from_posts(&posts, replies);
     let profiles = profiles::get_profiles(client, did_document_storage, actors.into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
 
-    let mapped_posts =
-        post_authors::populate_profile_posts_with_authors(posts, &profiles)
-            .iter()
-            .map(|x| profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, &None))
-            .collect();
+    let mapped_posts = post_authors::populate_profile_posts_with_authors(posts, &profiles)
+        .iter()
+        .map(|x| profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, &None))
+        .collect();
 
     return Ok(Json(GetProfilePostsOutput { posts: mapped_posts }))
 
@@ -76,41 +74,40 @@ async fn get_posts_with_replies(client: &State<Client>, did_document_storage: &S
     let (pp1, pp2) = diesel::alias!(profile_post as pp1, profile_post as pp2);
 
     // TODO: Left join, but while populating with authors from fetched profile posts?
-    let posts_query = 
-        pp1
-            .order_by(pp1.field(profile_post::indexedat).desc())
-            .limit(limit)
-            .offset(offset)
-            .left_join(
-                pp2
-                    .on(
-                        pp1
-                            .field(profile_post::parenturi)
-                            .eq(
-                                pp2
-                                    .field(profile_post::uri)
-                                    .nullable()
-                            )
-                    )
-            )
-            .filter(
-                pp1
-                    .field(profile_post::uri)
-                    .like(uri_format)
-            )
-            // .select((profile_post::all_columns, profile_post::all_columns))
-            .load::<(ProfilePost, Option<ProfilePost>)>(&mut conn)
-            .expect("Error querying posts");
+    let posts_query: &Vec<(ProfilePost, Option<ProfilePost>)> = &pp1
+        .filter(
+            pp1
+                .field(profile_post::uri)
+                .like(uri_format)
+        )
+        .order_by(pp1.field(profile_post::indexedat).desc())
+        .limit(limit)
+        .offset(offset)
+        .left_join(
+            pp2
+                .on(
+                    pp1
+                        .field(profile_post::parenturi)
+                        .eq(
+                            pp2
+                                .field(profile_post::uri)
+                                .nullable()
+                        )
+                )
+        )
+        // .select((profile_post::all_columns, profile_post::all_columns))
+        .load::<(ProfilePost, Option<ProfilePost>)>(&mut conn)
+        .map_err(handle_all_db_errors)?;
+
     // To use existing methods
-    let posts_query_no_parent: Vec<ProfilePost> =
-        posts_query
-            .iter()
-            .map(|x| x.0.clone())
-            .collect();
-    let posts =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &actor, None, posts_query_no_parent)
-            .await
-            .map_err(|_| XRPCError::InternalServerError)?;
+    let mut posts: Vec<ProfilePost> = posts_query
+        .iter()
+        .map(|x| x.0.clone())
+        .collect();
+
+    profile_posts::fill_profile_posts_with_records(client, did_document_storage, &actor, None, true, &mut posts)
+        .await
+        .map_err(|_| XRPCError::InternalServerError)?;
 
     let actors = post_authors::get_authors_from_posts(&posts, replies);
     let profiles = profiles::get_profiles(client, did_document_storage, actors.into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
@@ -128,26 +125,25 @@ async fn get_posts_with_replies(client: &State<Client>, did_document_storage: &S
         .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2));
 
     // now with parents as well
-    let mapped_posts =
-        post_authors::populate_profile_posts_with_authors(posts, &profiles)
-            .iter()
-            .map(|x| {
-                // If there is no parent, no point
-                let found_parent =
-                    if x.2.parent_uri.is_none() { &None }
-                    else {
-                        let parent_uri = x.2.parent_uri.clone().unwrap();
-                        &parents.find(|y| { y.uri == parent_uri })
-                    };
+    let mapped_posts = post_authors::populate_profile_posts_with_authors(posts, &profiles)
+        .iter()
+        .map(|x| {
+            // If there is no parent, no point
+            let found_parent =
+                if x.2.parent_uri.is_none() { &None }
+                else {
+                    let parent_uri = x.2.parent_uri.clone().unwrap();
+                    &parents.find(|y| { y.uri == parent_uri })
+                };
 
-                profile_post_view_parented(
-                    &x.0,
-                    &profile_record(x.1.clone()),
-                    &x.2,
-                    found_parent
-                )
-            })
-            .collect();
+            profile_post_view_parented(
+                &x.0,
+                &profile_record(x.1.clone()),
+                &x.2,
+                found_parent
+            )
+        })
+        .collect();
 
     return Ok(Json(GetProfilePostsOutput { posts: mapped_posts }))
 

@@ -1,10 +1,10 @@
 #![
     allow(unused_variables)
 ]
-use appview_schema::{models::appview::TentMessage, schema::appview::tent_message};
+use appview_schema::{models::appview::{Actor, CampsiteMember, Profile, TentMessage}, schema::appview::{self, campsite_member, profile, tent_message}};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::tent::TentMessageViewBasic;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
@@ -37,11 +37,40 @@ pub async fn delete_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
                     tent_message::tentid
                         .eq(auth.tent.id)
                 )
-            )
-            .first::<TentMessage>(&mut conn)
-            .map_err(handle_select_first_error)?;
+        )
+        .left_join(
+            appview::actor::table
+                .on(
+                    tent_message::createdby.eq(
+                        appview::actor::did
+                    )
+                )
+        )
+        .left_join(
+            profile::table
+                .on(
+                    tent_message::createdby.eq(
+                        profile::creator
+                    )
+                )
+        )
+        .left_join(
+            campsite_member::table
+                .on(
+                    tent_message::createdby.eq(
+                        campsite_member::userid
+                    )
+                        .and(
+                            tent_message::campsiteid.eq(
+                                campsite_member::campsiteid
+                            )
+                        )
+                )
+        )
+        .first::<(TentMessage, Option<Actor>, Option<Profile>, Option<CampsiteMember>)>(&mut conn)
+        .map_err(handle_select_first_error)?;
 
-    let required_perms = if msg.created_by != auth.actor.did { TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::MANAGE_CONTENT } else { TentPermissionConsts::VIEW_CONTENT };
+    let required_perms = if msg.0.created_by != auth.actor.did { TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::MANAGE_CONTENT } else { TentPermissionConsts::VIEW_CONTENT };
 
     if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, TentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
@@ -59,5 +88,5 @@ pub async fn delete_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         .execute(&mut conn)
         .expect("Error deleting message");
 
-    return Ok(Json(tent_message_view_basic(&auth.tent, msg, &Some(actor), &Some(profile))));
+    return Ok(Json(tent_message_view_basic(&auth.tent, &msg.0, &msg.1, &msg.2, &msg.3)));
 }

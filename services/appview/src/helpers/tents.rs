@@ -1,8 +1,8 @@
-use appview_schema::models::appview::{Actor, Profile, Tent, TentCategory, TentMessage};
-use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::CampsitePermissionView, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
+use appview_schema::models::appview::{Actor, CampsiteMember, Profile, Tent, TentCategory, TentMessage};
+use campground_lexicon::gg::campground::{campsite::{CampsiteMemberViewAuthor, CampsitePermissionView}, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
 use uuid::Uuid;
 
-use crate::helpers::{util::serialize_datetime, views::{profile_view_basic_deleted_actor, profile_view_basic_deleted_profile, profile_view_basic_from_db}};
+use crate::helpers::{campsites::campsite_member_view_author, util::serialize_datetime, views::{profile_view_basic_deleted_actor, profile_view_basic_deleted_profile, profile_view_basic_from_db}};
 
 pub fn tent_category_view(category: &TentCategory) -> TentCategoryView {
     return TentCategoryView {
@@ -60,38 +60,40 @@ pub fn tent_view_detailed(tent: &Tent, permissions: Vec<CampsitePermissionView>)
     };
 }
 
-fn tent_message_created_by(created_by: &String, actor: &Option<Actor>, profile: &Option<Profile>) -> ProfileViewBasic {
-    match actor {
+fn created_by_view(created_by: &String, actor: &Option<Actor>, profile: &Option<Profile>, member: &Option<CampsiteMember>) -> CampsiteMemberViewAuthor {
+    let profile_view = match actor {
         None => profile_view_basic_deleted_actor(created_by.clone()),
         Some(x) => match profile {
             None => profile_view_basic_deleted_profile(x),
             Some(y) => profile_view_basic_from_db(x, y),
         }
-    }
+    };
+
+    campsite_member_view_author(member, profile_view)
 }
 
-pub fn tent_message_view_basic(tent: &Tent, message: &TentMessage, actor: &Option<Actor>, profile: &Option<Profile>) -> TentMessageViewBasic {
+pub fn tent_message_view_basic(tent: &Tent, message: &TentMessage, actor: &Option<Actor>, profile: &Option<Profile>, member: &Option<CampsiteMember>) -> TentMessageViewBasic {
     return TentMessageViewBasic {
         id: message.id,
         campsite_id: message.campsite_id.clone(),
         bonfire_id: tent.bonfire_id.clone(),
         tent_id: message.tent_id,
         content: message.content.clone(),
-        created_by: tent_message_created_by(&message.created_by, actor, profile),
+        created_by: created_by_view(&message.created_by, actor, profile, member),
         created_at: serialize_datetime(message.created_at),
         updated_at: message.updated_at.map(|x| serialize_datetime(x)),
         replying_to: message.replying_to.iter().filter_map(|x| x.clone()).collect::<Vec<Uuid>>(),
     };
 }
 
-pub fn tent_message_view_with_replies(tent: &Tent, message: &TentMessage, replies: Vec<TentMessageViewBasic>, actor: &Option<Actor>, profile: &Option<Profile>) -> TentMessageViewWithReplies {
+pub fn tent_message_view_with_replies(tent: &Tent, message: &TentMessage, replies: Vec<TentMessageViewBasic>, actor: &Option<Actor>, profile: &Option<Profile>, member: &Option<CampsiteMember>) -> TentMessageViewWithReplies {
     return TentMessageViewWithReplies {
         id: message.id,
         campsite_id: message.campsite_id.clone(),
         bonfire_id: tent.bonfire_id.clone(),
         tent_id: message.tent_id,
         content: message.content.clone(),
-        created_by: tent_message_created_by(&message.created_by, actor, profile),
+        created_by: created_by_view(&message.created_by, actor, profile, member),
         created_at: serialize_datetime(message.created_at),
         updated_at: message.updated_at.map(|x| serialize_datetime(x)),
         replying_to: replies,

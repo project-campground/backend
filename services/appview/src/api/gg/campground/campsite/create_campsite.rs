@@ -9,33 +9,60 @@ use rsky_common::tid::Ticker;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}, roles::CampsiteRoleFlag, tents::tent_view_basic}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}, roles::CampsiteRoleFlag, tents::tent_view_basic}, util::params::{OptionValidity, ensure_valid_set_uri}, xrpc::{
     auth::Authorization,
     error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
-pub struct CreateCampsiteBody {
+pub struct CreateCampsiteBody<'a> {
     name: String,
     description: String,
     vanity_url: Option<String>,
     tags: Option<Vec<String>>,
+    avatar_uri: Option<&'a str>,
+    banner_uri: Option<&'a str>,
 }
 
 #[post("/xrpc/gg.campground.campsite.createCampsite", data = "<body>")]
-pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, body: Json<CreateCampsiteBody>) -> Result<Json<CreateCampsiteOutput>> {    
-    let inner_body = &body.into_inner();
-    let vanity_url = &inner_body.vanity_url.clone();
-    if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
+pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, body: Json<CreateCampsiteBody<'_>>) -> Result<Json<CreateCampsiteOutput>> {    
+    let CreateCampsiteBody { name, description, vanity_url, tags, avatar_uri, banner_uri } = &body.into_inner();
+    if name.len() < 3 || name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
-    } else if inner_body.description.len() > 200 {
+
+    } else if description.len() <= 200 {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
-    } else if vanity_url.clone().map_or(false, |x| x.len() < 1 || x.len() > 32) {
-        return Err(XRPCError::BadRequest("Expected 'vanity_url' property to have a string of length 3 to 32 characters".to_string()));
-    } else if inner_body.tags.clone().map_or(false, |x| x.len() > 10 || x.iter().any(|y| y.len() > 20)) {
-        return Err(XRPCError::BadRequest("Expected 'tags' property to have up to 10 values and value to be a string of length up to 20 characters".to_string()));
     }
+
+    let vanity_url = &vanity_url
+        .clone()
+        .ensure_validity(|x| x.len() <= 32)
+        .map_err(|_|
+            XRPCError::BadRequest("Expected 'vanity_url' property to have a string of up to 32 characters".to_string())
+        )?;
+    let tags = &tags
+        .clone()
+        .ensure_validity(|x| x.len() <= 10 && !x.iter().any(|y| y.len() > 20))
+        .map_err(|_|
+            XRPCError::BadRequest("Expected 'tags' property to have up to 10 values and value to be a string of length up to 20 characters".to_string())
+        )?
+        .map(|x|
+            x
+                .iter()
+                .map(|x| Some(x.to_string()))
+                .collect::<Vec<Option<String>>>()
+        );
+    let avatar_uri = &ensure_valid_set_uri(avatar_uri)
+        .map_err(|x|
+            XRPCError::BadRequest(x.to_string())
+        )?
+        .map(|x| x.to_string());
+    let banner_uri = &ensure_valid_set_uri(banner_uri)
+        .map_err(|x|
+            XRPCError::BadRequest(x.to_string())
+        )?
+        .map(|x| x.to_string());
 
     let mut conn = establish_connection().unwrap();
     let (actor, profile) = &get_profile(client, did_document_storage, auth.actor_did.clone().as_str())
@@ -44,9 +71,10 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
 
     let existing_campsite_count = crate::schema::appview::campsite::table
         .filter(crate::schema::appview::campsite::owner.eq(&actor.did))
-        .execute(&mut conn)
+        .count()
+        .first::<i64>(&mut conn)
         .expect("Error loading owner's campsites");
-    
+
     if existing_campsite_count >= 20 {
         return Err(XRPCError::Forbidden("Cannot create more than 20 campsites".to_string()));
     }
@@ -54,7 +82,8 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
     if vanity_url.clone().map_or(false, |x| {
         let existing_vanity_count = crate::schema::appview::campsite::table
             .filter(crate::schema::appview::campsite::vanityurl.eq(x))
-            .execute(&mut conn)
+            .count()
+            .first::<i64>(&mut conn)
             .expect("Error loading other campsites");
         existing_vanity_count > 0
     }) {
@@ -69,12 +98,12 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
         .values(
             Campsite {
                 id: campsite_id.to_string(),
-                name: inner_body.name.clone(),
+                name: name.clone(),
                 vanity_url: vanity_url.clone(),
-                description: inner_body.description.clone(),
-                avatar_uri: None,
-                banner_uri: None,
-                tags: inner_body.tags.clone().map_or(vec![], |x| x.iter().map(|y| Some(y.clone())).collect()),
+                description: description.clone(),
+                avatar_uri: avatar_uri.clone(),
+                banner_uri: banner_uri.clone(),
+                tags: tags.clone().unwrap_or(vec![]),
                 member_dids: vec![Some(actor.did.clone())],
                 owner: actor.did.clone(),
                 created_by: actor.did.clone(),
@@ -143,8 +172,8 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
                 campsite_id: campsite_id.to_string(),
                 name: campsite.name.clone(),
                 description: "".to_string(),
-                avatar_uri: None,
-                banner_uri: None,
+                avatar_uri: avatar_uri.clone(),
+                banner_uri: banner_uri.clone(),
                 priority: 0,
                 created_by: actor.did.clone(),
                 created_at: current_date,

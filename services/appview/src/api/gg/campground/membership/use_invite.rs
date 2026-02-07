@@ -26,7 +26,7 @@ pub async fn use_invite(auth: Authorization<'_>, invite_id: &str) -> Result<()> 
 
     if actor.campsites.contains(&Some(invite.campsite_id.clone())) {
         return Err(XRPCError::Forbidden("User already joined this campsite".to_string()));
-    } else if invite.allowed_amount.map_or(false, |x| x >= invite.used) {
+    } else if invite.allowed_amount.map_or(false, |x| x <= invite.used) {
         return Err(XRPCError::Forbidden("This invite has already hit the allowed use limit".to_string()));
     } else if invite.expires_at.map_or(false, |x| x >= current_date) {
         return Err(XRPCError::Forbidden("This invite has already expired".to_string()));

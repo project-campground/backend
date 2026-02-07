@@ -93,6 +93,7 @@ pub async fn update_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         &auth.tent,
         updated_messages.first().unwrap(),
         &Some(actor),
-        &Some(profile)
+        &Some(profile),
+        &Some(auth.member)
     )));
 }

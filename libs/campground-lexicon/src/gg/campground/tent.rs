@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{actor::ProfileViewBasic, campsite::CampsitePermissionView};
+use crate::gg::campground::campsite::{CampsiteMemberViewAuthor, CampsitePermissionView};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -83,7 +83,7 @@ pub struct TentMessageViewBasic {
     pub replying_to: Vec<Uuid>,
     
     // pub created_by: String,
-    pub created_by: ProfileViewBasic,
+    pub created_by: CampsiteMemberViewAuthor,
 
     pub created_at: String,
     pub updated_at: Option<String>,
@@ -102,7 +102,7 @@ pub struct TentMessageViewWithReplies {
     pub replying_to_count: usize,
     
     // pub created_by: String,
-    pub created_by: ProfileViewBasic,
+    pub created_by: CampsiteMemberViewAuthor,
     pub created_at: String,
     pub updated_at: Option<String>,
 }

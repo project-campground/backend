@@ -85,5 +85,5 @@ pub async fn create_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         .load::<TentMessage>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(tent_message_view_basic(&auth.tent, message.first().unwrap(), &Some(actor), &Some(profile))));
+    return Ok(Json(tent_message_view_basic(&auth.tent, message.first().unwrap(), &Some(actor), &Some(profile), &Some(auth.member))));
 }

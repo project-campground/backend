@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{actor::ProfileViewBasic, tent::{TentCategoryView, TentViewBasic}};
+use crate::gg::campground::{actor::{ProfileViewBasic, ProfileViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,11 +51,29 @@ pub struct CampsiteViewDetailed {
 #[serde(rename_all = "camelCase")]
 pub struct CampsiteMemberViewBasic {
     pub user: ProfileViewBasic,
+    pub nickname: Option<String>,
+    pub roles: Vec<Uuid>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampsiteMemberViewDetailed {
+    pub user: ProfileViewDetailed,
     pub user_id: String,
     pub campsite_id: String,
     pub joined_at: String,
+    pub used_invite_id: Option<String>,
     pub nickname: Option<String>,
     pub roles: Vec<Uuid>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampsiteMemberViewAuthor {
+    pub user: ProfileViewBasic,
+    pub nickname: Option<String>,
+    pub roles: Vec<Uuid>,
+    pub is_member: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -93,17 +111,6 @@ pub struct CampsiteBanView {
     pub created_by: String,
     pub updated_at: String,
     pub updated_by: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CampsiteMemberViewDetailed {
-    pub user_id: String,
-    pub campsite_id: String,
-    pub joined_at: String,
-    pub used_invite_id: Option<String>,
-    pub nickname: Option<String>,
-    pub roles: Vec<Uuid>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

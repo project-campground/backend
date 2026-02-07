@@ -72,7 +72,7 @@ pub async fn get_post(_auth: OptionalAuthorization<'_>, client: &State<Client>, 
         .map_err(|_| XRPCError::NotFound)?;
 
     // TODO: Left join, but while populating with authors from fetched profile posts?
-    let replies_query =
+    let mut replies =
         profile_post::table
             .filter(
                 profile_post::parenturi
@@ -86,10 +86,9 @@ pub async fn get_post(_auth: OptionalAuthorization<'_>, client: &State<Client>, 
             .offset(offset)
             .load::<ProfilePost>(&mut conn)
             .expect("Error loading profile post");
-    let replies =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &author_did, Some(resolved_uri.clone()), replies_query)
-            .await
-            .map_err(|_| XRPCError::InternalServerError)?;
+    profile_posts::fill_profile_posts_with_records(client, did_document_storage, &author_did, Some(resolved_uri.clone()), false, &mut replies)
+        .await
+        .map_err(|_| XRPCError::InternalServerError)?;
 
     let mut actors = post_authors::get_authors_from_posts(&replies, true);
     actors.insert(author_actor.did);

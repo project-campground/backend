@@ -21,6 +21,7 @@ pub fn profile_view_basic(actor: &Actor, profile: &Profile) -> ProfileViewBasic 
             Some(handle) => handle.clone(),
             None => "handle.invalid".to_string()
         },
+        tagline: profile.tagline.clone(),
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
         created_at: parse_datetime(profile.created_at),
@@ -38,6 +39,7 @@ pub fn profile_view_basic_from_db(actor: &Actor, profile: &SchemaProfile) -> Pro
             Some(handle) => handle.clone(),
             None => "handle.invalid".to_string()
         },
+        tagline: profile.tagline.clone(),
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&avatar_from_cid(profile.avatar_cid.clone())),
         created_at: profile.created_at.clone(),
@@ -53,6 +55,7 @@ pub fn profile_view_basic_deleted_actor(did: String) -> ProfileViewBasic {
         did: did.clone(),
         handle: "null".to_string(),
         display_name: None,
+        tagline: None,
         avatar: None,
         created_at: None,
         activity: None,
@@ -68,6 +71,7 @@ pub fn profile_view_basic_deleted_profile(actor: &Actor) -> ProfileViewBasic {
         handle: actor.handle.clone().unwrap_or("null".to_string()),
         display_name: actor.handle.clone(),
         avatar: None,
+        tagline: None,
         created_at: Some(actor.indexed_at.clone()),
         activity: None,
         status: None,

@@ -32,8 +32,8 @@ pub async fn get_replies(_auth: OptionalAuthorization<'_>, client: &State<Client
 
     let mut conn = establish_connection().unwrap();
 
-    let posts_query =
-        profile_post::table.filter(
+    let mut posts = profile_post::table
+        .filter(
             profile_post::parenturi
                 .eq(
                     resolved_uri.clone()
@@ -45,20 +45,18 @@ pub async fn get_replies(_auth: OptionalAuthorization<'_>, client: &State<Client
         .offset(offset)
         .load::<ProfilePost>(&mut conn)
         .expect("Error loading profile post");
-    let posts =
-        profile_posts::fill_profile_posts_with_records(client, did_document_storage, &author_did, Some(resolved_uri), posts_query)
-            .await
-            .map_err(|_| XRPCError::InternalServerError)?;
+    profile_posts::fill_profile_posts_with_records(client, did_document_storage, &author_did, Some(resolved_uri), false, &mut posts)
+        .await
+        .map_err(|_| XRPCError::InternalServerError)?;
 
     // let posts = profile_posts::get_profile_posts(client, did_document_storage, uri.to_string(), limit, offset).await.map_err(|_| XRPCError::NotFound)?;
     let actors = post_authors::get_authors_from_posts(&posts, false);
     let profiles = profiles::get_profiles(client, did_document_storage, actors.into_iter().collect()).await.map_err(|_| XRPCError::NotFound)?;
 
-    let mapped_posts: Vec<ProfilePostViewBasic> =
-        post_authors::populate_profile_posts_with_authors(posts, &profiles)
-            .iter()
-            .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
-            .collect();
+    let mapped_posts: Vec<ProfilePostViewBasic> = post_authors::populate_profile_posts_with_authors(posts, &profiles)
+        .iter()
+        .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
+        .collect();
 
     return Ok(Json(GetProfilePostRepliesOutput { posts: mapped_posts }))
 }

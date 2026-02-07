@@ -1,5 +1,5 @@
 use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteBan, CampsiteInvite, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
-use campground_lexicon::gg::campground::{campsite::{BonfireViewBasic, BonfireViewDetailed, CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewBasic, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
+use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewAuthor, CampsiteMemberViewBasic, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
 use uuid::Uuid;
 
 use crate::helpers::{util::serialize_datetime, views::profile_view_basic_from_db};
@@ -52,14 +52,27 @@ pub fn campsite_view_detailed(campsite: &Campsite, bonfires: Vec<BonfireViewBasi
 pub fn campsite_member_view_basic(campsite_member: &CampsiteMember, profile: &Profile, actor: &Actor) -> CampsiteMemberViewBasic {
     return CampsiteMemberViewBasic {
         user: profile_view_basic_from_db(actor, profile),
-        user_id: campsite_member.user_id.clone(),
-        campsite_id: campsite_member.campsite_id.clone(),
-        joined_at: serialize_datetime(campsite_member.joined_at),
         nickname: campsite_member.nickname.clone(),
         roles: campsite_member.roles
             .iter()
             .filter_map(|&x| x)
             .collect::<Vec<Uuid>>()
+    };
+}
+
+const DEFAULT_NO_ROLES: Vec<Uuid> = vec![];
+
+pub fn campsite_member_view_author(campsite_member: &Option<CampsiteMember>, profile_view: ProfileViewBasic) -> CampsiteMemberViewAuthor {
+    return CampsiteMemberViewAuthor {
+        is_member: campsite_member.is_some(),
+        user: profile_view,
+        nickname: campsite_member.clone().map(|member| member.nickname.clone()).flatten(),
+        roles: campsite_member.clone().map_or(DEFAULT_NO_ROLES, |member|
+            member.roles
+                .iter()
+                .filter_map(|&x| x)
+                .collect::<Vec<Uuid>>()
+        )
     };
 }
 

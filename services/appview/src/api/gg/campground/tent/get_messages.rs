@@ -1,14 +1,14 @@
 #![
     allow(unused_variables)
 ]
-use appview_schema::{models::appview::{Actor, Profile, TentMessage}, schema::appview::{self, profile, tent_message}};
+use appview_schema::{models::appview::{Actor, CampsiteMember, Profile, TentMessage}, schema::appview::{self, campsite_member, profile, tent_message}};
 use campground_lexicon::gg::campground::tent::{GetTentMessagesOutput, TentMessageViewBasic, TentMessageViewWithReplies};
-use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::tents::{tent_message_view_basic, tent_message_view_with_replies}, xrpc::{
+    database::establish_connection, helpers::{api::handle_all_db_errors, tents::{tent_message_view_basic, tent_message_view_with_replies}}, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -29,7 +29,7 @@ pub async fn get_messages(auth: TentInfo<'_>, tent_id: &str, limit: Option<i64>,
         return Err(XRPCError::BadRequest("Cannot get messages of non-text tents".to_string()));
     }
 
-    let message_queries: Vec<(TentMessage, Option<Actor>, Option<Profile>)> = tent_message::table
+    let message_queries: Vec<(TentMessage, Option<Actor>, Option<Profile>, Option<CampsiteMember>)> = tent_message::table
         .order_by(tent_message::createdat.desc())
         .limit(limit)
         .offset(offset)
@@ -49,12 +49,25 @@ pub async fn get_messages(auth: TentInfo<'_>, tent_id: &str, limit: Option<i64>,
                     )
                 )
         )
+        .left_join(
+            campsite_member::table
+                .on(
+                    tent_message::createdby.eq(
+                        campsite_member::userid
+                    )
+                        .and(
+                            tent_message::campsiteid.eq(
+                                campsite_member::campsiteid
+                            )
+                        )
+                )
+        )
         .filter(
             crate::schema::appview::tent_message::tentid
                 .eq(auth.tent.id)
         )
-        .load::<(TentMessage, Option<Actor>, Option<Profile>)>(&mut conn)
-        .expect("Error loading tent messages");
+        .load::<(TentMessage, Option<Actor>, Option<Profile>, Option<CampsiteMember>)>(&mut conn)
+        .map_err(handle_all_db_errors)?;
     // Annoying. Hopefully better join can be done with author and replies
     let message_ids: Vec<Uuid> = message_queries.iter().map(|x| x.0.id).collect();
     let additional_reply_ids = message_queries
@@ -97,7 +110,20 @@ pub async fn get_messages(auth: TentInfo<'_>, tent_id: &str, limit: Option<i64>,
                             )
                         )
                 )
-                .load::<(TentMessage, Option<Actor>, Option<Profile>)>(&mut conn)
+                .left_join(
+                    campsite_member::table
+                        .on(
+                            tent_message::createdby.eq(
+                                campsite_member::userid
+                            )
+                                .and(
+                                    tent_message::campsiteid.eq(
+                                        campsite_member::campsiteid
+                                    )
+                                )
+                        )
+                )
+                .load::<(TentMessage, Option<Actor>, Option<Profile>, Option<CampsiteMember>)>(&mut conn)
                 .expect("Error loading tent message replies")
         };
     replies.extend(message_queries.clone());
@@ -112,10 +138,10 @@ pub async fn get_messages(auth: TentInfo<'_>, tent_id: &str, limit: Option<i64>,
                         x.0.replying_to.contains(&Some(y.0.id))
                     )
                     .map(|y|
-                        tent_message_view_basic(&auth.tent, &y.0, &y.1, &y.2)
+                        tent_message_view_basic(&auth.tent, &y.0, &y.1, &y.2, &y.3)
                     )
                     .collect::<Vec<TentMessageViewBasic>>();
-            tent_message_view_with_replies(&auth.tent, &x.0, replies_view, &x.1, &x.2)
+            tent_message_view_with_replies(&auth.tent, &x.0, replies_view, &x.1, &x.2, &x.3)
         })
         .collect::<Vec<TentMessageViewWithReplies>>();
 

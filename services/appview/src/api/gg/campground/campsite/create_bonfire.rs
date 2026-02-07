@@ -6,31 +6,40 @@ use rocket::serde::json::Json;
 use rsky_common::tid::Ticker;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, util::params::ensure_valid_set_uri, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
-pub struct CreateBonfireBody {
+pub struct CreateBonfireBody<'a> {
     name: String,
     description: String,
     priority: i32,
+    avatar_uri: Option<&'a str>,
+    banner_uri: Option<&'a str>,
 }
 
 #[post("/xrpc/gg.campground.campsite.createBonfire?<campsite_id>", data = "<body>")]
-pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<CreateBonfireBody>) -> Result<Json<BonfireViewBasic>> {    
-    let inner_body = &body.into_inner();
-    if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
+pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<CreateBonfireBody<'_>>) -> Result<Json<BonfireViewBasic>> {    
+    let CreateBonfireBody { name, description, priority, avatar_uri, banner_uri } = &body.into_inner();
+    if name.len() < 3 || name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
-    }
-    else if inner_body.description.len() > 200 {
+    } else if description.len() > 200 {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
-    }
-
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, 0).await? {
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
+    let avatar_uri = &ensure_valid_set_uri(avatar_uri)
+        .map_err(|x|
+            XRPCError::BadRequest(x.to_string())
+        )?
+        .map(|x| x.to_string());
+    let banner_uri = &ensure_valid_set_uri(banner_uri)
+        .map_err(|x|
+            XRPCError::BadRequest(x.to_string())
+        )?
+        .map(|x| x.to_string());
 
     let mut conn = establish_connection().unwrap();
 
@@ -54,11 +63,11 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
             Bonfire {
                 id: bonfire_id.to_string(),
                 campsite_id: campsite_id.to_string(),
-                name: inner_body.name.clone(),
-                description: inner_body.description.clone(),
-                avatar_uri: None,
-                banner_uri: None,
-                priority: inner_body.priority,
+                name: name.clone(),
+                description: description.clone(),
+                avatar_uri: avatar_uri.clone(),
+                banner_uri: banner_uri.clone(),
+                priority: *priority,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
                 updated_by: auth.actor.did,
