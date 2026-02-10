@@ -18,7 +18,7 @@ use crate::{database::{establish_connection, profiles::get_profile}, helpers::{c
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
 pub struct CreateCampsiteBody<'a> {
     name: String,
-    description: String,
+    description: Option<String>,
     vanity_url: Option<String>,
     tags: Option<Vec<String>>,
     avatar_uri: Option<&'a str>,
@@ -31,7 +31,7 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
     if name.len() < 3 || name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
 
-    } else if description.len() <= 200 {
+    } else if description.clone().map_or(false, |x| x.len() > 200) {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
     }
 
@@ -100,7 +100,7 @@ pub async fn create_campsite(auth: Authorization<'_>, client: &State<Client>, di
                 id: campsite_id.to_string(),
                 name: name.clone(),
                 vanity_url: vanity_url.clone(),
-                description: description.clone(),
+                description: description.clone().unwrap_or("".to_string()),
                 avatar_uri: avatar_uri.clone(),
                 banner_uri: banner_uri.clone(),
                 tags: tags.clone().unwrap_or(vec![]),

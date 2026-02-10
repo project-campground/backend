@@ -210,6 +210,7 @@ pub mod appview {
     diesel::joinable!(campsite_ban -> campsite (campsiteid));
     diesel::joinable!(campsite_invite -> campsite (campsiteid));
     diesel::joinable!(campsite_member -> campsite (campsiteid));
+    diesel::joinable!(campsite_permission -> bonfire (bonfireid));
     diesel::joinable!(campsite_permission -> campsite (campsiteid));
     diesel::joinable!(campsite_permission -> tent (tentid));
     diesel::joinable!(campsite_permission -> tent_category (categoryid));

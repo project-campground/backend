@@ -4,6 +4,7 @@ pub fn routes() -> Vec<rocket::Route> {
         get_campsite::get_campsite,
         create_campsite::create_campsite,
         update_campsite::update_campsite,
+        delete_campsite::delete_campsite,
 
         get_bonfire::get_bonfire,
         create_bonfire::create_bonfire,
@@ -22,6 +23,7 @@ mod get_campsites;
 mod get_campsite;
 mod create_campsite;
 mod update_campsite;
+mod delete_campsite;
 
 mod get_roles;
 mod create_role;
