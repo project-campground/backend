@@ -6,7 +6,7 @@ use rocket::serde::json::Json;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}}, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}, roles::ensure_no_higher_role}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -18,16 +18,16 @@ pub struct UpdateRoleBody {
     color_secondary: Option<i32>,
     display_separately: Option<bool>,
     mentionable: Option<bool>,
+    // priority: Option<i32>,
     campsite_permissions: Option<i64>,
     tent_permissions: Option<i64>,
-    priority: Option<i32>,
 }
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.campsite.updateRole?<campsite_id>&<role_id>", data = "<body>")]
 pub async fn update_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &str, body: Json<UpdateRoleBody>) -> Result<Json<CampsiteRoleViewBasic>> {    
-    let inner_body = &body.into_inner();
-    if inner_body.name.clone().map_or(false, |x| x.len() == 0 || x.len() > 64) {
+    let UpdateRoleBody { name, color, color_secondary, display_separately, mentionable, campsite_permissions, tent_permissions } = &body.into_inner();
+    if name.clone().map_or(false, |x| x.len() == 0 || x.len() > 64) {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 1 to 64 characters".to_string()));
     }
 
@@ -44,7 +44,9 @@ pub async fn update_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &st
         .find(|x| x.id == role_id_uuid)
         .ok_or(XRPCError::NotFound)?;
 
-    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, roles, inner_body.campsite_permissions, inner_body.tent_permissions)?;
+    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &roles, *campsite_permissions, *tent_permissions)?;
+
+    ensure_no_higher_role(auth.member.user_id == auth.campsite.owner, &mut roles.clone(), role.priority, auth.member.roles)?;
 
     let current_date = Utc::now().naive_utc();
 
@@ -60,21 +62,19 @@ pub async fn update_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &st
                 .eq(current_date),
             // Stuff changed
             campsite_role::name
-                .eq(inner_body.name.clone().unwrap_or(role.name.clone())),
-            campsite_role::priority
-                .eq(inner_body.priority.clone().unwrap_or(role.priority)),
+                .eq(name.clone().unwrap_or(role.name.clone())),
             campsite_role::color
-                .eq(inner_body.color.clone().unwrap_or(role.color)),
+                .eq(color.unwrap_or(role.color)),
             campsite_role::displayseparately
-                .eq(inner_body.display_separately.clone().unwrap_or(role.display_separately)),
+                .eq(display_separately.unwrap_or(role.display_separately)),
             campsite_role::mentionable
-                .eq(inner_body.mentionable.clone().unwrap_or(role.mentionable)),
+                .eq(mentionable.unwrap_or(role.mentionable)),
             campsite_role::colorsecondary
-                .eq(inner_body.color_secondary.clone().unwrap_or(role.color_secondary)),
+                .eq(color_secondary.unwrap_or(role.color_secondary)),
             campsite_role::tentpermissions
-                .eq(inner_body.tent_permissions.clone().unwrap_or(role.tent_permissions)),
+                .eq(tent_permissions.unwrap_or(role.tent_permissions)),
             campsite_role::campsitepermissions
-                .eq(inner_body.campsite_permissions.clone().unwrap_or(role.campsite_permissions)),
+                .eq(campsite_permissions.unwrap_or(role.campsite_permissions)),
         ))
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;

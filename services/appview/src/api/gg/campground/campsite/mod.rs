@@ -13,6 +13,7 @@ pub fn routes() -> Vec<rocket::Route> {
         get_roles::get_roles,
         create_role::create_role,
         update_role::update_role,
+        move_roles::move_roles,
         delete_role::delete_role,
     ]
 }
@@ -25,6 +26,7 @@ mod update_campsite;
 mod get_roles;
 mod create_role;
 mod update_role;
+mod move_roles;
 mod delete_role;
 
 mod get_bonfire;
