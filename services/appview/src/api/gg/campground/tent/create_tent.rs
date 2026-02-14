@@ -2,11 +2,11 @@ use appview_schema::models::appview::{Bonfire, Tent};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -22,7 +22,7 @@ pub struct CreateTentBody {
 }
 
 #[post("/xrpc/gg.campground.tent.createTent?<campsite_id>&<bonfire_id>", data = "<body>")]
-pub async fn create_tent(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &str, body: Json<CreateTentBody>) -> Result<Json<TentViewBasic>> {    
+pub async fn create_tent(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, bonfire_id: &str, body: Json<CreateTentBody>) -> Result<Json<TentViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -75,7 +75,7 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: 
 
     let current_date = Utc::now().naive_utc();
 
-    let tent = &diesel::insert_into(crate::schema::appview::tent::table)
+    let tents = &diesel::insert_into(crate::schema::appview::tent::table)
         .values(
             Tent {
                 id: Uuid::new_v4(),
@@ -96,7 +96,11 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: 
         .load::<Tent>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let tent_view = tent_view_basic(&tent.first().unwrap());
+    let first_tent = tents.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "TentCreated", tent_view_basic(&first_tent));
+
+    let tent_view = tent_view_basic(&first_tent);
 
     return Ok(Json(tent_view));
 }

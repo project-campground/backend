@@ -1,15 +1,15 @@
 use appview_schema::{models::appview::CampsiteRole, schema::appview::{campsite_permission, campsite_role}};
 use campground_lexicon::gg::campground::campsite::CampsiteRoleViewBasic;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.campsite.deleteRole?<campsite_id>&<role_id>")]
-pub async fn delete_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &str) -> Result<Json<CampsiteRoleViewBasic>> {    
+pub async fn delete_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, role_id: &str) -> Result<Json<CampsiteRoleViewBasic>> {    
     let mut conn = establish_connection().unwrap();
 
     // Can be given invalid UUID; Be descriptive
@@ -53,6 +53,8 @@ pub async fn delete_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &st
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    event_next(event_subject, &auth.campsite.id, "RoleDeleted", campsite_role_view_basic(given_role));
 
     return Ok(Json(campsite_role_view_basic(given_role)));
 }

@@ -80,7 +80,7 @@ impl<'r, 'a> FromRequest<'r> for Authorization<'a> where 'r: 'a {
     }
 }
 
-async fn validate_jwt(
+pub async fn validate_jwt(
     token: &str,
     storage: &State<LruDidDocumentStorage>,
     http_client: &Client
@@ -182,3 +182,4 @@ pub enum AuthError {
     // #[error("Account was deactivated")]
     // AccountDeactivated,
 }
+

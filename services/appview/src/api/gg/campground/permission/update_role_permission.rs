@@ -2,11 +2,11 @@ use appview_schema::{models::appview::{CampsitePermission, CampsiteRole}, schema
 use campground_lexicon::gg::campground::campsite::CampsitePermissionView;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, expression::NonAggregate, sql_types::BoolOrNullableBool};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, permissions::{CampsitePermissionConsts, has_full_tent_perms_from_roles}, roles::ensure_no_higher_role}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, permissions::{CampsitePermissionConsts, has_full_tent_perms_from_roles}, roles::ensure_no_higher_role, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::{BonfireInfo, CategoryInfo, TentInfo}, error::{Result, XRPCError}
 }};
 
@@ -21,7 +21,7 @@ pub struct UpdatePermissionBody {
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<tent_id>&<role_id>", data = "<body>", rank = 1)]
-pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_tent_role_permission(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: &str, tent_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -52,6 +52,7 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
     let permission = &create_or_modify_permission(
+        event_subject,
         &auth.actor.did,
         &auth.tent.campsite_id,
         None,
@@ -76,7 +77,7 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, role_id: &str, tent
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<category_id>&<role_id>", data = "<body>", rank = 2)]
-pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &str, category_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_category_role_permission(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: &str, category_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -107,6 +108,7 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &s
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
     let permission = &create_or_modify_permission(
+        event_subject,
         &auth.actor.did,
         &auth.category.campsite_id,
         None,
@@ -131,7 +133,7 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, role_id: &s
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<bonfire_id>&<role_id>", data = "<body>", rank = 3)]
-pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, role_id: &str, bonfire_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: &str, bonfire_id: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -162,6 +164,7 @@ pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, role_id: &str
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
     
     let permission = &create_or_modify_permission(
+        event_subject,
         &auth.actor.did,
         &auth.bonfire.campsite_id,
         Some(auth.bonfire.id.clone()),
@@ -193,6 +196,7 @@ pub fn ensure_update_permission_good_request(inner_body: &UpdatePermissionBody) 
 }
 
 pub fn create_or_modify_permission<Predicate: diesel::Expression + diesel::expression::ValidGrouping<()> + diesel::AppearsOnTable<appview_schema::schema::appview::campsite_permission::table> + diesel::query_builder::QueryFragment<diesel::pg::Pg> + diesel::query_builder::QueryId>(
+    event_subject: &State<ReactiveSubject>,
     actor: &String,
     campsite_id: &String,
     bonfire_id: Option<String>,
@@ -220,11 +224,14 @@ pub fn create_or_modify_permission<Predicate: diesel::Expression + diesel::expre
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_select_first_error)?;
     
-    if existing.len() < 1 {
+    let permission = (if existing.len() < 1 {
         insert_permission_if_not_empty(actor, campsite_id, bonfire_id, category_id, tent_id, role_id, user_id, allowed_campsite_permissions, allowed_tent_permissions, denied_campsite_permissions, denied_tent_permissions)
     } else {
         update_or_delete_role_permission(allowed_campsite_permissions, allowed_tent_permissions, denied_campsite_permissions, denied_tent_permissions, existing.first().unwrap().clone(), predicate)
-    }
+    })?;
+
+    event_next(event_subject, campsite_id, "PermissionUpdated", campsite_permission_view(&permission));
+    Ok(permission)
 }
 
 fn insert_permission_if_not_empty(

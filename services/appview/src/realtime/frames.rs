@@ -8,6 +8,7 @@ use anyhow::Result;
 #[repr(i8)]
 pub enum SocketFrameType {
     Error = -1,
+    Auth = 0,
     Data = 1,
 }
 
@@ -68,6 +69,15 @@ impl SocketErrorFrame {
             error,
             message,
         }
+    }
+    pub fn from_error_message(error: &str, message: &str) -> (Result<Vec<u8>>, ws::Message) {
+        (
+            SocketErrorFrame::new(error.to_string(), Some(message.to_string())).binary(),
+            ws::Message::Close(Some(ws::frame::CloseFrame {
+                code: ws::frame::CloseCode::Error,
+                reason: std::borrow::Cow::Owned(message.to_string())
+            }))
+        )
     }
 }
 

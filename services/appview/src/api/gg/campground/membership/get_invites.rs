@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::CampsiteInvite, schema::appview::campsite_invite};
-use campground_lexicon::gg::campground::campsite::{CampsiteInviteViewBasic, GetCampsiteInvitesOutput};
+use campground_lexicon::gg::campground::membership::{CampsiteInviteViewBasic, GetCampsiteInvitesOutput};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 

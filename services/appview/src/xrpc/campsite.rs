@@ -49,7 +49,7 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfo<'a> where 'r: 'a {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let auth = req.guard::<Authorization>().await.unwrap();
 
-        let actor = get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
+        let actor = get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
             .await;
 
         if actor.is_err() {
@@ -108,7 +108,7 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfoBasic<'a> where 'r: 'a {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let auth = req.guard::<Authorization>().await.unwrap();
 
-        let actor = get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
+        let actor = get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
             .await;
 
         if actor.is_err() {
@@ -145,7 +145,7 @@ impl<'r, 'a> FromRequest<'r> for TentInfo<'a> where 'r: 'a {
         let auth = req.guard::<Authorization>().await.unwrap();
         
         let actor = try_outcome!(
-            get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
+            get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
                 .await
                 .outcome(|_| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
         );
@@ -193,7 +193,7 @@ impl<'r, 'a> FromRequest<'r> for CategoryInfo<'a> where 'r: 'a {
         let auth = req.guard::<Authorization>().await.unwrap();
         
         let actor = try_outcome!(
-            get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
+            get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
                 .await
                 .outcome(|_| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
         );
@@ -241,7 +241,7 @@ impl<'r, 'a> FromRequest<'r> for BonfireInfo<'a> where 'r: 'a {
         let auth = req.guard::<Authorization>().await.unwrap();
         
         let actor = try_outcome!(
-            get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
+            get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
                 .await
                 .outcome(|_| Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance)))
         );

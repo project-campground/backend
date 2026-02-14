@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::campsite::{CampsiteMemberViewAuthor, CampsitePermissionView};
+use crate::gg::campground::{campsite::CampsitePermissionView, membership::CampsiteMemberViewAuthor};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]

@@ -5,10 +5,10 @@ use appview_schema::{models::appview::Tent, schema::appview};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+use crate::{database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -21,7 +21,7 @@ pub struct UpdateTentBody {
 }
 
 #[post("/xrpc/gg.campground.tent.updateTent?<tent_id>", data = "<body>")]
-pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTentBody>) -> Result<Json<TentViewBasic>> {    
+pub async fn update_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, tent_id: &str, body: Json<UpdateTentBody>) -> Result<Json<TentViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.is_none() && inner_body.description.is_none() && inner_body.view_type.is_none() {
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
@@ -41,7 +41,7 @@ pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTen
 
     let current_date = Utc::now().naive_utc();
     
-    let updated_tent = diesel::update(crate::schema::appview::tent::table)
+    let updated_tents = diesel::update(crate::schema::appview::tent::table)
         .filter(
             appview::tent::id
                 .eq(
@@ -51,9 +51,9 @@ pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTen
         .set((
             // All the new settings
             appview::tent::name
-                .eq(inner_body.name.clone().unwrap_or(auth.tent.name)),
+                .eq(inner_body.name.clone().unwrap_or(auth.tent.name.clone())),
             appview::tent::description
-                .eq(inner_body.description.clone().unwrap_or(auth.tent.description)),
+                .eq(inner_body.description.clone().unwrap_or(auth.tent.description.clone())),
             appview::tent::viewtype
                 .eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
             // Mandatory
@@ -65,5 +65,9 @@ pub async fn update_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<UpdateTen
         .load::<Tent>(&mut conn)
         .expect("Error updating tent");
 
-    return Ok(Json(tent_view_basic(updated_tent.first().unwrap())));
+    let first_tent = updated_tents.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "TentUpdated", tent_view_basic(&auth.tent));
+
+    return Ok(Json(tent_view_basic(first_tent)));
 }

@@ -1,13 +1,13 @@
 use appview_schema::models::appview::TentCategory;
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
-    campsite::CampsiteInfoBasic, error::{Result, XRPCError}
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+    campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
@@ -18,8 +18,8 @@ pub struct CreateCategoryBody {
     priority: i32,
 }
 
-#[post("/xrpc/gg.campground.tent.createCategory?<campsite_id>&<bonfire_id>", data = "<body>")]
-pub async fn create_category(auth: CampsiteInfoBasic<'_>, campsite_id: &str, bonfire_id: &str, body: Json<CreateCategoryBody>) -> Result<Json<TentCategoryView>> {    
+#[post("/xrpc/gg.campground.tent.createCategory?<bonfire_id>", data = "<body>")]
+pub async fn create_category(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, bonfire_id: &str, body: Json<CreateCategoryBody>) -> Result<Json<TentCategoryView>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -29,31 +29,10 @@ pub async fn create_category(auth: CampsiteInfoBasic<'_>, campsite_id: &str, bon
 
     let mut conn = establish_connection().unwrap();
 
-    let bonfire_count = crate::schema::appview::bonfire::table
-        .filter(
-            crate::schema::appview::bonfire::id
-                .eq(bonfire_id)
-                .and(
-                    crate::schema::appview::bonfire::campsiteid
-                        .eq(campsite_id)
-                )
-        )
-        .count()
-        .first::<i64>(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    if bonfire_count < 1 {
-        return Err(XRPCError::NotFound);
-    }
-
     let existing_category_count = crate::schema::appview::tent_category::table
         .filter(
             crate::schema::appview::tent_category::campsiteid
-                .eq(campsite_id)
-                .and(
-                    crate::schema::appview::tent_category::bonfireid
-                        .eq(bonfire_id)
-                )
+                .eq(&auth.campsite.id)
         )
         .count()
         .first::<i64>(&mut conn)
@@ -69,7 +48,7 @@ pub async fn create_category(auth: CampsiteInfoBasic<'_>, campsite_id: &str, bon
         .values(
             TentCategory {
                 id: Uuid::new_v4(),
-                campsite_id: campsite_id.to_string(),
+                campsite_id: auth.campsite.id.clone(),
                 bonfire_id: bonfire_id.to_string(),
                 name: inner_body.name.clone(),
                 description: inner_body.description.clone(),
@@ -83,7 +62,7 @@ pub async fn create_category(auth: CampsiteInfoBasic<'_>, campsite_id: &str, bon
         .get_result::<TentCategory>(&mut conn)
         .expect("Error inserting bonfire");
 
-    let category_view = tent_category_view(category);
+    event_next(event_subject, &auth.campsite.id.clone(), "TentCategoryCreated", tent_category_view(&category));
 
-    return Ok(Json(category_view));
+    return Ok(Json(tent_category_view(category)));
 }

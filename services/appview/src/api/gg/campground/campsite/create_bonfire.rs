@@ -2,11 +2,11 @@ use appview_schema::models::appview::Bonfire;
 use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use rsky_common::tid::Ticker;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, util::params::ensure_valid_set_uri, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, util::params::ensure_valid_set_uri, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -21,7 +21,7 @@ pub struct CreateBonfireBody<'a> {
 }
 
 #[post("/xrpc/gg.campground.campsite.createBonfire?<campsite_id>", data = "<body>")]
-pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<CreateBonfireBody<'_>>) -> Result<Json<BonfireViewBasic>> {    
+pub async fn create_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, body: Json<CreateBonfireBody<'_>>) -> Result<Json<BonfireViewBasic>> {    
     let CreateBonfireBody { name, description, priority, avatar_uri, banner_uri } = &body.into_inner();
     if name.len() < 3 || name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -77,7 +77,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, body: Jso
         .get_result::<Bonfire>(&mut conn)
         .expect("Error inserting bonfire");
 
-    let bonfire_view = bonfire_view_basic(bonfire);
+    event_next(event_subject, &auth.campsite.id, "BonfireCreated", bonfire_view_basic(bonfire));
 
-    return Ok(Json(bonfire_view));
+    return Ok(Json(bonfire_view_basic(bonfire)));
 }

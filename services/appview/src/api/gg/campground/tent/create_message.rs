@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic}, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -25,7 +25,7 @@ pub struct CreateMessageBody {
 }
 
 #[post("/xrpc/gg.campground.tent.createMessage?<tent_id>", data = "<body>")]
-pub async fn create_message(auth: TentInfo<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, tent_id: &str, body: Json<CreateMessageBody>) -> Result<Json<TentMessageViewBasic>> {    
+pub async fn create_message<'a>(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, tent_id: &str, body: Json<CreateMessageBody>) -> Result<Json<TentMessageViewBasic>> {    
     if body.content.len() > 4000 || body.content.len() == 0 {
         return Err(XRPCError::BadRequest("Expected message content length to be between (and including) 1 and 4000.".to_string()));
     }
@@ -71,7 +71,7 @@ pub async fn create_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         return Err(XRPCError::BadRequest("Some of the messages being replied to no longer exist or never existed in this tent.".to_string()));
     }
 
-    let message = &diesel::insert_into(tent_message::table)
+    let messages = &diesel::insert_into(tent_message::table)
         .values(TentMessage {
             id: Uuid::new_v4(),
             campsite_id: auth.tent.campsite_id.clone(),
@@ -85,5 +85,9 @@ pub async fn create_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         .load::<TentMessage>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(tent_message_view_basic(&auth.tent, message.first().unwrap(), &Some(actor), &Some(profile), &Some(auth.member))));
+    let first_message = messages.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "TentMessageCreated", tent_message_view_basic(&auth.tent, first_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
+
+    return Ok(Json(tent_message_view_basic(&auth.tent, first_message, &Some(actor), &Some(profile), &Some(auth.member))));
 }

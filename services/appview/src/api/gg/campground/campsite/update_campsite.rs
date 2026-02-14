@@ -2,10 +2,10 @@ use appview_schema::{models::appview::Campsite, schema::appview};
 use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, util::params::{AsParamValue, OptionValidity, ensure_valid_modified_uri}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite_global}, realtime::data::ReactiveSubject, util::params::{AsParamValue, OptionValidity, ensure_valid_modified_uri}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -21,7 +21,7 @@ pub struct UpdateCampsiteBody<'a> {
 }
 
 #[post("/xrpc/gg.campground.campsite.updateCampsite?<campsite_id>", data = "<body>")]
-pub async fn update_campsite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<UpdateCampsiteBody<'_>>) -> Result<Json<CampsiteViewBasic>> {    
+pub async fn update_campsite(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, body: Json<UpdateCampsiteBody<'_>>) -> Result<Json<CampsiteViewBasic>> {    
     let UpdateCampsiteBody { name, description, vanity_url, tags, avatar_uri, banner_uri } = &body.into_inner();
     let name = &name
         .ensure_validity(|x| x.len() >= 3 && x.len() <= 48)
@@ -93,6 +93,8 @@ pub async fn update_campsite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Js
         ))
         .get_result::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    event_next_campsite_global(event_subject, &auth.campsite.id, "CampsiteUpdated", campsite_view_basic(&campsite));
 
     return Ok(Json(campsite_view_basic(&campsite)));
 }

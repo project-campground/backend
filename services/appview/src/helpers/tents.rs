@@ -1,5 +1,5 @@
 use appview_schema::models::appview::{Actor, CampsiteMember, Profile, Tent, TentCategory, TentMessage};
-use campground_lexicon::gg::campground::{campsite::{CampsiteMemberViewAuthor, CampsitePermissionView}, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
+use campground_lexicon::gg::campground::{campsite::CampsitePermissionView, membership::CampsiteMemberViewAuthor, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
 use uuid::Uuid;
 
 use crate::helpers::{campsites::campsite_member_view_author, util::serialize_datetime, views::{profile_view_basic_deleted_actor, profile_view_basic_deleted_profile, profile_view_basic_from_db}};

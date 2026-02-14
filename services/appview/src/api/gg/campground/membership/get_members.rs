@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::{Actor, CampsiteMember, Profile}, schema::appview::{campsite_member, profile}};
-use campground_lexicon::gg::campground::campsite::{CampsiteMemberViewBasic, GetMembersOutput};
+use campground_lexicon::gg::campground::membership::{CampsiteMemberViewBasic, GetMembersOutput};
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 

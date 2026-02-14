@@ -2,10 +2,10 @@ use appview_schema::{models::appview::Bonfire, schema::appview};
 use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, util::params::{OptionValidity, ensure_valid_modified_uri}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, util::params::{OptionValidity, ensure_valid_modified_uri}, xrpc::{
     campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
@@ -19,7 +19,7 @@ pub struct UpdateBonfireBody<'a> {
 }
 
 #[post("/xrpc/gg.campground.campsite.updateBonfire?<bonfire_id>", data = "<body>")]
-pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, bonfire_id: &str, body: Json<UpdateBonfireBody<'a>>) -> Result<Json<BonfireViewBasic>> {    
+pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, bonfire_id: &str, body: Json<UpdateBonfireBody<'a>>) -> Result<Json<BonfireViewBasic>> {    
     let UpdateBonfireBody { name, description, avatar_uri, banner_uri } = &body.into_inner();
     let name = &name
         .clone()
@@ -79,7 +79,10 @@ pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, bonfire_id: &str, body: J
         ))
         .load::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    let bonfire = bonfire.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "BonfireUpdated", bonfire_view_basic(bonfire));
     
-    let bonfire_view = bonfire_view_basic(bonfire.first().unwrap());
-    return Ok(Json(bonfire_view));
+    return Ok(Json(bonfire_view_basic(bonfire)));
 }

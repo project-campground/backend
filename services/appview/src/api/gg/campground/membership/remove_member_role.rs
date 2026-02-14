@@ -1,11 +1,12 @@
-use appview_schema::{models::appview::CampsiteRole, schema::appview::{campsite_member, campsite_role}};
+use appview_schema::{models::appview::{CampsiteMember, CampsiteRole}, schema::appview::{campsite_member, campsite_role}};
+use campground_lexicon::gg::campground::membership::ModifyMemberRolesOutput;
 use diesel::{BoolExpressionMethods, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 use diesel::pg::expression::dsl::array_remove;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -16,7 +17,7 @@ pub struct RemoveMemberRoleBody {
 }
 
 #[post("/xrpc/gg.campground.membership.removeMemberRoles?<campsite_id>&<role_id>", data = "<body>")]
-pub async fn remove_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &str, body: Json<RemoveMemberRoleBody>) -> Result<Json<usize>> {    
+pub async fn remove_member_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, role_id: &str, body: Json<RemoveMemberRoleBody>) -> Result<Json<ModifyMemberRolesOutput>> {    
     let inner_body = &body.into_inner();
     let member_ids_length = inner_body.member_ids.len();
     if member_ids_length < 1 || member_ids_length > 100 {
@@ -76,8 +77,13 @@ pub async fn remove_member_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_
                     )
                 ),
         ))
-        .execute(&mut conn)
+        .load::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
-    
-    return Ok(Json(updated_members));
+
+    let member_ids = updated_members.iter().map(|x| x.user_id.clone()).collect::<Vec<String>>();
+    let role_view = campsite_role_view_basic(given_role);
+
+    event_next(event_subject, &auth.campsite.id, "MemberRolesRemoved", ModifyMemberRolesOutput { role: role_view.clone(), members: member_ids.clone() });
+
+    return Ok(Json(ModifyMemberRolesOutput { role: role_view, members: member_ids }));
 }

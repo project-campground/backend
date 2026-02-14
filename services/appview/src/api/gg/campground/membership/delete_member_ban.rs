@@ -1,14 +1,14 @@
 use appview_schema::{models::appview::{Actor, CampsiteBan, Profile}, schema::appview::{self, campsite_ban}};
-use campground_lexicon::gg::campground::campsite::CampsiteBanView;
+use campground_lexicon::gg::campground::membership::CampsiteBanView;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.membership.deleteMemberBan?<campsite_id>&<actor>")]
-pub async fn delete_member_ban(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &str) -> Result<Json<CampsiteBanView>> {    
+pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, actor: &str) -> Result<Json<CampsiteBanView>> {    
     if actor == auth.actor.did {
         return Err(XRPCError::Forbidden("Member cannot ban themselves".to_string()));
     }
@@ -56,6 +56,8 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, campsite_id: &str, actor:
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    event_next(event_subject, &auth.campsite.id, "MemberBanDeleted", campsite_ban_view(&member_ban, &profile, &target_actor));
 
     Ok(Json(campsite_ban_view(&member_ban, &profile, &target_actor)))
 }

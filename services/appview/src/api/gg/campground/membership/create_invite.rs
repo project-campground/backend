@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::CampsiteInvite, schema::appview::campsite_invite};
-use campground_lexicon::gg::campground::campsite::CampsiteInviteViewBasic;
+use campground_lexicon::gg::campground::membership::CampsiteInviteViewBasic;
 use chrono::{NaiveDateTime, Utc};
 use diesel::RunQueryDsl;
 use rocket::serde::json::Json;

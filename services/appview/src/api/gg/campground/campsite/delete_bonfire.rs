@@ -1,14 +1,14 @@
 use appview_schema::{models::appview::Bonfire, schema::appview};
 use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.campsite.deleteBonfire?<campsite_id>&<bonfire_id>")]
-pub async fn delete_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &str) -> Result<Json<BonfireViewBasic>> {    
+pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, bonfire_id: &str) -> Result<Json<BonfireViewBasic>> {    
     let mut conn = establish_connection().unwrap();
 
     let existing_bonfires = appview::bonfire::table
@@ -42,7 +42,10 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_i
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
-    
-    let bonfire_view = bonfire_view_basic(bonfire.unwrap());
-    return Ok(Json(bonfire_view));
+
+    let bonfire = bonfire.unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "BonfireCreated", bonfire_view_basic(bonfire));
+
+    return Ok(Json(bonfire_view_basic(bonfire)));
 }

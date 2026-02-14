@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::tents::tent_message_view_basic, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{tents::tent_message_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -25,7 +25,7 @@ pub struct UpdateMessageBody {
 
 
 #[post("/xrpc/gg.campground.tent.updateMessage?<tent_id>&<message_id>", data = "<body>")]
-pub async fn update_message(auth: TentInfo<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, tent_id: &str, message_id: &str, body: Json<UpdateMessageBody>) -> Result<Json<TentMessageViewBasic>> {    
+pub async fn update_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, tent_id: &str, message_id: &str, body: Json<UpdateMessageBody>) -> Result<Json<TentMessageViewBasic>> {    
     if body.content.len() > 4000 || body.content.len() == 0 {
         return Err(XRPCError::BadRequest("Expected message content length to be between (and including) 1 and 4000.".to_string()));
     }
@@ -88,10 +88,14 @@ pub async fn update_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         .load::<TentMessage>(&mut conn)
         .expect("Error updating message");
 
+    let updated_message = updated_messages.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "TentMessageUpdated", tent_message_view_basic(&auth.tent, updated_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
+
     // New tent message, since it has been updated and is not given by SQL
     return Ok(Json(tent_message_view_basic(
         &auth.tent,
-        updated_messages.first().unwrap(),
+        updated_message,
         &Some(actor),
         &Some(profile),
         &Some(auth.member)

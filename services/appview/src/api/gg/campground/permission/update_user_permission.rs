@@ -1,15 +1,15 @@
 use appview_schema::{models::appview::CampsiteMember, schema::appview::{campsite_member, campsite_permission}};
 use campground_lexicon::gg::campground::campsite::CampsitePermissionView;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 
-use crate::{api::gg::campground::permission::update_role_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, permissions::{CampsitePermissionConsts, has_full_tent_perms}}, xrpc::{
+use crate::{api::gg::campground::permission::update_role_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, permissions::{CampsitePermissionConsts, has_full_tent_perms}}, realtime::data::ReactiveSubject, xrpc::{
     campsite::{BonfireInfo, CategoryInfo, TentInfo}, error::{Result, XRPCError}
 }};
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<tent_id>&<actor>", data = "<body>", rank = 4)]
-pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_tent_user_permission(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, tent_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -33,6 +33,7 @@ pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, acto
         .map_err(handle_select_first_error)?;
 
     let permission = &create_or_modify_permission(
+        event_subject,
         &auth.actor.did,
         &auth.tent.campsite_id,
         None,
@@ -57,7 +58,7 @@ pub async fn update_tent_user_permission(auth: TentInfo<'_>, tent_id: &str, acto
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<category_id>&<actor>", data = "<body>", rank = 5)]
-pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_category_user_permission(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -81,6 +82,7 @@ pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id
         .map_err(handle_select_first_error)?;
 
     let permission = &create_or_modify_permission(
+        event_subject,
         &auth.actor.did,
         &auth.category.campsite_id,
         None,
@@ -105,7 +107,7 @@ pub async fn update_category_user_permission(auth: CategoryInfo<'_>, category_id
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<bonfire_id>&<actor>", data = "<body>", rank = 6)]
-pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, bonfire_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, bonfire_id: &str, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -129,6 +131,7 @@ pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, bonfire_id: &
         .map_err(handle_select_first_error)?;
 
     let permission = &create_or_modify_permission(
+        event_subject,
         &auth.actor.did,
         &auth.bonfire.campsite_id,
         Some(auth.bonfire.id.clone()),

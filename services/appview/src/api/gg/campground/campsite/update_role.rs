@@ -2,11 +2,11 @@ use appview_schema::{models::appview::{Campsite, CampsiteMember, CampsiteRole}, 
 use campground_lexicon::gg::campground::campsite::CampsiteRoleViewBasic;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}, roles::ensure_no_higher_role}, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}, roles::ensure_no_higher_role, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -25,7 +25,7 @@ pub struct UpdateRoleBody {
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.campsite.updateRole?<campsite_id>&<role_id>", data = "<body>")]
-pub async fn update_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &str, body: Json<UpdateRoleBody>) -> Result<Json<CampsiteRoleViewBasic>> {    
+pub async fn update_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, role_id: &str, body: Json<UpdateRoleBody>) -> Result<Json<CampsiteRoleViewBasic>> {    
     let UpdateRoleBody { name, color, color_secondary, display_separately, mentionable, campsite_permissions, tent_permissions } = &body.into_inner();
     if name.clone().map_or(false, |x| x.len() == 0 || x.len() > 64) {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 1 to 64 characters".to_string()));
@@ -78,6 +78,8 @@ pub async fn update_role(auth: CampsiteInfo<'_>, campsite_id: &str, role_id: &st
         ))
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    event_next(event_subject, &auth.campsite.id, "RoleUpdated", campsite_role_view_basic(updated_role));
 
     return Ok(Json(campsite_role_view_basic(updated_role)));
 }

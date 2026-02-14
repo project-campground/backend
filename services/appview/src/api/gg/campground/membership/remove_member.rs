@@ -1,19 +1,21 @@
-use appview_schema::{models::appview::{CampsiteMember, CampsiteRole}, schema::appview::{self, campsite_member, campsite_role}};
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use appview_schema::{models::appview::{Actor, CampsiteMember, CampsiteRole, Profile}, schema::appview::{self, campsite_member, campsite_role, profile}};
+use atproto_identity::storage_lru::LruDidDocumentStorage;
+use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use diesel::pg::expression::dsl::array_remove;
+use reqwest::Client;
+use rocket::State;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::campsite_member_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::{event_next, event_next_campsite_removed}}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>&<actor>", rank = 1)]
-pub async fn remove_member(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &str) -> Result<()> {    
+pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, actor: &str) -> Result<()> {    
     if actor == auth.actor.did {
-        return remove_self(auth, campsite_id).await;
-    }
-
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
+        return remove_self(auth, event_subject, client, did_document_storage, campsite_id).await;
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -24,7 +26,7 @@ pub async fn remove_member(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &st
         .filter(campsite_role::campsiteid.eq(campsite_id))
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
-    
+
     let target = campsite_member::table
         .filter(
             campsite_member::campsiteid
@@ -33,19 +35,42 @@ pub async fn remove_member(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &st
                     campsite_member::userid.eq(&auth.actor.did)
                 )
         )
-        .first::<CampsiteMember>(&mut conn)
+        .inner_join(
+            profile::table
+                .on(
+                    profile::creator.eq(
+                        campsite_member::userid
+                    )
+                )
+        )
+        .inner_join(
+            crate::schema::appview::actor::table
+                .on(
+                    crate::schema::appview::actor::did.eq(
+                        campsite_member::userid
+                    )
+                )
+        )
+        .select(
+            (campsite_member::all_columns, profile::all_columns, crate::schema::appview::actor::all_columns)
+        )
+        .first::<(CampsiteMember, Profile, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    ensure_user_isnt_higher(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), &target.roles, auth.member.roles.clone())?;
+    ensure_user_isnt_higher(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), &target.0.roles, auth.member.roles.clone())?;
 
-    remove_campsite_member(campsite_id, actor)
+    remove_campsite_member(event_subject, campsite_id, &target, actor)
 }
 #[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>", rank = 2)]
-pub async fn remove_self(auth: CampsiteInfo<'_>, campsite_id: &str) -> Result<()> {    
-    remove_campsite_member(campsite_id, &auth.actor.did)
+pub async fn remove_self(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str) -> Result<()> {    
+    let (actor, profile) = get_profile(client, did_document_storage, &auth.actor.did)
+        .await
+        .map_err(|_| XRPCError::Unauthorized)?;
+
+    remove_campsite_member(event_subject, campsite_id, &(auth.member, profile, actor), &auth.actor.did)
 }
 
-pub fn remove_campsite_member(campsite_id: &str, actor: &str) -> Result<()> {
+pub fn remove_campsite_member(event_subject: &State<ReactiveSubject>, campsite_id: &str, target: &(CampsiteMember, Profile, Actor), actor: &str) -> Result<()> {
     let mut conn = establish_connection().unwrap();
     diesel::delete(campsite_member::table)
         .filter(
@@ -89,6 +114,9 @@ pub fn remove_campsite_member(campsite_id: &str, actor: &str) -> Result<()> {
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    event_next(event_subject, &target.0.campsite_id, "MemberRemoved", campsite_member_view_basic(&target.0, &target.1, &target.2));
+    event_next_campsite_removed(event_subject, &campsite_id.to_string(), &target.2.did, "CampsiteLeft", CampsiteLeftOutput { id: campsite_id.to_string() });
 
     Ok(())
 }

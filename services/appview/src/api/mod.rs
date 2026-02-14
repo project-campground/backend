@@ -63,7 +63,8 @@ async fn did() -> String {
 
 pub fn routes() -> Vec<rocket::Route> {
     merge_routes!(
-        gg::routes(), 
+        gg::routes(),
+        ws::routes(),
         rocket::routes![
             robots,
             index,
@@ -74,3 +75,4 @@ pub fn routes() -> Vec<rocket::Route> {
 }
 
 mod gg;
+mod ws;

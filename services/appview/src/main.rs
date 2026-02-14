@@ -46,11 +46,12 @@ use atproto_identity::resolve::create_resolver;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use hickory_resolver::TokioResolver;
 use lazy_static::lazy_static;
-use rocket::fairing::{Fairing, Info, Kind};
+use rocket::{fairing::{Fairing, Info, Kind}, futures::FutureExt};
 use rocket::shield::{Shield, NoSniff};
 use rocket::{Request, Response};
 use rocket::http::{Header, Status};
 use anyhow::Result;
+use rxrust::{Context, Observable, ObservableFactory, Observer, Shared, SharedScheduler, Subscription};
 use xrpc::error::XRPCError;
 
 use askama as _;
@@ -118,11 +119,14 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         .user_agent(APP_USER_AGENT)
         .build()?;
 
+    let event_subject: ReactiveSubject = Shared::subject();
+
     let rocket = rocket::build()
         .mount("/", routes![all_options])
         .mount("/", api::routes())
         .manage(client)
         .manage(did_document_cache)
+        .manage(event_subject)
         .attach(shield)
         .attach(CORS)
         .register("/", catchers![default_catcher]);
@@ -140,10 +144,12 @@ async fn main() -> Result<()> {
 }
 
 mod xrpc;
-mod xws;
+mod realtime;
 mod database;
 mod helpers;
 mod util;
 mod config;
 mod api;
 pub use appview_schema::schema;
+
+use crate::realtime::data::{ReactiveSubject, ReactiveSubjectData};

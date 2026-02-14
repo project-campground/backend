@@ -1,25 +1,36 @@
-use appview_schema::{models::appview::{CampsiteInvite, CampsiteMember, CampsiteRole}, schema::appview::{self, campsite, campsite_ban, campsite_invite, campsite_member, campsite_role}};
+use appview_schema::{models::appview::{Campsite, CampsiteInvite, CampsiteMember, CampsiteRole}, schema::appview::{self, campsite, campsite_ban, campsite_invite, campsite_member, campsite_role}};
+use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, PgArrayExpressionMethods, QueryDsl, RunQueryDsl};
+use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, roles::CampsiteRoleFlag}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::{campsite_member_view_basic, campsite_view_basic}, roles::CampsiteRoleFlag, ws::{event_next, event_next_campsite_added}}, realtime::data::ReactiveSubject, xrpc::{
     auth::Authorization, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.membership.useInvite?<invite_id>")]
-pub async fn use_invite(auth: Authorization<'_>, invite_id: &str) -> Result<()> {
+pub async fn use_invite(auth: Authorization<'_>, event_subject: &State<ReactiveSubject>, invite_id: &str) -> Result<Json<CampsiteViewBasic>> {
     let mut conn = establish_connection().unwrap();
-    let actor = &get_actor(auth.client, auth.did_document_storage, auth.actor_did.clone().as_str())
+    let (actor, profile) = &get_profile(auth.client, auth.did_document_storage, &auth.actor_did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 
     let uuid = Uuid::try_parse(invite_id)
         .map_err(|_| XRPCError::BadRequest("Invalid 'invite_id' format. Expected UUID".to_string()))?;
 
-    let invite = campsite_invite::table
+    let (invite, campsite) = campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
-        .first::<CampsiteInvite>(&mut conn)
+        .inner_join(
+            appview::campsite::table
+                .on(
+                    appview::campsite::id
+                        .eq(
+                            campsite_invite::campsiteid
+                        )
+                )   
+        )
+        .first::<(CampsiteInvite, Campsite)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let current_date = Utc::now().naive_utc();
@@ -37,7 +48,7 @@ pub async fn use_invite(auth: Authorization<'_>, invite_id: &str) -> Result<()> 
         .count()
         .first::<i64>(&mut conn)
         .map_err(handle_select_first_error)?;
-    
+
     if ban_count > 0 {
         return Err(XRPCError::Forbidden("User is banned from this campsite".to_string()));
     }
@@ -100,7 +111,7 @@ pub async fn use_invite(auth: Authorization<'_>, invite_id: &str) -> Result<()> 
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    diesel::insert_into(campsite_member::table)
+    let member = diesel::insert_into(campsite_member::table)
         .values(
             CampsiteMember {
                 user_id: auth.actor_did,
@@ -113,6 +124,10 @@ pub async fn use_invite(auth: Authorization<'_>, invite_id: &str) -> Result<()> 
         )
         .load::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
+    let member = member.first().unwrap();
 
-    return Ok(());
+    event_next(event_subject, &campsite.id, "MemberJoined", campsite_member_view_basic(member, profile, actor));
+    event_next_campsite_added(event_subject, &campsite.id, &member.user_id, "CampsiteJoined", campsite_view_basic(&campsite));
+
+    return Ok(Json(campsite_view_basic(&campsite)));
 }

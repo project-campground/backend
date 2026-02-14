@@ -10,13 +10,13 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic}, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
 
 #[post("/xrpc/gg.campground.tent.deleteMessage?<tent_id>&<message_id>")]
-pub async fn delete_message(auth: TentInfo<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, tent_id: &str, message_id: &str) -> Result<Json<TentMessageViewBasic>> {    
+pub async fn delete_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, tent_id: &str, message_id: &str) -> Result<Json<TentMessageViewBasic>> {    
     let mut conn = establish_connection().unwrap();
     let (actor, profile) = get_profile_from_actor(client, did_document_storage, auth.actor.clone())
         .await
@@ -87,6 +87,8 @@ pub async fn delete_message(auth: TentInfo<'_>, client: &State<Client>, did_docu
         )
         .execute(&mut conn)
         .expect("Error deleting message");
+
+    event_next(event_subject, &auth.campsite.id, "TentMessageDeleted", tent_message_view_basic(&auth.tent, &msg.0, &msg.1.clone(), &msg.2.clone(), &msg.3.clone()));
 
     return Ok(Json(tent_message_view_basic(&auth.tent, &msg.0, &msg.1, &msg.2, &msg.3)));
 }

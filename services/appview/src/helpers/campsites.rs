@@ -1,5 +1,5 @@
 use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteBan, CampsiteInvite, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
-use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewAuthor, CampsiteMemberViewBasic, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
+use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, membership::{CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewAuthor, CampsiteMemberViewBasic}, tent::{TentCategoryView, TentViewBasic}};
 use uuid::Uuid;
 
 use crate::helpers::{util::serialize_datetime, views::profile_view_basic_from_db};

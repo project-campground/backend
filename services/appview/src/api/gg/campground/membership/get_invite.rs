@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::{Campsite, CampsiteInvite}, schema::appview::{self, campsite_invite}};
-use campground_lexicon::gg::campground::campsite::CampsiteInviteViewDetailed;
+use campground_lexicon::gg::campground::membership::CampsiteInviteViewDetailed;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;

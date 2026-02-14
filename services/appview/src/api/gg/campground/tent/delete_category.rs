@@ -1,67 +1,53 @@
-use appview_schema::{models::appview::TentCategory, schema::appview::{campsite_permission, tent, tent_category}};
-use atproto_identity::storage_lru::LruDidDocumentStorage;
+use appview_schema::schema::appview::{campsite_permission, tent, tent_category};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use reqwest::Client;
+use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
-        auth::Authorization,
-        error::{Result, XRPCError}
+    database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+        campsite::CategoryInfo, error::{Result, XRPCError}
     }
 };
 
+#[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.deleteCategory?<category_id>")]
-pub async fn delete_category(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, category_id: &str) -> Result<Json<TentCategoryView>> {    
-    let actor_did = auth.actor_did;
+pub async fn delete_category(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str) -> Result<Json<TentCategoryView>> {
+    if !has_tent_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    }
 
     let mut conn = establish_connection().unwrap();
-    let actor = get_actor(client, did_document_storage, actor_did.as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
-
-    // Can be given invalid UUID; Be descriptive
-    let category_id_uuid = Uuid::try_parse(category_id)
-        .map_err(|_| XRPCError::BadRequest("Expected 'category_id' query to be a valid UUID".to_string()))
-        ?;
-    let category = &tent_category::table
-        .filter(
-            tent_category::id
-                .eq(category_id_uuid)
-        )
-        .first::<TentCategory>(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    // Not in the campsite to view that
-    if !actor.campsites.contains(&Some(category.campsite_id.to_string())) {
-        return Err(XRPCError::Forbidden("User cannot view campsite that they are not member of".to_string()));
-    }
 
     diesel::delete(tent_category::table)
         .filter(
             tent_category::id
-                .eq(category.id)
+                .eq(auth.category.id)
         )
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
     diesel::delete(campsite_permission::table)
         .filter(
-            campsite_permission::tentid
-                .eq(category_id_uuid)
+            campsite_permission::categoryid
+                .eq(auth.category.id)
         )
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
 
     // To make it easier to delete sections of tents
-    diesel::delete(tent::table)
+    diesel::update(tent::table)
         .filter(
             tent::categoryid
-                .eq(category.id)
+                .eq(auth.category.id)
+        )
+        .set(
+            tent::categoryid
+                .eq::<Option<Uuid>>(None)
         )
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
 
-    return Ok(Json(tent_category_view(category)));
+    event_next(event_subject, &auth.category.campsite_id, "CategoryDeleted", tent_category_view(&auth.category));
+
+    return Ok(Json(tent_category_view(&auth.category)));
 }
