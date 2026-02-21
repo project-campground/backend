@@ -59,7 +59,7 @@ pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
 
     ensure_user_isnt_higher(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), &target.0.roles, auth.member.roles.clone())?;
 
-    remove_campsite_member(event_subject, campsite_id, &target, actor)
+    remove_campsite_member(event_subject, campsite_id, &target.0, &target.1, &target.2, actor)
 }
 #[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>", rank = 2)]
 pub async fn remove_self(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str) -> Result<()> {    
@@ -67,10 +67,10 @@ pub async fn remove_self(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 
-    remove_campsite_member(event_subject, campsite_id, &(auth.member, profile, actor), &auth.actor.did)
+    remove_campsite_member(event_subject, campsite_id, &auth.member, &profile, &actor, &auth.actor.did)
 }
 
-pub fn remove_campsite_member(event_subject: &State<ReactiveSubject>, campsite_id: &str, target: &(CampsiteMember, Profile, Actor), actor: &str) -> Result<()> {
+pub fn remove_campsite_member(event_subject: &State<ReactiveSubject>, campsite_id: &str, target_member: &CampsiteMember, target_profile: &Profile, target_actor: &Actor, actor: &str) -> Result<()> {
     let mut conn = establish_connection().unwrap();
     diesel::delete(campsite_member::table)
         .filter(
@@ -115,8 +115,8 @@ pub fn remove_campsite_member(event_subject: &State<ReactiveSubject>, campsite_i
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next(event_subject, &target.0.campsite_id, "MemberRemoved", campsite_member_view_basic(&target.0, &target.1, &target.2));
-    event_next_campsite_removed(event_subject, &campsite_id.to_string(), &target.2.did, "CampsiteLeft", CampsiteLeftOutput { id: campsite_id.to_string() });
+    event_next(event_subject, &target_member.campsite_id, "MemberRemoved", campsite_member_view_basic(&target_member, &target_profile, &target_actor));
+    event_next_campsite_removed(event_subject, &campsite_id.to_string(), &target_actor.did, "CampsiteLeft", CampsiteLeftOutput { id: campsite_id.to_string() });
 
     Ok(())
 }

@@ -2,10 +2,10 @@ use appview_schema::{models::appview::{Tent, TentCategory}, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
+use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CategoryInfo, error::{Result, XRPCError}
 }};
 
@@ -18,7 +18,7 @@ pub struct MoveCategoryBody {
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.moveCategory?<category_id>", data = "<body>")]
-pub async fn move_category(auth: CategoryInfo<'_>, category_id: &str, body: Json<MoveCategoryBody>) -> Result<Json<TentCategoryView>> {    
+pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str, body: Json<MoveCategoryBody>) -> Result<Json<TentCategoryView>> {    
     let inner_body = &body.into_inner();
     if inner_body.bonfire_id.is_none() && inner_body.priority.is_none() {
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
@@ -75,5 +75,9 @@ pub async fn move_category(auth: CategoryInfo<'_>, category_id: &str, body: Json
             .map_err(handle_select_first_error)?;
     }
 
-    return Ok(Json(tent_category_view(updated_category.first().unwrap())));
+    let updated_category = updated_category.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "CategoryMoved", tent_category_view(updated_category));
+
+    return Ok(Json(tent_category_view(updated_category)));
 }

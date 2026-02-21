@@ -1,11 +1,13 @@
-use appview_schema::{models::appview::{Actor, CampsiteBan, CampsiteMember, CampsiteRole, Profile}, schema::appview::{self, campsite_member, campsite_role, profile}};
+use appview_schema::{models::appview::{Actor, Campsite, CampsiteBan, CampsiteMember, CampsiteRole, Profile}, schema::appview::{self, campsite_member, campsite_role, profile}};
+use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::membership::CampsiteBanView;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use reqwest::Client;
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -16,7 +18,7 @@ pub struct CreateBanBody {
 }
 
 #[post("/xrpc/gg.campground.membership.banMember?<campsite_id>&<actor>", data = "<body>")]
-pub async fn ban_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, actor: &str, body: Json<CreateBanBody>) -> Result<Json<CampsiteBanView>> {    
+pub async fn ban_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, actor: &str, body: Json<CreateBanBody>) -> Result<Json<CampsiteBanView>> {    
     if actor == auth.actor.did {
         return Err(XRPCError::Forbidden("Member cannot ban themselves".to_string()));
     }
@@ -35,49 +37,60 @@ pub async fn ban_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
         .filter(campsite_role::campsiteid.eq(campsite_id))
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
-    
-    let target = campsite_member::table
+
+    let target_actor = &get_actor(client, did_document_storage, actor)
+        .await
+        .map_err(|_| XRPCError::NotFound)?;
+
+    let targets = profile::table
         .filter(
-            campsite_member::campsiteid
-                .eq(campsite_id)
-                .and(
-                    campsite_member::userid.eq(&auth.actor.did)
-                )
+            profile::creator
+                .eq(&target_actor.did)
         )
-        .inner_join(
-            profile::table
+        .left_join(
+            campsite_member::table
                 .on(
-                    profile::creator.eq(
-                        campsite_member::userid
-                    )
+                    profile::creator
+                        .eq(
+                            campsite_member::userid
+                        )
+                        .and(
+                            campsite_member::campsiteid
+                                .eq(campsite_id)
+                        )
                 )
         )
-        .inner_join(
-            crate::schema::appview::actor::table
-                .on(
-                    crate::schema::appview::actor::did.eq(
-                        campsite_member::userid
-                    )
-                )
-        )
-        .first::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .load::<(Profile, Option<CampsiteMember>)>(&mut conn)
         .map_err(handle_select_first_error)?;
+
+    if targets.len() < 1 {
+        return add_ban(event_subject, &auth.actor, &auth.campsite, target_actor, &inner_body.reason, &None);
+    }
+
+    let target = &targets.first().unwrap().clone();
     
-    ensure_user_isnt_higher(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), &target.0.roles, auth.member.roles.clone())?;
-    
-    remove_campsite_member(event_subject, &auth.campsite.id, &target, actor)?;
+    if let Some(member) = target.1.clone() {
+        ensure_user_isnt_higher(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), &member.roles, auth.member.roles.clone())?;
+        remove_campsite_member(event_subject, &auth.campsite.id, &member, &target.0, &target_actor, actor)?;
+    }
+
+    add_ban(event_subject, &auth.actor, &auth.campsite, target_actor, &inner_body.reason, &Some(target.0.clone()))
+}
+
+fn add_ban(event_subject: &State<ReactiveSubject>, executor: &Actor, campsite: &Campsite, actor: &Actor, reason: &Option<String>, profile: &Option<Profile>) -> Result<Json<CampsiteBanView>, XRPCError> {
+    let mut conn = establish_connection().unwrap();
 
     let current_date = Utc::now().naive_utc();
     let ban = &diesel::insert_into(appview::campsite_ban::table)
         .values(
             CampsiteBan {
-                user_id: actor.to_string(),
-                campsite_id: campsite_id.to_string(),
-                reason: inner_body.reason.clone(),
+                user_id: actor.did.clone(),
+                campsite_id: campsite.id.clone(),
+                reason: reason.clone(),
                 created_at: current_date,
-                created_by: auth.actor.did.clone(),
+                created_by: executor.did.clone(),
                 updated_at: current_date,
-                updated_by: auth.actor.did,
+                updated_by: executor.did.clone(),
             }
         )
         .load::<CampsiteBan>(&mut conn)
@@ -85,7 +98,7 @@ pub async fn ban_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
 
     let ban = ban.first().unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "MemberBanCreated", campsite_ban_view(ban, &target.1, &target.2));
- 
-    Ok(Json(campsite_ban_view(ban, &target.1, &target.2)))
+    event_next(event_subject, &campsite.id, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
+    
+    Ok(Json(campsite_ban_view(ban, profile, actor)))
 }

@@ -62,7 +62,7 @@ pub async fn create_category(auth: BonfireInfo<'_>, event_subject: &State<Reacti
         .get_result::<TentCategory>(&mut conn)
         .expect("Error inserting bonfire");
 
-    event_next(event_subject, &auth.campsite.id.clone(), "TentCategoryCreated", tent_category_view(&category));
+    event_next(event_subject, &auth.campsite.id.clone(), "CategoryCreated", tent_category_view(&category));
 
     return Ok(Json(tent_category_view(category)));
 }

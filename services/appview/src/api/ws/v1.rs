@@ -39,6 +39,7 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
 
                 // Bad CBOR
                 if auth_data.is_err() {
+                    println!("Err: {:?}", auth_data);
                     let (message, close_message) = SocketErrorFrame::from_error_message("AuthenticationParsingError", "Could not parse binary auth CBOR");
 
                     if let Ok(message) = message {
@@ -186,34 +187,40 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
                     yield ws::Message::Binary(binary);
                 },
                 // Campsite joined
-                ReactiveSubjectData::CampsiteAdded(campsite_id, to_actor, _event) => {
+                ReactiveSubjectData::CampsiteAdded(campsite_id, to_actor, binary) => {
                     if Some(to_actor.clone()) != actor_did {
                         continue;
                     }
-
+                    
                     actor_campsites.push(Some(campsite_id));
+
+                    yield ws::Message::Binary(binary);
                 },
                 // Campsite left
-                ReactiveSubjectData::CampsiteRemoved(campsite_id, to_actor, _event) => {
+                ReactiveSubjectData::CampsiteRemoved(campsite_id, to_actor, binary) => {
                     if Some(to_actor.clone()) != actor_did {
                         continue;
                     } else if Some(campsite_id.clone()) == current_campsite {
                         current_campsite = None;
                     }
-
+                    
                     // To no longer send global campsite events from
                     let campsite_index = actor_campsites.iter().position(|x| x.as_ref().map_or(false, |y| *y == campsite_id));
                     if campsite_index.is_none() {
                         continue;
                     }
-
+                    
                     actor_campsites.remove(campsite_index.unwrap());
+
+                    yield ws::Message::Binary(binary);
                 },
                 // DM received and whatever
-                ReactiveSubjectData::Personal(to_actor, _event) => {
+                ReactiveSubjectData::Personal(to_actor, binary) => {
                     if Some(to_actor.clone()) != actor_did {
                         continue;
                     }
+
+                    yield ws::Message::Binary(binary);
                 },
             }
         }

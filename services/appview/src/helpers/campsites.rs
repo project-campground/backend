@@ -1,8 +1,8 @@
 use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteBan, CampsiteInvite, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
-use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, membership::{CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewAuthor, CampsiteMemberViewBasic}, tent::{TentCategoryView, TentViewBasic}};
+use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, membership::{CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewAuthor, CampsiteMemberViewBasic, CampsiteMemberViewDetailed}, tent::{TentCategoryView, TentViewBasic}};
 use uuid::Uuid;
 
-use crate::helpers::{util::serialize_datetime, views::profile_view_basic_from_db};
+use crate::helpers::{util::serialize_datetime, views::{profile_view_basic_deleted_profile, profile_view_basic_from_db, profile_view_detailed_from_db}};
 
 pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
     return CampsiteViewBasic {
@@ -60,6 +60,20 @@ pub fn campsite_member_view_basic(campsite_member: &CampsiteMember, profile: &Pr
     };
 }
 
+pub fn campsite_member_view_detailed(campsite_member: &CampsiteMember, profile: &Profile, actor: &Actor) -> CampsiteMemberViewDetailed {
+    return CampsiteMemberViewDetailed {
+        campsite_id: campsite_member.campsite_id.clone(),
+        used_invite_id: campsite_member.used_invite_id.clone(),
+        user: profile_view_detailed_from_db(actor, profile),
+        nickname: campsite_member.nickname.clone(),
+        roles: campsite_member.roles
+            .iter()
+            .filter_map(|&x| x)
+            .collect::<Vec<Uuid>>(),
+        joined_at: serialize_datetime(campsite_member.joined_at),
+    };
+}
+
 const DEFAULT_NO_ROLES: Vec<Uuid> = vec![];
 
 pub fn campsite_member_view_author(campsite_member: &Option<CampsiteMember>, profile_view: ProfileViewBasic) -> CampsiteMemberViewAuthor {
@@ -76,7 +90,7 @@ pub fn campsite_member_view_author(campsite_member: &Option<CampsiteMember>, pro
     };
 }
 
-pub fn campsite_invite_view_basic(campsite_invite: &CampsiteInvite) -> CampsiteInviteViewBasic {
+pub fn campsite_invite_view_basic(campsite_invite: &CampsiteInvite, profile: &Profile, actor: &Actor) -> CampsiteInviteViewBasic {
     return CampsiteInviteViewBasic {
         id: campsite_invite.id.clone(),
         campsite_id: campsite_invite.campsite_id.clone(),
@@ -84,11 +98,11 @@ pub fn campsite_invite_view_basic(campsite_invite: &CampsiteInvite) -> CampsiteI
         allowed_amount: campsite_invite.allowed_amount.clone(),
         used: campsite_invite.used,
         created_at: serialize_datetime(campsite_invite.created_at),
-        created_by: campsite_invite.created_by.clone(),
+        created_by: profile_view_basic_from_db(actor, profile),
     };
 }
 
-pub fn campsite_invite_view_detailed(campsite_invite: &CampsiteInvite, campsite: &Campsite) -> CampsiteInviteViewDetailed {
+pub fn campsite_invite_view_detailed(campsite_invite: &CampsiteInvite, campsite: &Campsite, profile: &Profile, actor: &Actor) -> CampsiteInviteViewDetailed {
     return CampsiteInviteViewDetailed {
         id: campsite_invite.id.clone(),
         campsite: campsite_view_basic(campsite),
@@ -96,13 +110,16 @@ pub fn campsite_invite_view_detailed(campsite_invite: &CampsiteInvite, campsite:
         allowed_amount: campsite_invite.allowed_amount.clone(),
         used: campsite_invite.used,
         created_at: serialize_datetime(campsite_invite.created_at),
-        created_by: campsite_invite.created_by.clone(),
+        created_by: profile_view_basic_from_db(actor, profile),
     };
 }
 
-pub fn campsite_ban_view(ban: &CampsiteBan, profile: &Profile, actor: &Actor) -> CampsiteBanView {
+pub fn campsite_ban_view(ban: &CampsiteBan, profile: &Option<Profile>, actor: &Actor) -> CampsiteBanView {
     return CampsiteBanView {
-        user: profile_view_basic_from_db(actor, profile),
+        user: match profile {
+            Some(profile) => profile_view_basic_from_db(actor, profile),
+            None => profile_view_basic_deleted_profile(actor),
+        },
         user_id: ban.user_id.clone(),
         campsite_id: ban.campsite_id.clone(),
         reason: ban.reason.clone(),

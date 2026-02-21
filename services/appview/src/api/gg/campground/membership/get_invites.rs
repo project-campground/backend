@@ -1,6 +1,6 @@
-use appview_schema::{models::appview::CampsiteInvite, schema::appview::campsite_invite};
+use appview_schema::{models::appview::{Actor, CampsiteInvite, Profile}, schema::appview::{campsite_invite, profile}};
 use campground_lexicon::gg::campground::membership::{CampsiteInviteViewBasic, GetCampsiteInvitesOutput};
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
 use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
@@ -28,10 +28,26 @@ pub async fn get_invites(auth: CampsiteInfo<'_>, campsite_id: &str, limit: Optio
         )
         .limit(limit)
         .offset(offset)
-        .load::<CampsiteInvite>(&mut conn)
+        .inner_join(
+            profile::table
+                .on(
+                    profile::creator.eq(
+                        campsite_invite::createdby
+                    )
+                )
+        )
+        .inner_join(
+            crate::schema::appview::actor::table
+                .on(
+                    crate::schema::appview::actor::did.eq(
+                        campsite_invite::createdby
+                    )
+                )
+        )
+        .load::<(CampsiteInvite, Profile, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
-        .map(campsite_invite_view_basic)
+        .map(|x| campsite_invite_view_basic(&x.0, &x.1, &x.2))
         .collect::<Vec<CampsiteInviteViewBasic>>();
 
     return Ok(Json(GetCampsiteInvitesOutput { invites }));

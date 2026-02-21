@@ -1,6 +1,6 @@
-use appview_schema::{models::appview::{Campsite, CampsiteInvite}, schema::appview::{self, campsite_invite}};
+use appview_schema::{models::appview::{Actor, Campsite, CampsiteInvite, Profile}, schema::appview::{self, campsite_invite, profile}};
 use campground_lexicon::gg::campground::membership::CampsiteInviteViewDetailed;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
@@ -15,13 +15,29 @@ pub async fn get_invite(invite_id: &str) -> Result<Json<CampsiteInviteViewDetail
 
     let invite = campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
-        .first::<CampsiteInvite>(&mut conn)
+        .inner_join(
+            profile::table
+                .on(
+                    profile::creator.eq(
+                        campsite_invite::createdby
+                    )
+                )
+        )
+        .inner_join(
+            crate::schema::appview::actor::table
+                .on(
+                    crate::schema::appview::actor::did.eq(
+                        campsite_invite::createdby
+                    )
+                )
+        )
+        .first::<(CampsiteInvite, Profile, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let campsite = appview::campsite::table
-        .filter(appview::campsite::id.eq(invite.campsite_id.clone()))
+        .filter(appview::campsite::id.eq(invite.0.campsite_id.clone()))
         .first::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(campsite_invite_view_detailed(&invite, &campsite)));
+    return Ok(Json(campsite_invite_view_detailed(&invite.0, &campsite, &invite.1, &invite.2)));
 }

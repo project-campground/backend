@@ -1,12 +1,14 @@
 use appview_schema::{models::appview::CampsiteInvite, schema::appview::campsite_invite};
+use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::membership::CampsiteInviteViewBasic;
 use chrono::{NaiveDateTime, Utc};
 use diesel::RunQueryDsl;
-use rocket::serde::json::Json;
+use reqwest::Client;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -18,7 +20,7 @@ pub struct CreateInviteBody {
 }
 
 #[post("/xrpc/gg.campground.membership.createInvite?<campsite_id>", data = "<body>")]
-pub async fn create_invite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json<CreateInviteBody>) -> Result<Json<CampsiteInviteViewBasic>> {    
+pub async fn create_invite(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, body: Json<CreateInviteBody>) -> Result<Json<CampsiteInviteViewBasic>> {    
     let inner_body = &body.into_inner();
     let current_date = Utc::now().naive_utc();
     if inner_body.allowed_amount.map_or(false, |x| x < 1 || x > 1000) {
@@ -32,6 +34,9 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json
     }
 
     let mut conn = establish_connection().unwrap();
+    let (actor, profile) = get_profile_from_actor(client, did_document_storage, auth.actor.clone())
+        .await
+        .map_err(|_| XRPCError::Unauthorized)?;
 
     let invite = &diesel::insert_into(campsite_invite::table)
         .values(
@@ -48,5 +53,7 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, campsite_id: &str, body: Json
         .get_result::<CampsiteInvite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(campsite_invite_view_basic(invite)));
+    event_next(event_subject, &auth.campsite.id, "InviteCreated", campsite_invite_view_basic(invite, &profile, &actor));
+
+    return Ok(Json(campsite_invite_view_basic(invite, &profile, &actor)));
 }

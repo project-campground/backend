@@ -45,7 +45,7 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
 
     let bonfire = bonfire.unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "BonfireCreated", bonfire_view_basic(bonfire));
+    event_next(event_subject, &auth.campsite.id, "BonfireDeleted", bonfire_view_basic(bonfire));
 
     return Ok(Json(bonfire_view_basic(bonfire)));
 }

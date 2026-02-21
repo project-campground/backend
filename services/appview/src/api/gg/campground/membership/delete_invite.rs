@@ -1,15 +1,15 @@
-use appview_schema::{models::appview::CampsiteInvite, schema::appview::campsite_invite};
+use appview_schema::{models::appview::{Actor, CampsiteInvite, Profile}, schema::appview::{campsite_invite, profile}};
 use campground_lexicon::gg::campground::membership::CampsiteInviteViewBasic;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.membership.deleteInvite?<campsite_id>&<invite_id>")]
-pub async fn delete_invite(auth: CampsiteInfo<'_>, campsite_id: &str, invite_id: &str) -> Result<Json<CampsiteInviteViewBasic>> {    
+pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>,  campsite_id: &str, invite_id: &str) -> Result<Json<CampsiteInviteViewBasic>> {    
     if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_INVITES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
@@ -21,12 +21,40 @@ pub async fn delete_invite(auth: CampsiteInfo<'_>, campsite_id: &str, invite_id:
 
     let invite = campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
-        .first::<CampsiteInvite>(&mut conn)
+        .inner_join(
+            profile::table
+                .on(
+                    profile::creator.eq(
+                        campsite_invite::createdby
+                    )
+                )
+        )
+        .inner_join(
+            crate::schema::appview::actor::table
+                .on(
+                    crate::schema::appview::actor::did.eq(
+                        campsite_invite::createdby
+                    )
+                )
+        )
+        .first::<(CampsiteInvite, Profile, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    if invite.campsite_id != campsite_id {
+    if invite.0.campsite_id != campsite_id {
         return Err(XRPCError::NotFound);
     }
 
-    return Ok(Json(campsite_invite_view_basic(&invite)));
+    diesel::delete(
+        campsite_invite::table
+    )
+        .filter(
+            campsite_invite::id
+                .eq(invite.0.id.clone())
+        )
+        .execute(&mut conn)
+        .map_err(handle_all_db_errors)?;
+
+    event_next(event_subject, &auth.campsite.id, "InviteDeleted", campsite_invite_view_basic(&invite.0, &invite.1, &invite.2));
+
+    return Ok(Json(campsite_invite_view_basic(&invite.0, &invite.1, &invite.2)));
 }

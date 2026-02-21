@@ -10,10 +10,8 @@ use crate::{database::establish_connection, helpers::{api::handle_select_first_e
 #[post("/xrpc/gg.campground.membership.deleteMemberBan?<campsite_id>&<actor>")]
 pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, actor: &str) -> Result<Json<CampsiteBanView>> {    
     if actor == auth.actor.did {
-        return Err(XRPCError::Forbidden("Member cannot ban themselves".to_string()));
-    }
-
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
+        return Err(XRPCError::Forbidden("Member cannot delete ban from themselves".to_string()));
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -28,7 +26,7 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
                         .eq(actor)
                 )
         )
-        .inner_join(
+        .left_join(
             appview::profile::table
                 .on(
                     appview::profile::creator
@@ -42,7 +40,7 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
                         .eq(campsite_ban::userid)
                 )
         )
-        .first::<(CampsiteBan, Profile, Actor)>(&mut conn)
+        .first::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     diesel::delete(campsite_ban::table)

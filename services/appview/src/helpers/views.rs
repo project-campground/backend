@@ -50,6 +50,33 @@ pub fn profile_view_basic_from_db(actor: &Actor, profile: &SchemaProfile) -> Pro
     }
 }
 
+pub fn profile_view_detailed_from_db(actor: &Actor, profile: &SchemaProfile) -> ProfileViewDetailed {
+    ProfileViewDetailed {
+        did: actor.did.clone(),
+        handle: match &actor.handle {
+            Some(handle) => handle.clone(),
+            None => "handle.invalid".to_string()
+        },
+
+        display_name: profile.display_name.clone(),
+        avatar: get_blob_ref(&avatar_from_cid(profile.avatar_cid.clone())),
+        banner: get_blob_ref(&avatar_from_cid(profile.banner_cid.clone())),
+
+        tagline: profile.tagline.clone(),
+        description: profile.description.clone(),
+        location: profile.location.clone(),
+
+        labels: vec![],
+        social_connections: None,
+        status: None,
+        viewer: None,
+        activities: vec![],
+
+        indexed_at: Some(profile.indexed_at.clone()),
+        created_at: profile.created_at.clone(),
+    }
+}
+
 pub fn profile_view_basic_deleted_actor(did: String) -> ProfileViewBasic {
     ProfileViewBasic {
         did: did.clone(),
@@ -69,14 +96,17 @@ pub fn profile_view_basic_deleted_profile(actor: &Actor) -> ProfileViewBasic {
     ProfileViewBasic {
         did: actor.did.clone(),
         handle: actor.handle.clone().unwrap_or("null".to_string()),
+
         display_name: actor.handle.clone(),
         avatar: None,
+
         tagline: None,
-        created_at: Some(actor.indexed_at.clone()),
         activity: None,
         status: None,
         viewer: None,
         labels: None,
+
+        created_at: Some(actor.indexed_at.clone()),
     }
 }
 
@@ -87,16 +117,19 @@ pub fn profile_view(actor: &Actor, profile: &Profile) -> ProfileView {
             Some(handle) => handle.clone(),
             None => "handle.invalid".to_string()
         },
+
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
         banner: get_blob_ref(&profile.banner),
-        description: profile.description.clone(),
-        activities: vec![],
+
         tagline: profile.tagline.clone(),
+        description: profile.description.clone(),
+        status: None,
+
+        activities: vec![],
         labels: vec![],
         indexed_at: None,
         created_at: parse_datetime(profile.created_at),
-        status: None,
     }
 }
 
@@ -107,19 +140,23 @@ pub fn profile_view_detailed(actor: &Actor, profile: &Profile) -> ProfileViewDet
             Some(handle) => handle.clone(),
             None => "handle.invalid".to_string()
         },
+
         display_name: profile.display_name.clone(),
         avatar: get_blob_ref(&profile.avatar),
         banner: get_blob_ref(&profile.banner),
-        description: profile.description.clone(),
-        activities: vec![],
+
         tagline: profile.tagline.clone(),
+        description: profile.description.clone(),
+
+        activities: vec![],
         labels: vec![],
-        indexed_at: None,
-        created_at: parse_datetime(profile.created_at),
         status: None,
         viewer: None,
         social_connections: None,
         location: None,
+
+        indexed_at: Some(actor.indexed_at.clone()),
+        created_at: parse_datetime(profile.created_at),
     }
 }
 

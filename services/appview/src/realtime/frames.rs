@@ -1,6 +1,5 @@
 use rsky_common::struct_to_cbor;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use anyhow::Result;
 
@@ -22,11 +21,6 @@ pub struct SocketFrameHeader {
 
 pub trait SocketFrameSerializer {
     fn binary(&self) -> Result<Vec<u8>>;
-}
-
-pub enum SocketFrame {
-    Data(SocketDataFrame<Value>),
-    Error(SocketErrorFrame),
 }
 
 #[derive(Deserialize, Serialize)]

@@ -2,11 +2,11 @@ use appview_schema::{models::appview::{Bonfire, Campsite, CampsiteMember, Tent, 
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -20,7 +20,7 @@ pub struct MoveTentBody {
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.moveTent?<tent_id>", data = "<body>")]
-pub async fn move_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<MoveTentBody>) -> Result<Json<TentViewBasic>> {    
+pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, tent_id: &str, body: Json<MoveTentBody>) -> Result<Json<TentViewBasic>> {    
     let inner_body = &body.into_inner();
 
     // No reason to do anything with the request
@@ -78,7 +78,11 @@ pub async fn move_tent(auth: TentInfo<'_>, tent_id: &str, body: Json<MoveTentBod
         .load::<Tent>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(tent_view_basic(updated_tent.first().unwrap())));
+    let updated_tent = updated_tent.first().unwrap();
+
+    event_next(event_subject, &auth.campsite.id, "TentMoved", tent_view_basic(updated_tent));
+
+    return Ok(Json(tent_view_basic(updated_tent)));
 }
 
 async fn check_category_existence(campsite: &Campsite, member: &CampsiteMember, moved_bonfire_id: &str, category_id: Uuid) -> Result<String, XRPCError> {    
