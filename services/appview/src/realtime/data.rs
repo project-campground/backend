@@ -10,6 +10,7 @@ pub enum ReactiveSubjectData {
     CampsiteGlobal(String, Vec<u8>),
     CampsiteAdded(String, String, Vec<u8>),
     CampsiteRemoved(String, String, Vec<u8>),
+    #[allow(dead_code)]
     Personal(String, Vec<u8>),
 }
 

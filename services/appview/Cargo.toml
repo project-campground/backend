@@ -15,7 +15,7 @@ appview-schema = { version = "*", path = "../../libs/appview-schema" }
 atrium-oauth = { git = "https://github.com/sugyan/atrium" }
 common = { version = "*", path = "../../libs/common" }
 reqwest = { version = "0.12.5", features = ["json"] }
-rocket = { version = "0.5.1", features = ["json"] }
+rocket = { version = "0.5.1", features = ["json", "uuid"] }
 ws = { package = "rocket_ws", version = "0.1.1" }
 atproto-identity = "0.6.0"
 hickory-resolver = "0.25"

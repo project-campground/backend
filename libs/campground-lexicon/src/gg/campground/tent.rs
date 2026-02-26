@@ -110,6 +110,7 @@ pub struct TentMessageViewWithReplies {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetTentsOutput {
+    pub permissions: Vec<CampsitePermissionView>,
     pub tents: Vec<TentViewBasic>,
     pub categories: Vec<TentCategoryView>,
 }

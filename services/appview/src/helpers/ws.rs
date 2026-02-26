@@ -38,6 +38,7 @@ pub fn event_next_campsite_global<T>(event_subject: &State<ReactiveSubject>, cam
         )
     );
 }
+#[allow(dead_code)]
 pub fn event_next_personal<T>(event_subject: &State<ReactiveSubject>, actor: &String, data_type: &str, payload: T) where T: Serialize {
     event_next_inner(event_subject, data_type, payload, |binary|
         ReactiveSubjectData::Personal(

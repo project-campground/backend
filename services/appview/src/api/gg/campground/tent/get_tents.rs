@@ -1,43 +1,24 @@
 use std::collections::HashSet;
 
-use appview_schema::{models::appview::{Bonfire, CampsitePermission, CampsiteRole, Tent, TentCategory}, schema::appview::{bonfire, campsite_permission, campsite_role, tent, tent_category}};
-use campground_lexicon::gg::campground::tent::{GetTentsOutput, TentCategoryView, TentViewBasic};
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use appview_schema::{models::appview::{CampsitePermission, CampsiteRole, Tent, TentCategory}, schema::appview::{campsite_permission, campsite_role, tent, tent_category}};
+use campground_lexicon::gg::campground::{campsite::CampsitePermissionView, tent::{GetTentsOutput, TentCategoryView, TentViewBasic}};
+use diesel::{dsl::not, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, permissions::{TentPermissionConsts, aggregate_permissions, fetch_tent_permissions}, tents::{tent_category_view, tent_view_basic}}, util::database::PgBinaryIntegerExpressionMethods, xrpc::{
-        campsite::CampsiteInfo, error::{Result, XRPCError}
+    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view, permissions::{TentPermissionConsts, aggregate_permissions_from_iter}, tents::{tent_category_view, tent_view_basic}}, xrpc::{
+        campsite::BonfireInfo, error::{Result, XRPCError}
     }
 };
 
-#[get("/xrpc/gg.campground.tent.getTents?<campsite_id>&<bonfire_id>")]
-pub async fn get_tents(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
+#[get("/xrpc/gg.campground.tent.getTents?<bonfire_id>")]
+pub async fn get_tents(auth: BonfireInfo<'_>,  bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
     if auth.campsite.owner == auth.actor.did {
-        return get_tents_unchecked(campsite_id, bonfire_id).await;
+        return get_tents_unchecked(&auth.actor.did, &auth.bonfire.campsite_id, bonfire_id).await;
     }
 
     let mut conn = establish_connection().unwrap();  
-
-    // So we can ignore the disallowed permissions if it's home bonfire
-    let all_bonfires = bonfire::table
-        .filter(
-            bonfire::id
-                .eq(bonfire_id)
-        )
-        .load::<Bonfire>(&mut conn)
-        .map_err(handle_all_db_errors)?;
-
-    let current_bonfire = all_bonfires.iter().find(|x| x.id == bonfire_id);
-
-    if current_bonfire.is_none() {
-        return Err(XRPCError::NotFound);
-    }
-
-    let current_bonfire = current_bonfire.unwrap();
-    let min_priority = all_bonfires.iter().min_by(|x, y| x.priority.cmp(&y.priority)).unwrap();
-    let is_main_group = current_bonfire.id == min_priority.id;
 
     let member_roles = &auth
         .member
@@ -60,17 +41,47 @@ pub async fn get_tents(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &s
             tent_perm | role.tent_permissions
         );
     let has_role_permission = role_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT;
-    if !(is_main_group || has_perms_to_view_bonfire(campsite_id, bonfire_id, &auth.actor.did, member_roles, has_role_permission).await?) {
+
+    let permissions = campsite_permission::table
+        .filter(
+            campsite_permission::bonfireid
+                .eq(bonfire_id)
+                .and(
+                    campsite_permission::roleid
+                        .is_not_null()
+                        .or(
+                            campsite_permission::userid
+                                .eq(&auth.actor.did)
+                        )
+                )
+        )
+        .load::<CampsitePermission>(&mut conn)
+        .map_err(handle_all_db_errors)?;
+    let member_role_ids = &auth.member.roles;
+    let current_member_permissions =
+        &permissions
+            .iter()
+            .filter(|x| x.role_id.map_or_else(|| x.user_id.clone().unwrap() == auth.actor.did, |y| member_role_ids.contains(&Some(y))));    
+
+    if !has_perms_to_view_bonfire(&auth.actor.did, member_roles, has_role_permission, current_member_permissions).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
+
+    let (denied_categories, denied_tents) = &get_allowed_denied_tents(current_member_permissions);
 
     let categories = tent_category::table
         .filter(
             tent_category::campsiteid
-                .eq(campsite_id)
+                .eq(&auth.bonfire.campsite_id)
                 .and(
                     tent_category::bonfireid
-                        .eq(bonfire_id)
+                    .eq(bonfire_id)
+                )
+                .and(
+                    not(
+                        tent_category::id
+                            .eq_any(denied_categories)
+                    )
                 )
         )
         .load::<TentCategory>(&mut conn)
@@ -78,14 +89,29 @@ pub async fn get_tents(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &s
         .iter()
         .map(tent_category_view)
         .collect::<Vec<TentCategoryView>>();
-    let category_ids = &categories.iter().map(|x| x.id).collect::<Vec<Uuid>>();
     let tents = tent::table
         .filter(
             tent::campsiteid
-                .eq(campsite_id)
+                .eq(&auth.bonfire.campsite_id)
                 .and(
                     tent::bonfireid
                         .eq(bonfire_id)
+                )
+                .and(
+                    tent::categoryid
+                        .is_null()
+                        .or(
+                            not(
+                                tent::categoryid
+                                    .eq_any(denied_categories)
+                            )
+                        )
+                )
+                .and(
+                    not(
+                        tent::id
+                            .eq_any(denied_tents)
+                    )
                 )
         )
         .load::<Tent>(&mut conn)
@@ -93,107 +119,77 @@ pub async fn get_tents(auth: CampsiteInfo<'_>, campsite_id: &str, bonfire_id: &s
         .iter()
         .map(tent_view_basic)
         .collect::<Vec<TentViewBasic>>();
-    let tent_ids = &tents.iter().map(|x| x.id).collect::<Vec<Uuid>>();
-    let permissions = campsite_permission::table
-        .filter(
-            campsite_permission::categoryid
-                .eq_any(category_ids)
-                .or(
-                    campsite_permission::tentid
-                        .eq_any(tent_ids)
-                )
-                .and(
-                    campsite_permission::roleid
-                        .eq_any(member_roles)
-                        .or(
-                            campsite_permission::userid
-                                .eq(&auth.actor.did)
-                        )
-                )
-                // To not have useless permissions
-                .and(
-                    campsite_permission::allowedtentpermissions
-                        .binary_and(
-                            TentPermissionConsts::VIEW_CONTENT
-                        )
-                        .eq(
-                            TentPermissionConsts::VIEW_CONTENT
-                        )
-                        .or(
-                            campsite_permission::deniedtentpermissions
-                                .binary_and(
-                                    TentPermissionConsts::VIEW_CONTENT
-                                )
-                                .eq(
-                                    TentPermissionConsts::VIEW_CONTENT
-                                )
-                        )
-                )
-        )
-        .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_all_db_errors)?;
 
-    // Basically list of IDS that have allowed or denied the permission
-    let (category_permissions, tent_permissions): (Vec<&CampsitePermission>, Vec<&CampsitePermission>) = permissions
+    let permissions = permissions
         .iter()
-        .partition(
-            |x| x.category_id.is_some()
-        );
-    let (allowed_categories, denied_categories): (Vec<&CampsitePermission>, Vec<&CampsitePermission>) = category_permissions
-        .iter()
-        .partition(|x|
-            x.allowed_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT
-        );
-    let (allowed_tents, denied_tents): (Vec<&CampsitePermission>, Vec<&CampsitePermission>) = tent_permissions
-        .iter()
-        .partition(|x|
-            x.allowed_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT
-        );
-
-    let allowed_categories: HashSet<Uuid> = allowed_categories.iter().map(|x| x.category_id.unwrap())
-        .collect();
-    let denied_categories: HashSet<Uuid> = denied_categories.iter().map(|x| x.category_id.unwrap())
-        .collect();
-    let allowed_tents: HashSet<Uuid> = allowed_tents.iter().map(|x| x.tent_id.unwrap())
-        .collect();
-    let denied_tents: HashSet<Uuid> = denied_tents.iter().map(|x| x.tent_id.unwrap())
-        .collect();
-
-    // Since how perms work, tent is viewable if it has permitted role to view it, despite category denying the permission to view
-    // Hence, we will ignore its disabled view perm and give the client all categories
-    let all_category_ids = categories
-        .clone()
-        .into_iter()
-        .filter(|x|
-            allowed_categories.contains(&x.id) ||
-            (has_role_permission && !denied_categories.contains(&x.id))
-        )
-        .map(|x| x.id)
-        .collect::<Vec<Uuid>>();
-    let all_tents = tents
-        .into_iter()
-        .filter(|x|
-            allowed_tents.contains(&x.id) ||
-            (
-                (
-                    has_role_permission ||
-                    x.category_id.map_or(false, |y| all_category_ids.contains(&y))
-                )
-                && !denied_tents.contains(&x.id)
-            )
-        )
-        .collect::<Vec<TentViewBasic>>();
+        .map(campsite_permission_view)
+        .collect::<Vec<CampsitePermissionView>>();
 
     return Ok(Json(GetTentsOutput {
+        permissions,
         categories,
-        tents: all_tents,
+        tents,
     }));
 }
 
-async fn has_perms_to_view_bonfire(campsite_id: &str, bonfire_id: &str, actor: &str, role_ids: &Vec<Uuid>, has_role_perm: bool) -> Result<bool> {
-    let bonfire_perms = fetch_tent_permissions(campsite_id, bonfire_id, None, None, actor, role_ids).await?;
+fn get_allowed_denied_tents<'a, T>(permissions: &T) -> (HashSet<Uuid>, HashSet<Uuid>)
+    where T: Iterator<Item = &'a CampsitePermission>,
+          T: Clone,
+{
+    let category_permissions = permissions
+        .clone()
+        .filter(
+            |x| x.category_id.is_some()
+        );
+    let tent_permissions = permissions.clone().filter(|x| x.tent_id.is_some());
 
-    let (_, (allowed_tent_permissions, denied_tent_permissions)) = aggregate_permissions(&bonfire_perms);
+    let allowed_categories = filter_permissions_and_get_ids(
+        category_permissions.clone().cloned(),
+        false
+    )
+        .collect::<HashSet<Uuid>>();
+    let denied_categories = filter_permissions_and_get_ids(
+        category_permissions.clone().cloned(),
+        true
+    )
+        .filter(|x| !allowed_categories.contains(x))
+        .collect::<HashSet<Uuid>>();
+    let allowed_tents = filter_permissions_and_get_ids(
+        tent_permissions.clone().cloned(),
+        false
+    )
+        .collect::<HashSet<Uuid>>();
+    let denied_tents = filter_permissions_and_get_ids(
+        tent_permissions.clone().cloned(),
+        true
+    )
+        .filter(|x| !allowed_tents.contains(x))
+        .collect::<HashSet<Uuid>>();
+        
+    (denied_categories, denied_tents)
+}
+fn filter_permissions_and_get_ids<T>(permissions: T, get_denied: bool) -> impl Iterator<Item = Uuid>
+    where T: Iterator<Item = CampsitePermission>,
+          T: Clone,
+{
+    permissions
+        .filter(move |x|
+            (if get_denied { x.denied_tent_permissions } else { x.allowed_tent_permissions }) & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT
+        )
+        .map(|x| x.category_id.or(x.tent_id).unwrap())
+}
+
+async fn has_perms_to_view_bonfire<'a, T>(actor: &str, role_ids: &Vec<Uuid>, has_role_perm: bool, all_perms: &T) -> Result<bool>
+    where T: Iterator<Item = &'a CampsitePermission>,
+          T: Clone,
+{
+    let bonfire_perms = all_perms
+        .clone()
+        .filter(|x|
+            x.category_id.or(x.tent_id).is_none() &&
+            x.role_id.map_or_else(|| x.user_id.clone().unwrap() == actor, |y| role_ids.contains(&y))
+        );
+    let (_, (allowed_tent_permissions, denied_tent_permissions)) = aggregate_permissions_from_iter(bonfire_perms);
 
     // Don't need to check role permissions, because they were overridden
     if allowed_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
@@ -205,7 +201,7 @@ async fn has_perms_to_view_bonfire(campsite_id: &str, bonfire_id: &str, actor: &
     Ok(has_role_perm)
 }
 
-async fn get_tents_unchecked(campsite_id: &str, bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
+async fn get_tents_unchecked(actor: &str, campsite_id: &str, bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
     let mut conn = establish_connection().unwrap();
 
     let categories = crate::schema::appview::tent_category::table
@@ -236,6 +232,24 @@ async fn get_tents_unchecked(campsite_id: &str, bonfire_id: &str) -> Result<Json
         .iter()
         .map(tent_view_basic)
         .collect::<Vec<TentViewBasic>>();
+    let permissions = campsite_permission::table
+        .filter(
+            campsite_permission::bonfireid
+                .eq(bonfire_id)
+                .and(
+                    campsite_permission::roleid
+                        .is_not_null()
+                        .or(
+                            campsite_permission::userid
+                                .eq(&actor)
+                        )
+                )
+        )
+        .load::<CampsitePermission>(&mut conn)
+        .map_err(handle_all_db_errors)?
+        .iter()
+        .map(campsite_permission_view)
+        .collect::<Vec<CampsitePermissionView>>();
 
-    return Ok(Json(GetTentsOutput { tents, categories }));
+    return Ok(Json(GetTentsOutput { tents, categories, permissions }));
 }

@@ -98,10 +98,14 @@ pub async fn get_tent_permissions(campsite_id: &str, bonfire_id: &str, category_
     Ok((campsite_perms, campsite_permissions, tent_permissions))
 }
 pub fn aggregate_permissions(perms: &Vec<CampsitePermission>) -> ((i64, i64), (i64, i64)) {
+    aggregate_permissions_from_iter(perms.iter())
+}
+pub fn aggregate_permissions_from_iter<'a, T>(perms: T) -> ((i64, i64), (i64, i64))
+    where T: Iterator<Item = &'a CampsitePermission>
+{
     // (campsite(allowed, disallowed), tent(allowed, disallowed))
     let mut aggregated_perms = ((0i64, 0i64), (0i64, 0i64));
     perms
-        .iter()
         .for_each(|perm| {
             flip_perms(&mut aggregated_perms.0, perm.allowed_campsite_permissions, perm.denied_campsite_permissions);
             flip_perms(&mut aggregated_perms.1, perm.allowed_tent_permissions, perm.denied_tent_permissions);
@@ -168,16 +172,15 @@ pub fn aggregate_member_permissions(member: &CampsiteMember, roles: &Vec<Campsit
         .iter()
         .filter(|role|
             member.roles.contains(&Some(role.id))
-        )
-        .collect::<Vec<&CampsiteRole>>();
+        );
     
     let campsite_perms = member_roles
-        .iter()
+        .clone()
         .fold(0i64, |camp_perm, role|
             camp_perm | role.campsite_permissions
         );
     let tent_perms = member_roles
-        .iter()
+        .clone()
         .fold(0i64, |tent_perm, role|
             tent_perm | role.tent_permissions
         );

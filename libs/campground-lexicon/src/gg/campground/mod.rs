@@ -3,6 +3,7 @@ pub mod activity;
 pub mod socials;
 pub mod campsite;
 pub mod membership;
+pub mod permission;
 pub mod tent;
 pub mod actor;
 pub mod profile;

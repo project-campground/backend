@@ -46,12 +46,12 @@ use atproto_identity::resolve::create_resolver;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use hickory_resolver::TokioResolver;
 use lazy_static::lazy_static;
-use rocket::{fairing::{Fairing, Info, Kind}, futures::FutureExt};
+use rocket::fairing::{Fairing, Info, Kind};
 use rocket::shield::{Shield, NoSniff};
 use rocket::{Request, Response};
 use rocket::http::{Header, Status};
 use anyhow::Result;
-use rxrust::{Context, Observable, ObservableFactory, Observer, Shared, SharedScheduler, Subscription};
+use rxrust::{ObservableFactory, Shared};
 use xrpc::error::XRPCError;
 
 use askama as _;
@@ -152,4 +152,4 @@ mod config;
 mod api;
 pub use appview_schema::schema;
 
-use crate::realtime::data::{ReactiveSubject, ReactiveSubjectData};
+use crate::realtime::data::ReactiveSubject;

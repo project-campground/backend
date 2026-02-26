@@ -265,7 +265,7 @@ pub mod appview {
         pub user_id: Option<String>,
 
         #[diesel(column_name = bonfireid)]
-        pub bonfire_id: Option<String>,
+        pub bonfire_id: String,
         #[diesel(column_name = categoryid)]
         pub category_id: Option<Uuid>,
         #[diesel(column_name = tentid)]

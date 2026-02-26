@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use uuid::Uuid;
 
-use crate::gg::campground::{membership::CampsiteMemberViewBasic, tent::{TentCategoryView, TentViewBasic}};
+use crate::gg::campground::{membership::CampsiteMemberViewBasic, permission::{PermissionsDictionary, PermissionsStateDictionary}, tent::{TentCategoryView, TentViewBasic}};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -60,8 +60,7 @@ pub struct CampsiteRoleViewBasic {
     pub mentionable: bool,
     pub flags: i32,
 
-    pub campsite_permissions: i64,
-    pub tent_permissions: i64,
+    pub permissions: PermissionsDictionary,
     
     pub priority: i32,
     
@@ -80,17 +79,14 @@ pub struct CampsitePermissionView {
     pub id: Uuid,
     pub campsite_id: String,
 
-    pub bonfire_id: Option<String>,
+    pub bonfire_id: String,
     pub category_id: Option<Uuid>,
     pub tent_id: Option<Uuid>,
 
     pub user_id: Option<String>,
     pub role_id: Option<Uuid>,
 
-    pub allowed_campsite_permissions: i64,
-    pub denied_campsite_permissions: i64,
-    pub allowed_tent_permissions: i64,
-    pub denied_tent_permissions: i64,
+    pub permissions: PermissionsStateDictionary,
 
     pub created_by: String,
     pub created_at: String,
@@ -142,6 +138,12 @@ pub struct GetCampsitesOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GetCampsiteRolesOutput {
     pub roles: Vec<CampsiteRoleViewBasic>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetCampsitePermissionsOutput {
+    pub permissions: Vec<CampsitePermissionView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

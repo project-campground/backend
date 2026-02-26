@@ -14,10 +14,12 @@ pub struct CampsiteInfo<'a> {
     pub actor: Actor,
     pub campsite: Campsite,
     pub member: CampsiteMember,
+    #[allow(dead_code)]
     pub auth: Authorization<'a>,
 }
 pub struct CampsiteInfoBasic<'a> {
     pub actor: Actor,
+    #[allow(dead_code)]
     pub auth: Authorization<'a>,
 }
 pub struct TentInfo<'a> {
@@ -25,6 +27,7 @@ pub struct TentInfo<'a> {
     pub tent: Tent,
     pub campsite: Campsite,
     pub member: CampsiteMember,
+    #[allow(dead_code)]
     pub auth: Authorization<'a>,
 }
 pub struct CategoryInfo<'a> {
@@ -32,6 +35,7 @@ pub struct CategoryInfo<'a> {
     pub category: TentCategory,
     pub campsite: Campsite,
     pub member: CampsiteMember,
+    #[allow(dead_code)]
     pub auth: Authorization<'a>,
 }
 pub struct BonfireInfo<'a> {
@@ -39,7 +43,13 @@ pub struct BonfireInfo<'a> {
     pub bonfire: Bonfire,
     pub campsite: Campsite,
     pub member: CampsiteMember,
+    #[allow(dead_code)]
     pub auth: Authorization<'a>,
+}
+pub enum OneOfInfo<'a> {
+    Tent(TentInfo<'a>),
+    Category(CategoryInfo<'a>),
+    Bonfire(BonfireInfo<'a>),
 }
 
 #[rocket::async_trait]
@@ -47,7 +57,12 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfo<'a> where 'r: 'a {
     type Error = CampsiteError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let auth = req.guard::<Authorization>().await.unwrap();
+        let auth = try_outcome!(
+            req
+                .guard::<Authorization>()
+                .await
+                .map_error(|e| (e.0, CampsiteError::AuthRequired))
+        );
 
         let actor = get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
             .await;
@@ -106,7 +121,12 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfoBasic<'a> where 'r: 'a {
     type Error = CampsiteError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let auth = req.guard::<Authorization>().await.unwrap();
+        let auth = try_outcome!(
+            req
+                .guard::<Authorization>()
+                .await
+                .map_error(|e| (e.0, CampsiteError::AuthRequired))
+        );
 
         let actor = get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
             .await;
@@ -142,8 +162,13 @@ impl<'r, 'a> FromRequest<'r> for TentInfo<'a> where 'r: 'a {
     type Error = CampsiteError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let auth = req.guard::<Authorization>().await.unwrap();
-        
+        let auth = try_outcome!(
+            req
+                .guard::<Authorization>()
+                .await
+                .map_error(|e| (e.0, CampsiteError::AuthRequired))
+        );
+
         let actor = try_outcome!(
             get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
                 .await
@@ -191,7 +216,7 @@ impl<'r, 'a> FromRequest<'r> for CategoryInfo<'a> where 'r: 'a {
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let auth = req.guard::<Authorization>().await.unwrap();
-        
+
         let actor = try_outcome!(
             get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
                 .await
@@ -283,6 +308,30 @@ impl<'r, 'a> FromRequest<'r> for BonfireInfo<'a> where 'r: 'a {
         );
 
         rocket::outcome::Outcome::Success(BonfireInfo { campsite, member, actor, bonfire, auth })
+    }
+}
+#[rocket::async_trait]
+impl<'r, 'a> FromRequest<'r> for OneOfInfo<'a> where 'r: 'a {
+    type Error = CampsiteError;
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let queries = req.query_fields().map(|x| x.name.as_name().as_str()).collect::<Vec<&str>>();
+
+        if queries.contains(&"bonfire_id") {
+            BonfireInfo::from_request(req)
+                .await
+                .map(|x| OneOfInfo::Bonfire(x))
+        } else if queries.contains(&"category_id") {
+            CategoryInfo::from_request(req)
+                .await
+                .map(|x| OneOfInfo::Category(x))
+        } else if queries.contains(&"tent_id") {
+            TentInfo::from_request(req)
+                .await
+                .map(|x| OneOfInfo::Tent(x))
+        } else {
+            rocket::outcome::Outcome::Error((Status::NotFound, CampsiteError::InvalidId))
+        }
     }
 }
 

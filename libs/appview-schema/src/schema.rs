@@ -86,7 +86,7 @@ pub mod appview {
             campsiteid -> Varchar,
             roleid -> Nullable<Uuid>,
             userid -> Nullable<Varchar>,
-            bonfireid -> Nullable<Varchar>,
+            bonfireid -> Varchar,
             categoryid -> Nullable<Uuid>,
             tentid -> Nullable<Uuid>,
             allowedcampsitepermissions -> Int8,
@@ -215,6 +215,7 @@ pub mod appview {
     diesel::joinable!(campsite_permission -> tent (tentid));
     diesel::joinable!(campsite_permission -> tent_category (categoryid));
     diesel::joinable!(campsite_role -> campsite (campsiteid));
+    diesel::joinable!(tent -> bonfire (bonfireid));
     diesel::joinable!(tent -> campsite (campsiteid));
     diesel::joinable!(tent_category -> campsite (campsiteid));
     diesel::joinable!(tent_message -> tent (tentid));
