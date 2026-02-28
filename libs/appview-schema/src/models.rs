@@ -6,6 +6,7 @@
 
 pub mod appview {
     use chrono::NaiveDateTime;
+    use serde_json::Value;
     use uuid::Uuid;
 
     #[derive(
@@ -372,9 +373,9 @@ pub mod appview {
 
         pub name: String,
         #[diesel(column_name = type_)]
-        pub r#type: i32,
+        pub r#type: i16,
         #[diesel(column_name = viewtype)]
-        pub view_type: i32,
+        pub view_type: i16,
         pub description: String,
         
         pub priority: i32,
@@ -413,5 +414,9 @@ pub mod appview {
         pub created_at: NaiveDateTime,
         #[diesel(column_name = updatedat)]
         pub updated_at: Option<NaiveDateTime>,
+        
+        pub components: Vec<Option<Value>>,
+        #[diesel(column_name = type_)]
+        pub r#type: i16,
     }
 }

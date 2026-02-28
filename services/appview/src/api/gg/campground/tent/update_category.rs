@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view}, xrpc::{
     campsite::CategoryInfo, error::{Result, XRPCError}
 }};
 
@@ -24,6 +24,10 @@ pub async fn update_category(auth: CategoryInfo<'_>, category_id: &str, body: Js
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
     } else if inner_body.description.clone().map_or(false, |x| x.len() > 200) {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
+    }
+
+    if !has_tent_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, CampsitePermissionConsts::MANAGE_TENTS, TentPermissionConsts::VIEW_CONTENT).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
     let mut conn = establish_connection().unwrap();

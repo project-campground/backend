@@ -14,7 +14,6 @@ pub fn routes() -> Vec<rocket::Route> {
         get_members::get_members_any,
         get_members_detailed::get_members_detailed,
         remove_member::remove_member,
-        remove_member::remove_self,
 
         get_member_bans::get_member_bans,
         get_member_ban::get_member_ban,

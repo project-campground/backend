@@ -167,8 +167,8 @@ pub mod appview {
             categoryid -> Nullable<Uuid>,
             name -> Varchar,
             #[sql_name = "type"]
-            type_ -> Int4,
-            viewtype -> Int4,
+            type_ -> Int2,
+            viewtype -> Int2,
             description -> Varchar,
             priority -> Int4,
             createdby -> Varchar,
@@ -203,6 +203,9 @@ pub mod appview {
             createdby -> Varchar,
             createdat -> Timestamp,
             updatedat -> Nullable<Timestamp>,
+            components -> Array<Nullable<Jsonb>>,
+            #[sql_name = "type"]
+            type_ -> Int2,
         }
     }
 

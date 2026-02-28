@@ -70,11 +70,12 @@ pub async fn create_message<'a>(auth: TentInfo<'_>, event_subject: &State<Reacti
     if replies_query.len() < uuids.clone().len() {
         return Err(XRPCError::BadRequest("Some of the messages being replied to no longer exist or never existed in this tent.".to_string()));
     }
-
     let messages = &diesel::insert_into(tent_message::table)
         .values(TentMessage {
             id: Uuid::new_v4(),
             campsite_id: auth.tent.campsite_id.clone(),
+            r#type: 0,
+            components: vec![],
             tent_id: auth.tent.id.clone(),
             content: body.content.clone(),
             replying_to: uuids.iter().map(|x| Some(x.clone())).collect::<Vec<Option<Uuid>>>(),

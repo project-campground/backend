@@ -11,9 +11,10 @@ use crate::{database::{establish_connection, profiles::get_profile}, helpers::{a
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
-#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>&<actor>", rank = 1)]
+#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>&<actor>")]
 pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, actor: &str) -> Result<()> {    
-    if actor == auth.actor.did {
+    println!("A");
+    if actor == "" || actor == auth.actor.did {
         return remove_self(auth, event_subject, client, did_document_storage, campsite_id).await;
     } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
@@ -61,8 +62,10 @@ pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
 
     remove_campsite_member(event_subject, campsite_id, &target.0, &target.1, &target.2, actor)
 }
-#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>", rank = 2)]
+
+#[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>")]
 pub async fn remove_self(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str) -> Result<()> {    
+    println!("B");
     let (actor, profile) = get_profile(client, did_document_storage, &auth.actor.did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;

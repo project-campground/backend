@@ -1,12 +1,19 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{campsite::CampsitePermissionView, membership::CampsiteMemberViewAuthor};
+use crate::gg::campground::{campsite::CampsitePermissionView, content::ContentComponent, membership::CampsiteMemberViewAuthor};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum TentType {
     Text = 0,
+}
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+#[non_exhaustive]
+pub enum MessageType {
+    Default = 0,
+    System = 1,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -20,7 +27,7 @@ pub struct TentViewBasic {
     pub name: String,
     pub description: String,
     pub r#type: TentType,
-    pub view_type: i32,
+    pub view_type: i16,
 
     pub priority: i32,
     
@@ -41,7 +48,7 @@ pub struct TentViewDetailed {
     pub name: String,
     pub description: String,
     pub r#type: TentType,
-    pub view_type: i32,
+    pub view_type: i16,
 
     pub priority: i32,
 
@@ -78,13 +85,15 @@ pub struct TentMessageViewBasic {
     pub campsite_id: String,
     pub bonfire_id: String,
     pub tent_id: Uuid,
-    
+
+    pub r#type: Option<MessageType>,
     pub content: String,
+    pub components: Option<Vec<ContentComponent>>,
     pub replying_to: Vec<Uuid>,
     
     // pub created_by: String,
     pub created_by: CampsiteMemberViewAuthor,
-
+    
     pub created_at: String,
     pub updated_at: Option<String>,
 }
@@ -97,9 +106,11 @@ pub struct TentMessageViewWithReplies {
     pub bonfire_id: String,
     pub tent_id: Uuid,
     
+    pub r#type: Option<MessageType>,
     pub content: String,
     pub replying_to: Vec<TentMessageViewBasic>,
     pub replying_to_count: usize,
+    pub components: Option<Vec<ContentComponent>>,
     
     // pub created_by: String,
     pub created_by: CampsiteMemberViewAuthor,

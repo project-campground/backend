@@ -1,12 +1,12 @@
-use appview_schema::models::appview::{Bonfire, Tent};
-use campground_lexicon::gg::campground::tent::TentViewBasic;
+use appview_schema::models::appview::{Bonfire, Tent, TentMessage};
+use campground_lexicon::gg::campground::{content::{ContentComponent, SystemMessage}, tent::TentViewBasic};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::{tent_message_view_basic, tent_view_basic}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -16,8 +16,8 @@ pub struct CreateTentBody {
     name: String,
     description: String,
     category_id: Option<String>,
-    r#type: i32,
-    view_type: i32,
+    r#type: i16,
+    view_type: i16,
     priority: i32,
 }
 
@@ -89,16 +89,48 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
                 priority: inner_body.priority,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
-                updated_by: auth.actor.did,
+                updated_by: auth.actor.did.clone(),
                 updated_at: current_date,
             }
         )
         .load::<Tent>(&mut conn)
         .map_err(handle_select_first_error)?;
-
+    
     let first_tent = tents.first().unwrap();
+    
+    let first_message = &diesel::insert_into(crate::schema::appview::tent_message::table)
+        .values(
+            TentMessage {
+                id: Uuid::new_v4(),
+                campsite_id: campsite_id.to_string(),
+                tent_id: first_tent.id.clone(),
+                content: "".to_string(),
+                r#type: 1,
+                replying_to: vec![],
+                components: vec![
+                    serde_json::value::to_value(
+                        ContentComponent::System(
+                            SystemMessage::TentCreated {
+                                tent_name: inner_body.name.clone(),
+                            }
+                        )
+                    ).ok()
+                ],
+                created_by: auth.actor.did.clone(),
+                created_at: current_date,
+                updated_at: None,
+            }
+        )
+        .load::<TentMessage>(&mut conn)
+        .map_err(handle_select_first_error)?;
+    let first_message = first_message.first().unwrap();
+
+    let (_, profile) = get_profile_from_actor(&auth.auth.client, &auth.auth.did_document_storage, auth.actor.clone())
+        .await
+        .map_err(|_| XRPCError::InternalServerError)?;
 
     event_next(event_subject, &auth.campsite.id, "TentCreated", tent_view_basic(&first_tent));
+    event_next(event_subject, &auth.campsite.id, "MessageCreated", tent_message_view_basic(&first_tent, &first_message, &Some(auth.actor), &Some(profile), &Some(auth.member)));
 
     let tent_view = tent_view_basic(&first_tent);
 
