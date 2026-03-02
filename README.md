@@ -51,7 +51,7 @@ Where VER_NUM is the number of the folder after the PostgreSQL folder
 
 ### Accounts
 
-Make sure the Docker and PDS are running as per [PDS section](#pds), as well as PostgreSQL as per [Appview section](#appview).
+Make sure the Docker and PDS are running as per [PDS section](#pds), as well as PostgreSQL as per [Appview section](#appview-setup).
 
 As registration through front-end is broken, you will likely need to create an actor and profile records in PDS, as well as in Back-end DB. To do so, run the following command and follow the prompts (select `1. Setup actor/account` by typing `1` when menu is prompted):
 
