@@ -42,6 +42,13 @@ Where VER_NUM is the number of the folder after the PostgreSQL folder
     - [Create user Windows](https://stackoverflow.com/questions/5189026/how-to-add-a-user-to-postgresql-in-windows)
     - [Create database](https://www.geeksforgeeks.org/postgresql/postgresql-create-database/) (MAKE SURE THE USER IS THE OWNER OF THE DATABASE OR HAS APPROPRIATE PERMISSIONS VIA `GRANT ALL PRIVILEGES`)
 
+5) Setup `Rocket.toml` by copying `services/appview/Rocket.example.toml` as `services/appview/Rocket.example.toml`. You can get verification_key manually through OpenSSL or by doing:
+    ```bash
+    cd ./cmd/backend_manager
+    cargo run
+    ```
+    typing arbitrary values for DB URL and port like example and 10, then selecting menu item 2, then copying private key
+
 ### Accounts
 
 Make sure the Docker and PDS are running as per [PDS section](#pds), as well as PostgreSQL as per [Appview section](#appview).
@@ -58,7 +65,8 @@ cargo run
 When Docker and PostgreSQL daemons/drivers are running, you can turn on appview by doing the following:
 
 ```bash
-
+cd ./services/appview
+cargo run
 ```
 
 ### And it should be done!

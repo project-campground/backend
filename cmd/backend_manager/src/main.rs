@@ -44,7 +44,7 @@ use std::io;
 use anyhow::Result;
 use lazy_static::lazy_static;
 
-use crate::{actions::setup_actor::setup_actor, util::prompt::read_stdin};
+use crate::{actions::{create_keys::create_keys, setup_actor::setup_actor}, util::prompt::read_stdin};
 
 lazy_static! {
     static ref HTTP_CLIENT: reqwest::Client = reqwest::Client::new();
@@ -55,6 +55,7 @@ async fn menu(database_url: &str, pds_port: u16) -> Result<(), String> {
         =======================\n\
         0. Exit\n\
         1. Setup actor/account\n\
+        2. Create secp256k1 private and public keys\
     ");
 
     let mut stdin = io::stdin();
@@ -67,6 +68,9 @@ async fn menu(database_url: &str, pds_port: u16) -> Result<(), String> {
         },
         "1" => {
             setup_actor(&HTTP_CLIENT, database_url, pds_port).await?;
+        },
+        "2" => {
+            create_keys();
         },
         _ => {
             println!("Unknown option {:?}", input);
