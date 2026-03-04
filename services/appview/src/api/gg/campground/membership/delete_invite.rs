@@ -1,15 +1,15 @@
 use appview_schema::{models::appview::{Actor, CampsiteInvite, Profile}, schema::appview::{campsite_invite, profile}};
-use campground_lexicon::gg::campground::membership::CampsiteInviteViewBasic;
+use campground_lexicon::gg::campground::membership::CampsiteInviteViewCampsite;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_campsite, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.membership.deleteInvite?<campsite_id>&<invite_id>")]
-pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>,  campsite_id: &str, invite_id: &str) -> Result<Json<CampsiteInviteViewBasic>> {    
+pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>,  campsite_id: &str, invite_id: &str) -> Result<Json<CampsiteInviteViewCampsite>> {    
     if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_INVITES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
@@ -54,7 +54,7 @@ pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
 
-    event_next(event_subject, &auth.campsite.id, "InviteDeleted", campsite_invite_view_basic(&invite.0, &invite.1, &invite.2));
+    event_next(event_subject, &auth.campsite.id, "InviteDeleted", campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2));
 
-    return Ok(Json(campsite_invite_view_basic(&invite.0, &invite.1, &invite.2)));
+    return Ok(Json(campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2)));
 }

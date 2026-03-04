@@ -1,14 +1,14 @@
 use appview_schema::{models::appview::CampsiteRole, schema::appview::{campsite_permission, campsite_role}};
-use campground_lexicon::gg::campground::campsite::CampsitePermissionView;
+use campground_lexicon::gg::campground::campsite::CampsitePermissionViewDetailed;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{api::gg::campground::permission::update_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, permissions::{CampsitePermissionConsts, has_full_tent_perms_from_roles}, roles::ensure_no_higher_role}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::permission::update_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, permissions::{CampsitePermissionConsts, has_full_tent_perms_from_roles}, roles::ensure_no_higher_role}, realtime::data::ReactiveSubject, xrpc::{
     campsite::{BonfireInfo, CategoryInfo, TentInfo}, error::{Result, XRPCError}
 }};
 
-pub async fn update_tent_role_permission(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: Uuid, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_tent_role_permission(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: Uuid, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -52,10 +52,10 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, event_subject: &Sta
             ),
     )?;
     
-    Ok(Json(campsite_permission_view(permission)))
+    Ok(Json(campsite_permission_view_detailed(permission)))
 }
 
-pub async fn update_category_role_permission(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: Uuid, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_category_role_permission(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: Uuid, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -99,10 +99,10 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, event_subje
             ),
     )?;
     
-    Ok(Json(campsite_permission_view(permission)))
+    Ok(Json(campsite_permission_view_detailed(permission)))
 }
 
-pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: Uuid, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>> {    
+pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, role_id: Uuid, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>> {    
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
@@ -146,5 +146,5 @@ pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, event_subject
             ),
     )?;
     
-    Ok(Json(campsite_permission_view(permission)))
+    Ok(Json(campsite_permission_view_detailed(permission)))
 }

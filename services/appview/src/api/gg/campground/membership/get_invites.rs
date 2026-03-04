@@ -1,9 +1,9 @@
 use appview_schema::{models::appview::{Actor, CampsiteInvite, Profile}, schema::appview::{campsite_invite, profile}};
-use campground_lexicon::gg::campground::membership::{CampsiteInviteViewBasic, GetCampsiteInvitesOutput};
+use campground_lexicon::gg::campground::membership::{CampsiteInviteViewCampsite, GetCampsiteInvitesOutput};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_campsite, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -47,8 +47,8 @@ pub async fn get_invites(auth: CampsiteInfo<'_>, campsite_id: &str, limit: Optio
         .load::<(CampsiteInvite, Profile, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
-        .map(|x| campsite_invite_view_basic(&x.0, &x.1, &x.2))
-        .collect::<Vec<CampsiteInviteViewBasic>>();
+        .map(|x| campsite_invite_view_campsite(&x.0, &x.1, &x.2))
+        .collect::<Vec<CampsiteInviteViewCampsite>>();
 
     return Ok(Json(GetCampsiteInvitesOutput { invites }));
 }

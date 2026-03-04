@@ -1,5 +1,5 @@
 use appview_schema::models::appview::{Actor, CampsiteMember, Profile, Tent, TentCategory, TentMessage};
-use campground_lexicon::gg::campground::{campsite::CampsitePermissionView, content::ContentComponent, membership::CampsiteMemberViewAuthor, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
+use campground_lexicon::gg::campground::{campsite::CampsitePermissionViewBasic, content::ContentComponent, membership::CampsiteMemberViewAuthor, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
 use serde_json::from_value;
 use uuid::Uuid;
 
@@ -40,7 +40,7 @@ pub fn tent_view_basic(tent: &Tent) -> TentViewBasic {
     };
 }
 
-pub fn tent_view_detailed(tent: &Tent, permissions: Vec<CampsitePermissionView>) -> TentViewDetailed {
+pub fn tent_view_detailed(tent: &Tent, permissions: Vec<CampsitePermissionViewBasic>) -> TentViewDetailed {
     return TentViewDetailed {
         id: tent.id.clone(),
         campsite_id: tent.campsite_id.clone(),

@@ -1,12 +1,12 @@
 use appview_schema::{models::appview::CampsitePermission, schema::appview::campsite_permission};
-use campground_lexicon::gg::campground::{campsite::CampsitePermissionView, permission::PermissionsStateDictionary};
+use campground_lexicon::gg::campground::{campsite::CampsitePermissionViewDetailed, permission::PermissionsStateDictionary};
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl, expression::NonAggregate, sql_types::BoolOrNullableBool};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{api::gg::campground::permission::{update_role_permission::{update_bonfire_role_permission, update_category_role_permission, update_tent_role_permission}, update_user_permission::{update_bonfire_user_permission, update_category_user_permission, update_tent_user_permission}}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{campsite::OneOfInfo, error::XRPCError}};
+use crate::{api::gg::campground::permission::{update_role_permission::{update_bonfire_role_permission, update_category_role_permission, update_tent_role_permission}, update_user_permission::{update_bonfire_user_permission, update_category_user_permission, update_tent_user_permission}}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{campsite::OneOfInfo, error::XRPCError}};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
@@ -31,7 +31,7 @@ pub struct UpdatePermissionsQuery {
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.permission.updatePermission?<query..>", data = "<body>", rank = 1)]
-pub async fn update_permission(auth: OneOfInfo<'_>, query: UpdatePermissionsQuery, event_subject: &State<ReactiveSubject>, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionView>, XRPCError> {
+pub async fn update_permission(auth: OneOfInfo<'_>, query: UpdatePermissionsQuery, event_subject: &State<ReactiveSubject>, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>, XRPCError> {
     match (auth, query.role_id, query.actor) {
         // Roles
         (OneOfInfo::Tent(tent_auth), Some(role_id), None) =>
@@ -90,7 +90,7 @@ pub fn create_or_modify_permission<Predicate: diesel::Expression + diesel::expre
         update_or_delete_role_permission(permissions, existing.first().unwrap().clone(), predicate)
     })?;
 
-    event_next(event_subject, campsite_id, "PermissionUpdated", campsite_permission_view(&permission));
+    event_next(event_subject, campsite_id, "PermissionUpdated", campsite_permission_view_detailed(&permission));
     Ok(permission)
 }
 

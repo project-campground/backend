@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[get("/xrpc/gg.campground.membership.getMembers?<campsite_id>&<limit>&<offset>", rank = 1)]
-pub async fn get_members_any(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput>> {
+pub async fn get_members_any(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput<CampsiteMemberViewBasic>>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
 
@@ -48,11 +48,11 @@ pub async fn get_members_any(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, li
         .map(|a| campsite_member_view_basic(&a.0, &a.1, &a.2))
         .collect::<Vec<CampsiteMemberViewBasic>>();
 
-    return Ok(Json(GetMembersOutput { members }));
+    return Ok(Json(GetMembersOutput::<CampsiteMemberViewBasic> { members }));
 }
 
 #[get("/xrpc/gg.campground.campsite.getMembers?<campsite_id>&<actors>", rank = 2)]
-pub async fn get_members_given(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, actors: Vec<&str>) -> Result<Json<GetMembersOutput>> {
+pub async fn get_members_given(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, actors: Vec<&str>) -> Result<Json<GetMembersOutput<CampsiteMemberViewBasic>>> {
     let actors = deduplicate_list(lower_list(actors));
     if actors.len() > 25 || actors.len() == 0 {
         return Err(XRPCError::BadRequest("actors query must have at least 1 actor and less than or equal to 25".to_string()));
@@ -94,5 +94,5 @@ pub async fn get_members_given(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, 
         .map(|a| campsite_member_view_basic(&a.0, &a.1, &a.2))
         .collect::<Vec<CampsiteMemberViewBasic>>();
 
-    return Ok(Json(GetMembersOutput { members }));
+    return Ok(Json(GetMembersOutput::<CampsiteMemberViewBasic> { members }));
 }

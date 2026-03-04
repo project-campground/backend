@@ -1,7 +1,7 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::gg::campground::{actor::{ProfileViewBasic, ProfileViewDetailed}, campsite::{CampsiteRoleViewBasic, CampsiteViewBasic}};
-
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,9 +33,8 @@ pub struct CampsiteMemberViewAuthor {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsiteInviteViewBasic {
+pub struct CampsiteInviteViewCampsite {
     pub id: Uuid,
-    pub campsite_id: String,
     pub allowed_amount: Option<i32>,
     pub expires_at: Option<String>,
     pub created_at: String,
@@ -45,7 +44,7 @@ pub struct CampsiteInviteViewBasic {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsiteInviteViewDetailed {
+pub struct CampsiteInviteViewGlobal {
     pub id: Uuid,
     pub campsite: CampsiteViewBasic,
     pub allowed_amount: Option<i32>,
@@ -77,13 +76,7 @@ pub struct GetCampsiteMemberBansOutput {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetCampsiteInvitesOutput {
-    pub invites: Vec<CampsiteInviteViewBasic>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetCampsiteBansOutput {
-    pub bans: Vec<CampsiteBanView>,
+    pub invites: Vec<CampsiteInviteViewCampsite>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -101,13 +94,9 @@ pub struct CampsiteLeftOutput {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GetMembersOutput {
-    pub members: Vec<CampsiteMemberViewBasic>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetMembersDetailedOutput {
-    pub members: Vec<CampsiteMemberViewDetailed>,
+pub struct GetMembersOutput<T>
+    where T: Serialize
+{
+    pub members: Vec<T>,
 }
 

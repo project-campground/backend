@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{campsite::CampsitePermissionView, content::ContentComponent, membership::CampsiteMemberViewAuthor};
+use crate::gg::campground::{campsite::CampsitePermissionViewBasic, content::ContentComponent, membership::CampsiteMemberViewAuthor};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -52,7 +52,7 @@ pub struct TentViewDetailed {
 
     pub priority: i32,
 
-    pub permissions: Vec<CampsitePermissionView>,
+    pub permissions: Vec<CampsitePermissionViewBasic>,
 
     pub created_by: String,
     pub created_at: String,
@@ -121,7 +121,7 @@ pub struct TentMessageViewWithReplies {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetTentsOutput {
-    pub permissions: Vec<CampsitePermissionView>,
+    pub permissions: Vec<CampsitePermissionViewBasic>,
     pub tents: Vec<TentViewBasic>,
     pub categories: Vec<TentCategoryView>,
 }

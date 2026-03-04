@@ -75,7 +75,20 @@ pub struct CampsiteRoleViewBasic {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsitePermissionView {
+pub struct CampsitePermissionViewBasic {
+    pub bonfire_id: String,
+    pub category_id: Option<Uuid>,
+    pub tent_id: Option<Uuid>,
+
+    pub user_id: Option<String>,
+    pub role_id: Option<Uuid>,
+
+    pub permissions: PermissionsStateDictionary,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CampsitePermissionViewDetailed {
     pub id: Uuid,
     pub campsite_id: String,
 
@@ -143,7 +156,7 @@ pub struct GetCampsiteRolesOutput {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetCampsitePermissionsOutput {
-    pub permissions: Vec<CampsitePermissionView>,
+    pub permissions: Vec<CampsitePermissionViewDetailed>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

@@ -1,13 +1,13 @@
 use appview_schema::{models::appview::{Actor, Campsite, CampsiteInvite, Profile}, schema::appview::{self, campsite_invite, profile}};
-use campground_lexicon::gg::campground::membership::CampsiteInviteViewDetailed;
+use campground_lexicon::gg::campground::membership::CampsiteInviteViewGlobal;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_detailed}, xrpc::error::{Result, XRPCError}};
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_global}, xrpc::error::{Result, XRPCError}};
 
 #[get("/xrpc/gg.campground.membership.getInvite?<invite_id>")]
-pub async fn get_invite(invite_id: &str) -> Result<Json<CampsiteInviteViewDetailed>> {
+pub async fn get_invite(invite_id: &str) -> Result<Json<CampsiteInviteViewGlobal>> {
     let mut conn = establish_connection().unwrap();
 
     let uuid = Uuid::try_parse(invite_id)
@@ -39,5 +39,5 @@ pub async fn get_invite(invite_id: &str) -> Result<Json<CampsiteInviteViewDetail
         .first::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(campsite_invite_view_detailed(&invite.0, &campsite, &invite.1, &invite.2)));
+    return Ok(Json(campsite_invite_view_global(&invite.0, &campsite, &invite.1, &invite.2)));
 }

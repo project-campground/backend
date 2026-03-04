@@ -1,5 +1,5 @@
 use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteBan, CampsiteInvite, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
-use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsitePermissionView, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, membership::{CampsiteBanView, CampsiteInviteViewBasic, CampsiteInviteViewDetailed, CampsiteMemberViewAuthor, CampsiteMemberViewBasic, CampsiteMemberViewDetailed}, permission::{PermissionsDictionary, PermissionsStateDictionary}, tent::{TentCategoryView, TentViewBasic}};
+use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsitePermissionViewBasic, CampsitePermissionViewDetailed, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, membership::{CampsiteBanView, CampsiteInviteViewCampsite, CampsiteInviteViewGlobal, CampsiteMemberViewAuthor, CampsiteMemberViewBasic, CampsiteMemberViewDetailed}, permission::{PermissionsDictionary, PermissionsStateDictionary}, tent::{TentCategoryView, TentViewBasic}};
 use uuid::Uuid;
 
 use crate::helpers::{util::serialize_datetime, views::{profile_view_basic_deleted_profile, profile_view_basic_from_db, profile_view_detailed_from_db}};
@@ -90,10 +90,9 @@ pub fn campsite_member_view_author(campsite_member: &Option<CampsiteMember>, pro
     };
 }
 
-pub fn campsite_invite_view_basic(campsite_invite: &CampsiteInvite, profile: &Profile, actor: &Actor) -> CampsiteInviteViewBasic {
-    return CampsiteInviteViewBasic {
+pub fn campsite_invite_view_campsite(campsite_invite: &CampsiteInvite, profile: &Profile, actor: &Actor) -> CampsiteInviteViewCampsite {
+    return CampsiteInviteViewCampsite {
         id: campsite_invite.id.clone(),
-        campsite_id: campsite_invite.campsite_id.clone(),
         expires_at: campsite_invite.expires_at.map(|x| serialize_datetime(x)),
         allowed_amount: campsite_invite.allowed_amount.clone(),
         used: campsite_invite.used,
@@ -102,8 +101,8 @@ pub fn campsite_invite_view_basic(campsite_invite: &CampsiteInvite, profile: &Pr
     };
 }
 
-pub fn campsite_invite_view_detailed(campsite_invite: &CampsiteInvite, campsite: &Campsite, profile: &Profile, actor: &Actor) -> CampsiteInviteViewDetailed {
-    return CampsiteInviteViewDetailed {
+pub fn campsite_invite_view_global(campsite_invite: &CampsiteInvite, campsite: &Campsite, profile: &Profile, actor: &Actor) -> CampsiteInviteViewGlobal {
+    return CampsiteInviteViewGlobal {
         id: campsite_invite.id.clone(),
         campsite: campsite_view_basic(campsite),
         expires_at: campsite_invite.expires_at.map(|x| serialize_datetime(x)),
@@ -152,8 +151,30 @@ pub fn campsite_role_view_basic(role: &CampsiteRole) -> CampsiteRoleViewBasic {
     };
 }
 
-pub fn campsite_permission_view(permission: &CampsitePermission) -> CampsitePermissionView {
-    return CampsitePermissionView {
+pub fn campsite_permission_view_basic(permission: &CampsitePermission) -> CampsitePermissionViewBasic {
+    return CampsitePermissionViewBasic {
+        bonfire_id: permission.bonfire_id.clone(),
+        category_id: permission.category_id.clone(),
+        tent_id: permission.tent_id.clone(),
+
+        user_id: permission.user_id.clone(),
+        role_id: permission.role_id.clone(),
+
+        permissions: PermissionsStateDictionary {
+            allowed: PermissionsDictionary {
+                campsite: permission.allowed_campsite_permissions,
+                tent: permission.allowed_tent_permissions,
+            },
+            denied: PermissionsDictionary {
+                campsite: permission.denied_campsite_permissions,
+                tent: permission.denied_tent_permissions,
+            },
+        },
+    };
+}
+
+pub fn campsite_permission_view_detailed(permission: &CampsitePermission) -> CampsitePermissionViewDetailed {
+    return CampsitePermissionViewDetailed {
         id: permission.id.clone(),
         campsite_id: permission.campsite_id.clone(),
 

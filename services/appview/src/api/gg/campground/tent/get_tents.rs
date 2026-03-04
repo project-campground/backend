@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use appview_schema::{models::appview::{CampsitePermission, CampsiteRole, Tent, TentCategory}, schema::appview::{campsite_permission, campsite_role, tent, tent_category}};
-use campground_lexicon::gg::campground::{campsite::CampsitePermissionView, tent::{GetTentsOutput, TentCategoryView, TentViewBasic}};
+use campground_lexicon::gg::campground::{campsite::CampsitePermissionViewBasic, tent::{GetTentsOutput, TentCategoryView, TentViewBasic}};
 use diesel::{dsl::not, BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view, permissions::{TentPermissionConsts, aggregate_permissions_from_iter}, tents::{tent_category_view, tent_view_basic}}, xrpc::{
+    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view_basic, permissions::{TentPermissionConsts, aggregate_permissions_from_iter}, tents::{tent_category_view, tent_view_basic}}, xrpc::{
         campsite::BonfireInfo, error::{Result, XRPCError}
     }
 };
@@ -122,8 +122,8 @@ pub async fn get_tents(auth: BonfireInfo<'_>,  bonfire_id: &str) -> Result<Json<
 
     let permissions = permissions
         .iter()
-        .map(campsite_permission_view)
-        .collect::<Vec<CampsitePermissionView>>();
+        .map(campsite_permission_view_basic)
+        .collect::<Vec<CampsitePermissionViewBasic>>();
 
     return Ok(Json(GetTentsOutput {
         permissions,
@@ -248,8 +248,8 @@ async fn get_tents_unchecked(actor: &str, campsite_id: &str, bonfire_id: &str) -
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(campsite_permission_view)
-        .collect::<Vec<CampsitePermissionView>>();
+        .map(campsite_permission_view_basic)
+        .collect::<Vec<CampsitePermissionViewBasic>>();
 
     return Ok(Json(GetTentsOutput { tents, categories, permissions }));
 }

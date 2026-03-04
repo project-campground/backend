@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::{Actor, CampsiteMember, Profile}, schema::appview::{campsite_member, profile}};
-use campground_lexicon::gg::campground::membership::{CampsiteMemberViewDetailed, GetMembersDetailedOutput};
+use campground_lexicon::gg::campground::membership::{CampsiteMemberViewDetailed, GetMembersOutput};
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[get("/xrpc/gg.campground.membership.getMembersDetailed?<campsite_id>&<limit>&<offset>")]
-pub async fn get_members_detailed(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersDetailedOutput>> {
+pub async fn get_members_detailed(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput<CampsiteMemberViewDetailed>>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
 
@@ -48,5 +48,5 @@ pub async fn get_members_detailed(_auth: CampsiteInfoBasic<'_>, campsite_id: &st
         .map(|a| campsite_member_view_detailed(&a.0, &a.1, &a.2))
         .collect::<Vec<CampsiteMemberViewDetailed>>();
 
-    return Ok(Json(GetMembersDetailedOutput { members }));
+    return Ok(Json(GetMembersOutput::<CampsiteMemberViewDetailed> { members }));
 }

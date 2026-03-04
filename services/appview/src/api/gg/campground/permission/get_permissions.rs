@@ -1,10 +1,10 @@
 use appview_schema::{models::appview::CampsitePermission, schema::appview::campsite_permission};
-use campground_lexicon::gg::campground::campsite::{CampsitePermissionView, GetCampsitePermissionsOutput};
+use campground_lexicon::gg::campground::campsite::{CampsitePermissionViewDetailed, GetCampsitePermissionsOutput};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, sql_types::Bool};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::campsite_permission_view, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::campsite_permission_view_detailed, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
     campsite::{BonfireInfo, CategoryInfo, OneOfInfo, TentInfo}, error::{Result, XRPCError}
 }};
 
@@ -59,8 +59,8 @@ pub async fn get_tent_permissions(auth: TentInfo<'_>, non_self: bool) -> Result<
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(|x| campsite_permission_view(x))
-        .collect::<Vec<CampsitePermissionView>>();
+        .map(|x| campsite_permission_view_detailed(x))
+        .collect::<Vec<CampsitePermissionViewDetailed>>();
 
     Ok(Json(GetCampsitePermissionsOutput { permissions }))
 }
@@ -91,8 +91,8 @@ pub async fn get_category_permissions(auth: CategoryInfo<'_>, non_self: bool) ->
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(|x| campsite_permission_view(x))
-        .collect::<Vec<CampsitePermissionView>>();
+        .map(|x| campsite_permission_view_detailed(x))
+        .collect::<Vec<CampsitePermissionViewDetailed>>();
 
     Ok(Json(GetCampsitePermissionsOutput { permissions }))
 }
@@ -123,8 +123,8 @@ pub async fn get_bonfire_permissions(auth: BonfireInfo<'_>, non_self: bool) -> R
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(|x| campsite_permission_view(x))
-        .collect::<Vec<CampsitePermissionView>>();
+        .map(|x| campsite_permission_view_detailed(x))
+        .collect::<Vec<CampsitePermissionViewDetailed>>();
 
     Ok(Json(GetCampsitePermissionsOutput { permissions }))
 }

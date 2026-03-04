@@ -1,11 +1,11 @@
 use appview_schema::{models::appview::{CampsitePermission, Tent}, schema::appview::{self, campsite_permission}};
-use campground_lexicon::gg::campground::{campsite::CampsitePermissionView, tent::TentViewDetailed};
+use campground_lexicon::gg::campground::{campsite::CampsitePermissionViewBasic, tent::TentViewDetailed};
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view, tents::tent_view_detailed}, xrpc::{
+    database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_basic, tents::tent_view_detailed}, xrpc::{
         auth::Authorization,
         error::{Result, XRPCError}
     }
@@ -65,8 +65,8 @@ pub async fn get_tent(auth: Authorization<'_>, tent_id: &str) -> Result<Json<Ten
     let permissions = tent_with_perms
         .iter()
         .filter_map(|x| x.1.clone())
-        .map(|x| campsite_permission_view(&x))
-        .collect::<Vec<CampsitePermissionView>>();
+        .map(|x| campsite_permission_view_basic(&x))
+        .collect::<Vec<CampsitePermissionViewBasic>>();
 
     return Ok(Json(tent_view_detailed(&tent, permissions)));
 }
