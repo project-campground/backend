@@ -5,7 +5,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, util::params::{OptionValidity, ensure_valid_modified_uri}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, util::params::{OptionValidity, ensure_valid_modified_uri}, xrpc::{
     campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
@@ -82,7 +82,7 @@ pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, event_subject: &State<Rea
 
     let bonfire = bonfire.first().unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "BonfireUpdated", bonfire_view_basic(bonfire));
+    event_next_bonfire(event_subject, &bonfire, false, "BonfireUpdated", bonfire_view_basic(bonfire));
     
     return Ok(Json(bonfire_view_basic(bonfire)));
 }

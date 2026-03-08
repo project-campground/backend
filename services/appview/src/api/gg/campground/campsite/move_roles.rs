@@ -8,7 +8,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -105,7 +105,7 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
         .map(campsite_role_view_basic)
         .collect::<Vec<CampsiteRoleViewBasic>>();
 
-    event_next(event_subject, &auth.campsite.id, "RolesMoved", CampsiteRolesMovedOutput { roles_by_priority: roles_by_priority.clone(), });
+    event_next_campsite(event_subject, &auth.campsite.id, "RolesMoved", CampsiteRolesMovedOutput { roles_by_priority: roles_by_priority.clone(), });
 
     return Ok(Json(GetCampsiteRolesOutput { roles: updated_roles }));
 }

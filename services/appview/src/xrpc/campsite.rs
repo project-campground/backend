@@ -57,14 +57,12 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfo<'a> where 'r: 'a {
     type Error = CampsiteError;
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        println!("1");
         let auth = try_outcome!(
             req
                 .guard::<Authorization>()
                 .await
                 .map_error(|e| (e.0, CampsiteError::AuthRequired))
         );
-        println!("2");
 
         let actor = get_actor(auth.client, auth.did_document_storage, &auth.actor_did)
             .await;
@@ -72,18 +70,15 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfo<'a> where 'r: 'a {
         if actor.is_err() {
             return Outcome::Error((Status::Unauthorized, CampsiteError::NotOnInstance));
         }
-        println!("3");
 
         let actor = actor.unwrap();
         let campsite_id = req.query_value::<String>("campsite_id").map(|x| x.ok()).flatten();
 
-        println!("4");
         // Not in the campsite to view that. It also confirms existence of campsite
         if campsite_id.clone().map_or(false, |x| !actor.campsites.contains(&Some(x))) {
             return Outcome::Error((Status::Forbidden, CampsiteError::CannotView));
         }
 
-        println!("5");
         let campsite_id = campsite_id.clone().unwrap();
 
         let mut conn = establish_connection().unwrap();
@@ -111,16 +106,13 @@ impl<'r, 'a> FromRequest<'r> for CampsiteInfo<'a> where 'r: 'a {
                 NotFound => Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),
                 _ => Outcome::Error((Status::InternalServerError, CampsiteError::InternalServerError)),
             });
-        println!("6");
 
         if query.is_err() {
             return query.err().unwrap();
         }
 
-        println!("7");
         let (member, camp) = query.unwrap();
 
-        println!("8");
         rocket::outcome::Outcome::Success(CampsiteInfo { actor, campsite: camp, member, auth })
     }
 }

@@ -9,7 +9,7 @@ use rsky_common::tid::Ticker;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_all_db_errors, campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}, roles::CampsiteRoleFlag, tents::tent_view_basic, ws::event_next_campsite_added}, realtime::data::ReactiveSubject, util::params::{OptionValidity, ensure_valid_set_uri}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_all_db_errors, campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_basic, campsite_view_detailed}, roles::CampsiteRoleFlag, tents::tent_view_basic, ws::event_next}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, util::params::{OptionValidity, ensure_valid_set_uri}, xrpc::{
     auth::Authorization,
     error::{Result, XRPCError}
 }};
@@ -206,7 +206,12 @@ pub async fn create_campsite(auth: Authorization<'_>, event_subject: &State<Reac
 
     let campsite_view = campsite_view_detailed(campsite, vec![ bonfire_view_basic(home_bonfire) ], vec![ campsite_role_view_basic(default_role) ], campsite_member_view_basic(owner_member, profile, actor));
 
-    event_next_campsite_added(event_subject, &campsite.id, &actor.did.clone(), "CampsiteCreated", campsite_view_detailed(campsite, vec![ bonfire_view_basic(home_bonfire) ], vec![ campsite_role_view_basic(default_role) ], campsite_member_view_basic(owner_member, profile, actor)));
-
+    event_next(event_subject, "CampsiteJoined", campsite_view_basic(&campsite), |binary|
+        ReactiveSubjectData::CampsiteAdded {
+            campsite_id: campsite.id.clone(),
+            to_actor: actor.did.clone(),
+            binary,
+        }
+    );
     return Ok(Json(CreateCampsiteOutput { campsite: campsite_view, default_tent: tent_view_basic(general_tent) }));
 }

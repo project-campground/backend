@@ -7,7 +7,7 @@ use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view_basic, permissions::{TentPermissionConsts, aggregate_permissions_from_iter}, tents::{tent_category_view, tent_view_basic}}, xrpc::{
+    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view_basic, permissions::TentPermissionConsts, tents::{tent_category_view, tent_view_basic}}, util::iter::AggregatePermissions, xrpc::{
         campsite::BonfireInfo, error::{Result, XRPCError}
     }
 };
@@ -189,12 +189,12 @@ async fn has_perms_to_view_bonfire<'a, T>(actor: &str, role_ids: &Vec<Uuid>, has
             x.category_id.or(x.tent_id).is_none() &&
             x.role_id.map_or_else(|| x.user_id.clone().unwrap() == actor, |y| role_ids.contains(&y))
         );
-    let (_, (allowed_tent_permissions, denied_tent_permissions)) = aggregate_permissions_from_iter(bonfire_perms);
+    let perms = bonfire_perms.aggregate_permissions();
 
     // Don't need to check role permissions, because they were overridden
-    if allowed_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
+    if perms.allowed.tent & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
         return Ok(true);
-    } else if denied_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
+    } else if perms.denied.tent & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
         return Ok(false);
     }
 

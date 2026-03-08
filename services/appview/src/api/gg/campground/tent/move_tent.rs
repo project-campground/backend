@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -81,7 +81,7 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
 
     let updated_tent = updated_tent.first().unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "TentMoved", tent_view_basic(updated_tent));
+    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "TentMoved", tent_view_basic(updated_tent));
 
     return Ok(Json(tent_view_basic(updated_tent)));
 }

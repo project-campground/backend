@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use diesel::dsl::not;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::ensure_no_higher_role, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, roles::ensure_no_higher_role, ws::event_next}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -79,7 +79,15 @@ pub async fn add_member_role(auth: CampsiteInfo<'_>, event_subject: &State<React
     let member_ids = updated_members.iter().map(|x| x.user_id.clone()).collect::<Vec<String>>();
     let role_view = campsite_role_view_basic(given_role);
 
-    event_next(event_subject, &auth.campsite.id, "MemberRolesAdded", ModifyMemberRolesOutput { role: role_view.clone(), members: member_ids.clone() });
+    event_next(event_subject, "MemberRolesAdded", ModifyMemberRolesOutput { role: role_view.clone(), members: member_ids.clone() }, |payload|
+        ReactiveSubjectData::MemberRolesModified {
+            campsite_id: campsite_id.to_string(),
+            actors: member_ids.clone(),
+            role_id: given_role.id,
+            permissions_are_empty: given_role.campsite_permissions == 0 && given_role.tent_permissions == 0,
+            removed: false,
+            binary: payload
+    });
 
     return Ok(Json(ModifyMemberRolesOutput { role: role_view, members: member_ids }));
 }

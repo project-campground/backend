@@ -4,7 +4,7 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_campsite, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_campsite, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -54,7 +54,7 @@ pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
 
-    event_next(event_subject, &auth.campsite.id, "InviteDeleted", campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2));
+    event_next_campsite(event_subject, &auth.campsite.id, "InviteDeleted", campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2));
 
     return Ok(Json(campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2)));
 }

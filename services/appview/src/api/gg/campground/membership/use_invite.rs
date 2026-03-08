@@ -5,7 +5,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, PgArrayExpress
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::{campsite_member_view_basic, campsite_view_basic}, roles::CampsiteRoleFlag, ws::{event_next, event_next_campsite_added}}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::{campsite_member_view_basic, campsite_view_basic}, roles::CampsiteRoleFlag, ws::{event_next, event_next_campsite}}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
     auth::Authorization, error::{Result, XRPCError}
 }};
 
@@ -126,8 +126,14 @@ pub async fn use_invite(auth: Authorization<'_>, event_subject: &State<ReactiveS
         .map_err(handle_select_first_error)?;
     let member = member.first().unwrap();
 
-    event_next(event_subject, &campsite.id, "MemberJoined", campsite_member_view_basic(member, profile, actor));
-    event_next_campsite_added(event_subject, &campsite.id, &member.user_id, "CampsiteJoined", campsite_view_basic(&campsite));
+    event_next_campsite(event_subject, &campsite.id, "MemberJoined", campsite_member_view_basic(member, profile, actor));
+    event_next(event_subject, "CampsiteJoined", campsite_view_basic(&campsite), |binary|
+        ReactiveSubjectData::CampsiteAdded {
+            campsite_id: campsite.id.clone(),
+            to_actor: actor.did.clone(),
+            binary,
+        }
+    );
 
     return Ok(Json(campsite_view_basic(&campsite)));
 }

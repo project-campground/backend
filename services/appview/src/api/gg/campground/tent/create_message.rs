@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -88,7 +88,7 @@ pub async fn create_message<'a>(auth: TentInfo<'_>, event_subject: &State<Reacti
 
     let first_message = messages.first().unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "MessageCreated", tent_message_view_basic(&auth.tent, first_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
+    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "MessageCreated", tent_message_view_basic(&auth.tent, first_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
 
     return Ok(Json(tent_message_view_basic(&auth.tent, first_message, &Some(actor), &Some(profile), &Some(auth.member))));
 }

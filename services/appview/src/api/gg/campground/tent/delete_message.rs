@@ -10,7 +10,7 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -88,7 +88,7 @@ pub async fn delete_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSu
         .execute(&mut conn)
         .expect("Error deleting message");
 
-    event_next(event_subject, &auth.campsite.id, "MessageDeleted", tent_message_view_basic(&auth.tent, &msg.0, &msg.1.clone(), &msg.2.clone(), &msg.3.clone()));
+    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "MessageDeleted", tent_message_view_basic(&auth.tent, &msg.0, &msg.1.clone(), &msg.2.clone(), &msg.3.clone()));
 
     return Ok(Json(tent_message_view_basic(&auth.tent, &msg.0, &msg.1, &msg.2, &msg.3)));
 }

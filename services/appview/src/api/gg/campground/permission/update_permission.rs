@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{api::gg::campground::permission::{update_role_permission::{update_bonfire_role_permission, update_category_role_permission, update_tent_role_permission}, update_user_permission::{update_bonfire_user_permission, update_category_user_permission, update_tent_user_permission}}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{campsite::OneOfInfo, error::XRPCError}};
+use crate::{api::gg::campground::permission::{update_role_permission::{update_bonfire_role_permission, update_category_role_permission, update_tent_role_permission}, update_user_permission::{update_bonfire_user_permission, update_category_user_permission, update_tent_user_permission}}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, ws::event_next}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{campsite::OneOfInfo, error::XRPCError}};
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
@@ -90,7 +90,17 @@ pub fn create_or_modify_permission<Predicate: diesel::Expression + diesel::expre
         update_or_delete_role_permission(permissions, existing.first().unwrap().clone(), predicate)
     })?;
 
-    event_next(event_subject, campsite_id, "PermissionUpdated", campsite_permission_view_detailed(&permission));
+    event_next(event_subject, "PermissionUpdated", campsite_permission_view_detailed(&permission), |binary|
+        ReactiveSubjectData::CampsitePermissionUpdated {
+            campsite_id: permission.campsite_id.clone(),
+            bonfire_id: permission.bonfire_id.clone(),
+            category_id: permission.category_id.clone(),
+            tent_id: permission.tent_id.clone(),
+            user_id: permission.user_id.clone(),
+            role_id: permission.role_id.clone(),
+            binary
+        }
+    );
     Ok(permission)
 }
 

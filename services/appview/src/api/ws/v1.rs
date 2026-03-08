@@ -1,14 +1,10 @@
-use std::borrow::Cow;
-
-use appview_schema::models::appview::Actor;
+use appview_schema::models::appview::{Actor, CampsiteMember};
 use tokio_stream::StreamExt;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use reqwest::Client;
 use rocket::State;
-use rsky_common::cbor_to_struct;
 use rxrust::{Observable, SharedScheduler};
-use ws::frame::CloseFrame;
-use crate::{database::actors::get_actor, realtime::{frames::{SocketErrorFrame, SocketFrameType}, messages::{SocketAuthFrame, SocketInAnyFrame, SocketInFramePayload}}, xrpc::auth::validate_jwt};
+use crate::{api::ws::{reactive::{MEMBER_PERMS_DEFAULT, WebSocketOutput, on_reactive_data}}, database::actors::get_actor, helpers::ws::{CampsiteMemberPermissions, get_did_from_auth}, realtime::frames::SocketErrorFrame};
 
 use crate::realtime::data::{ReactiveSubject, ReactiveSubjectData};
 
@@ -33,59 +29,18 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
         
         let init_message = init_message.as_ref().unwrap().as_ref().unwrap();
         let mut current_campsite: Option<String> = None;
-        let actor_did: Option<String> = match init_message {
-            ws::Message::Binary(bytes) => {
-                let auth_data = cbor_to_struct::<SocketAuthFrame>(bytes.clone());
+        let mut current_membership: Option<CampsiteMember> = None;
+        let actor_did = &get_did_from_auth(did_document_storage, client, init_message).await;
 
-                // Bad CBOR
-                if auth_data.is_err() {
-                    println!("Err: {:?}", auth_data);
-                    let (message, close_message) = SocketErrorFrame::from_error_message("AuthenticationParsingError", "Could not parse binary auth CBOR");
+        if let Err(actor_did_error) = actor_did.clone() {
+            if let Some(error_frame) = actor_did_error.0 {
+                yield ws::Message::Binary(error_frame);
+            }
 
-                    if let Ok(message) = message {
-                        yield ws::Message::Binary(message);
-                    }
+            yield actor_did_error.1;
+        }
 
-                    yield close_message;
-                }
-                
-                let auth_data = auth_data.unwrap();
-
-                // Make sure it is authentication frame, could be other frame
-                if auth_data.op != SocketFrameType::Auth {
-                    let (message, close_message) = SocketErrorFrame::from_error_message("AuthenticationBadMessage", "Expected authentication op to be 0");
-    
-                    if let Ok(message) = message {
-                        yield ws::Message::Binary(message);
-                    }
-    
-                    yield close_message;
-                }
-
-                if let Some(payload) = auth_data.payload {
-                    // Get actor
-                    let validated_jwt = validate_jwt(&payload.service_auth, did_document_storage, client).await;
-                    if let Err(_) = validated_jwt {
-                        None
-                    } else {
-                        let (_, claims) = validated_jwt.unwrap();
-                        claims.jose.issuer
-                    }
-                } else {
-                    None
-                }
-            },
-            _ => {
-                let (message, close_message) = SocketErrorFrame::from_error_message("InvalidAuthenticationFormat", "Expected a binary authentication message");
-
-                if let Ok(message) = message {
-                    yield ws::Message::Binary(message);
-                }
-
-                yield close_message;
-                return;
-            },
-        };
+        let actor_did = actor_did.clone().unwrap();
 
         let actor: &Option<Actor> = if actor_did.is_none() { &None } else {
             &get_actor(client, did_document_storage, actor_did.as_ref().unwrap())
@@ -93,6 +48,7 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
                 .ok()
         };
         let mut actor_campsites = actor.clone().map_or(vec![], |x| x.campsites);
+        let mut permissions: &mut CampsiteMemberPermissions = &mut MEMBER_PERMS_DEFAULT.clone();
 
         // Might be useless?
         let observer = subject
@@ -109,120 +65,50 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
 
         // Outgoing messages
         for await omsg in observer_stream.merge(weird_ws) {
+            println!("Omsg");
             // Perhaps there's a better way to do that? It seems that observables cannot be unsubscribed if they are streams
             if omsg.is_err() {
+                println!("Error omsg");
                 break;
             }
+            println!("Non-error omsg");
 
             let omsg = omsg.unwrap();
 
-            match omsg {
-                ReactiveSubjectData::RocketError => {
-                    yield ws::Message::Close(Some(ws::frame::CloseFrame {
-                        code: ws::frame::CloseCode::Error,
-                        reason: std::borrow::Cow::Owned("WS Error received".to_string())
-                    }));
+            match on_reactive_data(omsg, &actor_did, &mut actor_campsites, &mut current_campsite, &mut current_membership, &mut permissions).await {
+                WebSocketOutput::Ignore => {
+                    println!("Ignored...");
+                },
+                WebSocketOutput::BinaryData(data) => {
+                    yield ws::Message::Binary(data);
+                },
+                WebSocketOutput::RocketMessage(message) => {
+                    yield message;
+                },
+                WebSocketOutput::EmptyClose => {
+                    println!("Empty close");
                     break;
                 },
-                // Incoming messages, sent by the user
-                ReactiveSubjectData::RocketMessage(msg) => {
-                    match msg {
-                        ws::Message::Ping(payload) =>
-                            yield ws::Message::Pong(payload),
-                        ws::Message::Close(_) => {
-                            break;
-                        },
-                        ws::Message::Binary(bytes) => {
-                            let data = cbor_to_struct::<SocketInAnyFrame>(bytes.clone());
-
-                            if data.is_err() {
-                                println!("Data is err: {:?}", data.err().unwrap());
-                                let (message, close_message) = SocketErrorFrame::from_error_message("ParsingError", "Could not parse binary CBOR");
-
-                                if let Ok(message) = message {
-                                    yield ws::Message::Binary(message);
-                                }
-
-                                yield close_message;
-                                continue;
-                            }
-                            
-                            let data = data.unwrap();
-
-                            // Make sure it is authentication frame, could be other frame
-                            match data.op {
-                                SocketFrameType::Data => {
-                                    match data.payload {
-                                        SocketInFramePayload::View(view) => {
-                                            println!("Change campsite: {:?}", view.campsite.clone());
-                                            current_campsite = if view.campsite == "" { None } else { Some(view.campsite) };
-                                        }
-                                    }
-                                },
-                                _ => {
-                                    yield ws::Message::Close(Some(CloseFrame { code: ws::frame::CloseCode::Error, reason: Cow::Owned("Unexpected opcode".to_string()) }));
-                                    break;
-                                }
-                            }
-                        },
-                        _ => ()
+                WebSocketOutput::MessagedClose(header, message) => {
+                    println!("Messaged close: {:?}, {:?}", header, message);
+                    let (message, close_message) = SocketErrorFrame::from_error_message(&header, &message);
+        
+                    if let Ok(message) = message {
+                        yield ws::Message::Binary(message);
                     }
+        
+                    yield close_message;
+                    break;
                 },
-                // Role created, Message created, etc.
-                ReactiveSubjectData::Campsite(campsite, binary) => {
-                    // Could be used in observer .filter, but borrowing could be less intuitive
-                    if Some(campsite.clone()) != current_campsite {
-                        continue;
-                    }
-
-                    yield ws::Message::Binary(binary);
-
-                },
-                // Campsite has been deleted, campsite modified, etc.
-                ReactiveSubjectData::CampsiteGlobal(campsite, binary) => {
-                    if !actor_campsites.contains(&Some(campsite.clone())) {
-                        continue;
-                    }
-
-                    yield ws::Message::Binary(binary);
-                },
-                // Campsite joined
-                ReactiveSubjectData::CampsiteAdded(campsite_id, to_actor, binary) => {
-                    if Some(to_actor.clone()) != actor_did {
-                        continue;
-                    }
-                    
-                    actor_campsites.push(Some(campsite_id));
-
-                    yield ws::Message::Binary(binary);
-                },
-                // Campsite left
-                ReactiveSubjectData::CampsiteRemoved(campsite_id, to_actor, binary) => {
-                    if Some(to_actor.clone()) != actor_did {
-                        continue;
-                    } else if Some(campsite_id.clone()) == current_campsite {
-                        current_campsite = None;
-                    }
-                    
-                    // To no longer send global campsite events from
-                    let campsite_index = actor_campsites.iter().position(|x| x.as_ref().map_or(false, |y| *y == campsite_id));
-                    if campsite_index.is_none() {
-                        continue;
-                    }
-                    
-                    actor_campsites.remove(campsite_index.unwrap());
-
-                    yield ws::Message::Binary(binary);
-                },
-                // DM received and whatever
-                ReactiveSubjectData::Personal(to_actor, binary) => {
-                    if Some(to_actor.clone()) != actor_did {
-                        continue;
-                    }
-
-                    yield ws::Message::Binary(binary);
-                },
-            }
+                WebSocketOutput::RocketError(err) => {
+                    println!("Rocket error: {:?}", err);
+                    yield ws::Message::Close(Some(ws::frame::CloseFrame {
+                        code: ws::frame::CloseCode::Error,
+                        reason: std::borrow::Cow::Owned(err)
+                    }));
+                    break;
+                }
+            };
         }
     })
 }

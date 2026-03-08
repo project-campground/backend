@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{CampsitePermissionConsts, aggregate_member_permissions}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -70,7 +70,7 @@ pub async fn create_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next(event_subject, &auth.campsite.id, "RoleCreated", campsite_role_view_basic(role));
+    event_next_campsite(event_subject, &auth.campsite.id, "RoleCreated", campsite_role_view_basic(role));
 
     return Ok(Json(campsite_role_view_basic(role)));
 }
@@ -80,12 +80,12 @@ fn ensure_user_has_manage_role_permission(campsite: &Campsite, member: &Campsite
         return Ok(());
     }
 
-    let (campsite_permissions, tent_permissions) = aggregate_member_permissions(&member, &roles);
+    let permissions = aggregate_member_permissions(&member, &roles);
 
     // The user might not even have the permission to manage roles
-    if campsite_permissions & CampsitePermissionConsts::MANAGE_ROLES == 0 {
+    if permissions.campsite & CampsitePermissionConsts::MANAGE_ROLES == 0 {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    } else if (given_campsite_permissions & campsite_permissions != given_campsite_permissions) || (given_tent_permissions & tent_permissions != given_tent_permissions) {
+    } else if (given_campsite_permissions & permissions.campsite != given_campsite_permissions) || (given_tent_permissions & permissions.campsite != given_tent_permissions) {
         // Ensure user does not give themselves Manage Tent permission if they have Give Role & Manage Roles combo
         return Err(XRPCError::Forbidden("Cannot give role permissions that the member does not have".to_string()));
     }

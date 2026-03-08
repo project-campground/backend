@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
@@ -62,7 +62,7 @@ pub async fn create_category(auth: BonfireInfo<'_>, event_subject: &State<Reacti
         .get_result::<TentCategory>(&mut conn)
         .expect("Error inserting bonfire");
 
-    event_next(event_subject, &auth.campsite.id.clone(), "CategoryCreated", tent_category_view(&category));
+    event_next_campsite(event_subject, &auth.campsite.id.clone(), "CategoryCreated", tent_category_view(&category));
 
     return Ok(Json(tent_category_view(category)));
 }

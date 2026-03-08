@@ -8,7 +8,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -67,7 +67,7 @@ pub async fn update_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubje
 
     let first_tent = updated_tents.first().unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "TentUpdated", tent_view_basic(&auth.tent));
+    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "TentUpdated", tent_view_basic(&auth.tent));
 
     return Ok(Json(tent_view_basic(first_tent)));
 }

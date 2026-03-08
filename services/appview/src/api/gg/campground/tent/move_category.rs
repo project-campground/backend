@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CategoryInfo, error::{Result, XRPCError}
 }};
 
@@ -81,7 +81,7 @@ pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<Reactiv
 
     let updated_category = updated_category.first().unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "CategoryMoved", tent_category_view(updated_category));
+    event_next_category(event_subject, &auth.campsite.id, &auth.category.bonfire_id, auth.category.id, false, "CategoryMoved", tent_category_view(updated_category));
 
     return Ok(Json(tent_category_view(updated_category)));
 }

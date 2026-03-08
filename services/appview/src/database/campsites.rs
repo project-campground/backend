@@ -56,6 +56,23 @@ pub fn get_full_campsite_member(campsite_id: &str, actor: &str) -> Result<(Camps
 
     Ok(member)
 }
+pub fn get_campsite_member(campsite_id: &str, actor: &str) -> Result<CampsiteMember, XRPCError> {
+    let mut conn = establish_connection().unwrap();
+    let member = campsite_member::table
+        .filter(
+            campsite_member::campsiteid
+                .eq(campsite_id)
+                .and(
+                    campsite_member::userid
+                        .eq(actor)
+                )
+        )
+
+        .first::<CampsiteMember>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    Ok(member)
+}
 
 pub fn get_roles_from_db(campsite_id: &str) -> Result<Vec<CampsiteRole>, XRPCError> {
     let mut conn = establish_connection().unwrap();

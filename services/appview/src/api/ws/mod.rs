@@ -5,3 +5,5 @@ pub fn routes() -> Vec<rocket::Route> {
 }
 
 mod v1;
+mod permissions;
+mod reactive;

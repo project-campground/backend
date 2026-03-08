@@ -3,7 +3,7 @@ use campground_lexicon::gg::campground::membership::CampsiteBanView;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -55,7 +55,7 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next(event_subject, &auth.campsite.id, "MemberBanDeleted", campsite_ban_view(&member_ban, &profile, &target_actor));
+    event_next_campsite(event_subject, &auth.campsite.id, "MemberBanDeleted", campsite_ban_view(&member_ban, &profile, &target_actor));
 
     Ok(Json(campsite_ban_view(&member_ban, &profile, &target_actor)))
 }

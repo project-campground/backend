@@ -7,7 +7,7 @@ use reqwest::Client;
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -98,7 +98,7 @@ fn add_ban(event_subject: &State<ReactiveSubject>, executor: &Actor, campsite: &
 
     let ban = ban.first().unwrap();
 
-    event_next(event_subject, &campsite.id, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
+    event_next_campsite(event_subject, &campsite.id, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
     
     Ok(Json(campsite_ban_view(ban, profile, actor)))
 }

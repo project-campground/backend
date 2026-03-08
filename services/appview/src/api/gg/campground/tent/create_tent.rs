@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::{tent_message_view_basic, tent_view_basic}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, has_tent_perms_or_owner}, tents::{tent_message_view_basic, tent_view_basic}, ws::{event_next_campsite, event_next_tent}}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -129,8 +129,8 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .await
         .map_err(|_| XRPCError::InternalServerError)?;
 
-    event_next(event_subject, &auth.campsite.id, "TentCreated", tent_view_basic(&first_tent));
-    event_next(event_subject, &auth.campsite.id, "MessageCreated", tent_message_view_basic(&first_tent, &first_message, &Some(auth.actor), &Some(profile), &Some(auth.member)));
+    event_next_tent(event_subject, &auth.campsite.id, &first_tent.bonfire_id, first_tent.category_id, first_tent.id, false, "TentCreated", tent_view_basic(&first_tent));
+    event_next_campsite(event_subject, &auth.campsite.id, "MessageCreated", tent_message_view_basic(&first_tent, &first_message, &Some(auth.actor), &Some(profile), &Some(auth.member)));
 
     let tent_view = tent_view_basic(&first_tent);
 

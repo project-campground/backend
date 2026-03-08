@@ -3,7 +3,7 @@ use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -45,7 +45,7 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
 
     let bonfire = bonfire.unwrap();
 
-    event_next(event_subject, &auth.campsite.id, "BonfireDeleted", bonfire_view_basic(bonfire));
+    event_next_bonfire(event_subject, &bonfire, true, "BonfireDeleted", bonfire_view_basic(bonfire));
 
     return Ok(Json(bonfire_view_basic(bonfire)));
 }
