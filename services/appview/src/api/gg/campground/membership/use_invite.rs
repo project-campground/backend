@@ -126,7 +126,7 @@ pub async fn use_invite(auth: Authorization<'_>, event_subject: &State<ReactiveS
         .map_err(handle_select_first_error)?;
     let member = member.first().unwrap();
 
-    event_next_campsite(event_subject, &campsite.id, "MemberJoined", campsite_member_view_basic(member, profile, actor));
+    event_next_campsite(event_subject, &campsite.id, 0, "MemberJoined", campsite_member_view_basic(member, profile, actor));
     event_next(event_subject, "CampsiteJoined", campsite_view_basic(&campsite), |binary|
         ReactiveSubjectData::CampsiteAdded {
             campsite_id: campsite.id.clone(),

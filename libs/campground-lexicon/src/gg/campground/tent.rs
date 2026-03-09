@@ -30,11 +30,6 @@ pub struct TentViewBasic {
     pub view_type: i16,
 
     pub priority: i32,
-    
-    pub created_by: String,
-    pub created_at: String,
-    pub updated_by: String,
-    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -51,8 +46,6 @@ pub struct TentViewDetailed {
     pub view_type: i16,
 
     pub priority: i32,
-
-    pub permissions: Vec<CampsitePermissionViewBasic>,
 
     pub created_by: String,
     pub created_at: String,

@@ -1,63 +1,12 @@
 use std::{collections::HashMap, hash::Hash};
 
 use appview_schema::{models::appview::{CampsiteMember, CampsitePermission, CampsiteRole}, schema::appview::campsite_permission};
-use campground_lexicon::gg::campground::permission::{PermissionsDictionary, PermissionsStateDictionary};
+use campground_lexicon::gg::campground::permission::PermissionsStateDictionary;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use multimap::MultiMap;
 use uuid::Uuid;
 
 use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_all_db_errors, ws::CampsiteMemberPermissions}, util::iter::{AggregatePermissions, aggregate_permissions_double_ref}, xrpc::error::XRPCError};
-
-#[derive(PartialEq, Eq)]
-pub enum PermissionState {
-    Allowed,
-    Inherit,
-    Denied,
-}
-
-impl PermissionState {
-    pub fn map_inherit<F: FnOnce() -> PermissionState>(self, map: F) -> PermissionState {
-        match self {
-            PermissionState::Inherit => map(),
-            _ => self,
-        }
-    }
-    pub fn from_role_tent(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
-        if permissions.tent & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
-    }
-    #[allow(dead_code)]
-    pub fn from_role_campsite(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
-        if permissions.campsite & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
-    }
-    pub fn from_tent_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
-        permission.map_or(PermissionState::Inherit, |x| PermissionState::from_tent(x, flag))
-    }
-    pub fn from_tent(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
-        if permission.allowed.tent & flag == flag {
-            PermissionState::Allowed
-        } else if permission.denied.tent & flag == flag {
-            PermissionState::Denied
-        } else {
-            PermissionState::Inherit
-        }
-    }
-    #[allow(dead_code)]
-    pub fn from_campsite_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
-        permission.map_or(PermissionState::Inherit, |x| PermissionState::from_campsite(x, flag))
-    }
-    pub fn from_campsite(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
-        if permission.allowed.campsite & flag == flag {
-            PermissionState::Allowed
-        } else if permission.denied.campsite & flag == flag {
-            PermissionState::Denied
-        } else {
-            PermissionState::Inherit
-        }
-    }
-    pub fn is_allowed(self) -> bool {
-        self == PermissionState::Allowed
-    }
-}
 
 pub async fn update_ws_permissions<'a>(campsite_id: &str, member: &CampsiteMember, current: &CampsiteMemberPermissions, no_role_permissions: bool, updated_bonfires: Vec<String>, updated_categories: Vec<Uuid>, updated_tents: Vec<Uuid>) -> Result<CampsiteMemberPermissions, XRPCError> {    
     let mut conn = establish_connection().unwrap();

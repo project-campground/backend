@@ -88,7 +88,7 @@ pub async fn delete_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSu
         .execute(&mut conn)
         .expect("Error deleting message");
 
-    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "MessageDeleted", tent_message_view_basic(&auth.tent, &msg.0, &msg.1.clone(), &msg.2.clone(), &msg.3.clone()));
+    event_next_tent(event_subject, &auth.tent, false, "MessageDeleted", tent_message_view_basic(&auth.tent, &msg.0, &msg.1.clone(), &msg.2.clone(), &msg.3.clone()));
 
     return Ok(Json(tent_message_view_basic(&auth.tent, &msg.0, &msg.1, &msg.2, &msg.3)));
 }

@@ -88,7 +88,7 @@ pub async fn create_message<'a>(auth: TentInfo<'_>, event_subject: &State<Reacti
 
     let first_message = messages.first().unwrap();
 
-    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "MessageCreated", tent_message_view_basic(&auth.tent, first_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
+    event_next_tent(event_subject, &auth.tent, false, "MessageCreated", tent_message_view_basic(&auth.tent, first_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
 
     return Ok(Json(tent_message_view_basic(&auth.tent, first_message, &Some(actor), &Some(profile), &Some(auth.member))));
 }

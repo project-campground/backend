@@ -1,5 +1,5 @@
 use appview_schema::models::appview::{Actor, CampsiteMember, Profile, Tent, TentCategory, TentMessage};
-use campground_lexicon::gg::campground::{campsite::CampsitePermissionViewBasic, content::ContentComponent, membership::CampsiteMemberViewAuthor, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
+use campground_lexicon::gg::campground::{content::ContentComponent, membership::CampsiteMemberViewAuthor, tent::{TentCategoryView, TentMessageViewBasic, TentMessageViewWithReplies, TentType, TentViewBasic, TentViewDetailed}};
 use serde_json::from_value;
 use uuid::Uuid;
 
@@ -33,14 +33,10 @@ pub fn tent_view_basic(tent: &Tent) -> TentViewBasic {
         },
         view_type: tent.view_type,
         priority: tent.priority,
-        created_by: tent.created_by.clone(),
-        created_at: serialize_datetime(tent.created_at),
-        updated_by: tent.updated_by.clone(),
-        updated_at: serialize_datetime(tent.updated_at)
     };
 }
 
-pub fn tent_view_detailed(tent: &Tent, permissions: Vec<CampsitePermissionViewBasic>) -> TentViewDetailed {
+pub fn tent_view_detailed(tent: &Tent) -> TentViewDetailed {
     return TentViewDetailed {
         id: tent.id.clone(),
         campsite_id: tent.campsite_id.clone(),
@@ -57,7 +53,6 @@ pub fn tent_view_detailed(tent: &Tent, permissions: Vec<CampsitePermissionViewBa
         created_at: serialize_datetime(tent.created_at),
         updated_by: tent.updated_by.clone(),
         updated_at: serialize_datetime(tent.updated_at),
-        permissions,
     };
 }
 

@@ -4,7 +4,7 @@ use atproto_identity::storage_lru::LruDidDocumentStorage;
 use reqwest::Client;
 use rocket::State;
 use rxrust::{Observable, SharedScheduler};
-use crate::{api::ws::{reactive::{MEMBER_PERMS_DEFAULT, WebSocketOutput, on_reactive_data}}, database::actors::get_actor, helpers::ws::{CampsiteMemberPermissions, get_did_from_auth}, realtime::frames::SocketErrorFrame};
+use crate::{api::ws::reactive::{MEMBER_PERMS_DEFAULT, WebSocketOutput, on_reactive_data}, database::actors::get_actor, helpers::ws::{CampsiteMemberPermissions, get_did_from_auth}, realtime::{frames::SocketErrorFrame, messages::{SocketAuthFrame, SocketAuthFramePayload}}};
 
 use crate::realtime::data::{ReactiveSubject, ReactiveSubjectData};
 
@@ -15,7 +15,7 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
         let subject: &ReactiveSubject = event_subject;
 
         let init_message = &ws.next().await;
-
+        
         if init_message.is_none() || init_message.as_ref().unwrap().is_err() {
             let (message, close_message) = SocketErrorFrame::from_error_message("Unauthenticated", "Expected authentication message");
 
@@ -26,7 +26,8 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
             yield close_message;
             return;
         }
-        
+
+        println!("Expected auth: {:?}", serde_json::to_string(&SocketAuthFrame { op: crate::realtime::frames::SocketFrameType::Auth, payload: Some(SocketAuthFramePayload { service_auth: "example".to_string() }) }));
         let init_message = init_message.as_ref().unwrap().as_ref().unwrap();
         let mut current_campsite: Option<String> = None;
         let mut current_membership: Option<CampsiteMember> = None;
@@ -65,19 +66,15 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
 
         // Outgoing messages
         for await omsg in observer_stream.merge(weird_ws) {
-            println!("Omsg");
             // Perhaps there's a better way to do that? It seems that observables cannot be unsubscribed if they are streams
             if omsg.is_err() {
-                println!("Error omsg");
                 break;
             }
-            println!("Non-error omsg");
 
             let omsg = omsg.unwrap();
 
             match on_reactive_data(omsg, &actor_did, &mut actor_campsites, &mut current_campsite, &mut current_membership, &mut permissions).await {
                 WebSocketOutput::Ignore => {
-                    println!("Ignored...");
                 },
                 WebSocketOutput::BinaryData(data) => {
                     yield ws::Message::Binary(data);
@@ -86,7 +83,6 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
                     yield message;
                 },
                 WebSocketOutput::EmptyClose => {
-                    println!("Empty close");
                     break;
                 },
                 WebSocketOutput::MessagedClose(header, message) => {

@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use anyhow::Result;
 
+use crate::helpers::ws::CampsiteMemberPermissions;
+
 #[derive(Debug, Clone, PartialEq, Deserialize_repr, Serialize_repr)]
 #[repr(i8)]
 pub enum SocketFrameType {
@@ -38,6 +40,13 @@ impl<T> SocketDataFrame<T> {
             payload,
         }
     }
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+#[derive(Debug, Clone, PartialEq)]
+pub struct SocketFramePermissionViewPayload {
+    pub permissions: CampsiteMemberPermissions,
 }
 
 impl<T: serde::Serialize> SocketFrameSerializer for SocketDataFrame<T> {

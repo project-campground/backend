@@ -5,7 +5,7 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+    database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
         campsite::CategoryInfo, error::{Result, XRPCError}
     }
 };
@@ -47,7 +47,7 @@ pub async fn delete_category(auth: CategoryInfo<'_>, event_subject: &State<React
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
 
-    event_next_campsite(event_subject, &auth.category.campsite_id, "CategoryDeleted", tent_category_view(&auth.category));
+    event_next_category(event_subject, &auth.category, true, "CategoryDeleted", tent_category_view(&auth.category));
 
     return Ok(Json(tent_category_view(&auth.category)));
 }

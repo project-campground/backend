@@ -7,7 +7,7 @@ use reqwest::Client;
 use rocket::State;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::campsite_member_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::{event_next_campsite, event_next_campsite_removed}}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::campsite_member_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::{event_next, event_next_campsite}}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -118,8 +118,14 @@ pub fn remove_campsite_member(event_subject: &State<ReactiveSubject>, campsite_i
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &target_member.campsite_id, "MemberRemoved", campsite_member_view_basic(&target_member, &target_profile, &target_actor));
-    event_next_campsite_removed(event_subject, &campsite_id.to_string(), &target_actor.did, CampsiteLeftOutput { id: campsite_id.to_string() });
+    event_next_campsite(event_subject, &target_member.campsite_id, 0, "MemberRemoved", campsite_member_view_basic(&target_member, &target_profile, &target_actor));
+    event_next(event_subject, "CampsiteLeft", CampsiteLeftOutput { id: campsite_id.to_string() }, |binary|
+        ReactiveSubjectData::CampsiteRemoved {
+            campsite_id: campsite_id.to_string(),
+            to_actor: actor.to_string(),
+            binary,
+        }
+    );
 
     Ok(())
 }

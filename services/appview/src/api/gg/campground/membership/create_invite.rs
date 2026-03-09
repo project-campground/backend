@@ -53,7 +53,7 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
         .get_result::<CampsiteInvite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, "InviteCreated", campsite_invite_view_campsite(invite, &profile, &actor));
+    event_next_campsite(event_subject, &auth.campsite.id, CampsitePermissionConsts::MANAGE_INVITES, "InviteCreated", campsite_invite_view_campsite(invite, &profile, &actor));
 
     return Ok(Json(campsite_invite_view_campsite(invite, &profile, &actor)));
 }

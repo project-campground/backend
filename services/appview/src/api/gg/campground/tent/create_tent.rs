@@ -129,8 +129,8 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .await
         .map_err(|_| XRPCError::InternalServerError)?;
 
-    event_next_tent(event_subject, &auth.campsite.id, &first_tent.bonfire_id, first_tent.category_id, first_tent.id, false, "TentCreated", tent_view_basic(&first_tent));
-    event_next_campsite(event_subject, &auth.campsite.id, "MessageCreated", tent_message_view_basic(&first_tent, &first_message, &Some(auth.actor), &Some(profile), &Some(auth.member)));
+    event_next_tent(event_subject, &first_tent, false, "TentCreated", tent_view_basic(&first_tent));
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "MessageCreated", tent_message_view_basic(&first_tent, &first_message, &Some(auth.actor), &Some(profile), &Some(auth.member)));
 
     let tent_view = tent_view_basic(&first_tent);
 

@@ -90,7 +90,7 @@ pub async fn update_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSu
 
     let updated_message = updated_messages.first().unwrap();
 
-    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "MessageUpdated", tent_message_view_basic(&auth.tent, updated_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
+    event_next_tent(event_subject, &auth.tent, false, "MessageUpdated", tent_message_view_basic(&auth.tent, updated_message, &Some(actor.clone()), &Some(profile.clone()), &Some(auth.member.clone())));
 
     // New tent message, since it has been updated and is not given by SQL
     return Ok(Json(tent_message_view_basic(

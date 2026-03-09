@@ -1,19 +1,19 @@
 use std::collections::HashMap;
 
-use appview_schema::models::appview::Bonfire;
+use appview_schema::models::appview::{Bonfire, Tent, TentCategory};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::permission::{PermissionsDictionary, PermissionsStateDictionary};
 use reqwest::Client;
 use rocket::State;
 use rsky_common::cbor_to_struct;
 use rxrust::Observer;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use ws::Message;
 
 use crate::{realtime::{data::{ReactiveSubject, ReactiveSubjectData}, frames::{SocketDataFrame, SocketErrorFrame, SocketFrameSerializer, SocketFrameType}, messages::SocketAuthFrame}, xrpc::auth::validate_jwt};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct CampsiteMemberPermissions {
     pub roles: PermissionsDictionary,
     pub bonfires: HashMap<String, PermissionsStateDictionary>,
@@ -82,10 +82,11 @@ pub fn event_next<TData, TFn>(event_subject: &State<ReactiveSubject>, data_type:
     }
 }
 
-pub fn event_next_campsite<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, data_type: &str, payload: T) where T: Serialize {
+pub fn event_next_campsite<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, permissions_required: i64, data_type: &str, payload: T) where T: Serialize {
     event_next(event_subject, data_type, payload, |binary|
         ReactiveSubjectData::Campsite {
             campsite_id: campsite_id.clone(),
+            permissions_required,
             binary,
         }
     );
@@ -100,24 +101,24 @@ pub fn event_next_bonfire<T>(event_subject: &State<ReactiveSubject>, bonfire: &B
         }
     );
 }
-pub fn event_next_category<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, bonfire_id: &String, category_id: Uuid, deleted: bool, data_type: &str, payload: T) where T: Serialize {
+pub fn event_next_category<T>(event_subject: &State<ReactiveSubject>, category: &TentCategory, deleted: bool, data_type: &str, payload: T) where T: Serialize {
     event_next(event_subject, data_type, payload, |binary|
         ReactiveSubjectData::Category {
-            campsite_id: campsite_id.clone(),
-            bonfire_id: bonfire_id.clone(),
-            category_id: category_id,
+            campsite_id: category.campsite_id.clone(),
+            bonfire_id: category.bonfire_id.clone(),
+            category_id: category.id,
             deleted,
             binary,
         }
     );
 }
-pub fn event_next_tent<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, bonfire_id: &String, category_id: Option<Uuid>, tent_id: Uuid, deleted: bool, data_type: &str, payload: T) where T: Serialize {
+pub fn event_next_tent<T>(event_subject: &State<ReactiveSubject>, tent: &Tent, deleted: bool, data_type: &str, payload: T) where T: Serialize {
     event_next(event_subject, data_type, payload, |binary|
         ReactiveSubjectData::Tent {
-            campsite_id: campsite_id.clone(),
-            bonfire_id: bonfire_id.clone(),
-            category_id: category_id,
-            tent_id: tent_id,
+            campsite_id: tent.campsite_id.clone(),
+            bonfire_id: tent.bonfire_id.clone(),
+            category_id: tent.category_id.clone(),
+            tent_id: tent.id,
             deleted,
             binary,
         }
@@ -135,15 +136,6 @@ pub fn event_next_campsite_global<T>(event_subject: &State<ReactiveSubject>, cam
 pub fn event_next_personal<T>(event_subject: &State<ReactiveSubject>, actor: &String, data_type: &str, payload: T) where T: Serialize {
     event_next(event_subject, data_type, payload, |binary|
         ReactiveSubjectData::Personal {
-            to_actor: actor.clone(),
-            binary,
-        }
-    );
-}
-pub fn event_next_campsite_removed<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, actor: &String, payload: T) where T: Serialize {
-    event_next(event_subject, "CampsiteLeft", payload, |binary|
-        ReactiveSubjectData::CampsiteRemoved {
-            campsite_id: campsite_id.clone(),
             to_actor: actor.clone(),
             binary,
         }

@@ -54,7 +54,13 @@ pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, "InviteDeleted", campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2));
+    event_next_campsite(
+        event_subject,
+        &auth.campsite.id,
+        CampsitePermissionConsts::MANAGE_INVITES,
+        "InviteDeleted",
+        campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2)
+    );
 
     return Ok(Json(campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2)));
 }

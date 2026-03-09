@@ -31,6 +31,7 @@ pub enum ReactiveSubjectData {
     // Within campsite + has appropriate perms to view it
     Campsite {
         campsite_id: String,
+        permissions_required: i64,
         binary: Vec<u8>
     },
     #[allow(dead_code)]
@@ -55,7 +56,6 @@ pub enum ReactiveSubjectData {
         deleted: bool,
         binary: Vec<u8>
     },
-    #[allow(dead_code)]
     // For updating WebSocket known permissions
     MemberRolesModified {
         campsite_id: String,

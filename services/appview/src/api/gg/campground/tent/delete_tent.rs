@@ -35,7 +35,7 @@ pub async fn delete_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubje
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
 
-    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, true, "TentDeleted", tent_view_basic(&auth.tent));
+    event_next_tent(event_subject, &auth.tent, true, "TentDeleted", tent_view_basic(&auth.tent));
 
     return Ok(Json(tent_view_basic(&auth.tent)));
 }

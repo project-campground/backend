@@ -81,7 +81,7 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
 
     let updated_tent = updated_tent.first().unwrap();
 
-    event_next_tent(event_subject, &auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id, auth.tent.id, false, "TentMoved", tent_view_basic(updated_tent));
+    event_next_tent(event_subject, &auth.tent, false, "TentMoved", tent_view_basic(updated_tent));
 
     return Ok(Json(tent_view_basic(updated_tent)));
 }

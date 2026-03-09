@@ -98,7 +98,7 @@ fn add_ban(event_subject: &State<ReactiveSubject>, executor: &Actor, campsite: &
 
     let ban = ban.first().unwrap();
 
-    event_next_campsite(event_subject, &campsite.id, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
+    event_next_campsite(event_subject, &campsite.id, CampsitePermissionConsts::BAN_MEMBERS, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
     
     Ok(Json(campsite_ban_view(ban, profile, actor)))
 }

@@ -2,10 +2,10 @@ use appview_schema::{models::appview::TentCategory, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
-use rocket::serde::json::Json;
+use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CategoryInfo, error::{Result, XRPCError}
 }};
 
@@ -18,7 +18,7 @@ pub struct UpdateCategoryBody {
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.updateCategory?<category_id>", data = "<body>")]
-pub async fn update_category(auth: CategoryInfo<'_>, category_id: &str, body: Json<UpdateCategoryBody>) -> Result<Json<TentCategoryView>> {    
+pub async fn update_category(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str, body: Json<UpdateCategoryBody>) -> Result<Json<TentCategoryView>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.clone().map_or(false, |x| x.len() < 3 || x.len() > 48) {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -56,5 +56,9 @@ pub async fn update_category(auth: CategoryInfo<'_>, category_id: &str, body: Js
         .load::<TentCategory>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(tent_category_view(updated_category.first().unwrap())));
+    let updated_category = updated_category.first().unwrap();
+
+    event_next_category(event_subject, &updated_category, false, "CategoryMoved", tent_category_view(updated_category));
+
+    return Ok(Json(tent_category_view(updated_category)));
 }

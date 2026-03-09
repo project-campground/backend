@@ -54,7 +54,7 @@ pub async fn delete_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, "RoleDeleted", campsite_role_view_basic(given_role));
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleDeleted", campsite_role_view_basic(given_role));
 
     return Ok(Json(campsite_role_view_basic(given_role)));
 }

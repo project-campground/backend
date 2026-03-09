@@ -79,7 +79,7 @@ pub async fn update_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, "RoleUpdated", campsite_role_view_basic(updated_role));
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleUpdated", campsite_role_view_basic(updated_role));
 
     return Ok(Json(campsite_role_view_basic(updated_role)));
 }

@@ -81,7 +81,7 @@ pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<Reactiv
 
     let updated_category = updated_category.first().unwrap();
 
-    event_next_category(event_subject, &auth.campsite.id, &auth.category.bonfire_id, auth.category.id, false, "CategoryMoved", tent_category_view(updated_category));
+    event_next_category(event_subject, &updated_category, false, "CategoryMoved", tent_category_view(updated_category));
 
     return Ok(Json(tent_category_view(updated_category)));
 }

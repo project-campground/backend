@@ -14,8 +14,10 @@ pub type SocketAuthFrame = SocketInFrame<Option<SocketAuthFramePayload>>;
 
 #[derive(Deserialize, Serialize)]
 #[serde(crate = "rocket::serde")]
+#[serde(tag = "t")]
 pub enum SocketInFramePayload {
     View(SocketViewFramePayload),
+    ViewPermissions,
 }
 
 pub type SocketInAnyFrame = SocketInFrame<SocketInFramePayload>;

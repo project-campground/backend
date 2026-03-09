@@ -4,7 +4,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQ
 use rocket::serde::json::Json;
 
 use crate::{
-    database::establish_connection, helpers::{api::handle_all_db_errors, campsites::campsite_member_view_detailed}, xrpc::{
+    database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_member_view_detailed}, xrpc::{
         campsite::CampsiteInfoBasic, error::Result
     }
 };
@@ -42,7 +42,7 @@ pub async fn get_member(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, actor: 
             (campsite_member::all_columns, profile::all_columns, crate::schema::appview::actor::all_columns)
         )
         .first::<(CampsiteMember, Profile, Actor)>(&mut conn)
-        .map_err(handle_all_db_errors)?;
+        .map_err(handle_select_first_error)?;
 
     return Ok(Json(campsite_member_view_detailed(&member.0, &member.1, &member.2)));
 }

@@ -55,7 +55,13 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, "MemberBanDeleted", campsite_ban_view(&member_ban, &profile, &target_actor));
+    event_next_campsite(
+        event_subject,
+        &auth.campsite.id,
+        CampsitePermissionConsts::BAN_MEMBERS,
+        "MemberBanDeleted",
+        campsite_ban_view(&member_ban, &profile, &target_actor)
+    );
 
     Ok(Json(campsite_ban_view(&member_ban, &profile, &target_actor)))
 }

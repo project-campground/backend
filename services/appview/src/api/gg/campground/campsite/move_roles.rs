@@ -105,7 +105,7 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
         .map(campsite_role_view_basic)
         .collect::<Vec<CampsiteRoleViewBasic>>();
 
-    event_next_campsite(event_subject, &auth.campsite.id, "RolesMoved", CampsiteRolesMovedOutput { roles_by_priority: roles_by_priority.clone(), });
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RolesMoved", CampsiteRolesMovedOutput { roles_by_priority: roles_by_priority.clone(), });
 
     return Ok(Json(GetCampsiteRolesOutput { roles: updated_roles }));
 }

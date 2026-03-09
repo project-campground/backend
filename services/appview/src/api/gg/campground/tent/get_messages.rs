@@ -8,7 +8,7 @@ use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{api::handle_all_db_errors, tents::{tent_message_view_basic, tent_message_view_with_replies}}, xrpc::{
+    database::establish_connection, helpers::{api::handle_all_db_errors, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::{tent_message_view_basic, tent_message_view_with_replies}}, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -20,6 +20,9 @@ pub async fn get_messages(auth: TentInfo<'_>, tent_id: &str, limit: Option<i64>,
 
     if limit < 1 || limit > 100 {
         return Err(XRPCError::BadRequest("Expected limit query to be between and including 1 and 100".to_string()));
+    }
+    else if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, TentPermissionConsts::VIEW_CONTENT).await? {
+        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
     let mut conn = establish_connection().unwrap();

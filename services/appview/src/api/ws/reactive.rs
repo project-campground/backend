@@ -8,7 +8,7 @@ use rsky_common::cbor_to_struct;
 use uuid::Uuid;
 use ws::Message;
 
-use crate::{api::ws::permissions::{PermissionState, aggregate_ws_permissions, update_ws_permissions}, database::{campsites::{get_campsite_member, get_roles_from_db}, establish_connection}, helpers::{api::handle_all_db_errors, permissions::{TentPermissionConsts, fetch_all_campsite_permissions, fetch_only_specific_permissions}, ws::CampsiteMemberPermissions}, realtime::{data::ReactiveSubjectData, frames::SocketFrameType, messages::{SocketInAnyFrame, SocketInFramePayload}}, try_or_continue, util::{iter::AggregatePermissions, sql::array_agg}};
+use crate::{api::ws::permissions::{aggregate_ws_permissions, update_ws_permissions}, database::{campsites::{get_campsite_member, get_roles_from_db}, establish_connection}, helpers::{api::handle_all_db_errors, permissions::{TentPermissionConsts, fetch::{fetch_all_campsite_permissions, fetch_only_specific_permissions}, state::PermissionState}, ws::CampsiteMemberPermissions}, realtime::{data::ReactiveSubjectData, frames::{SocketDataFrame, SocketFramePermissionViewPayload, SocketFrameSerializer, SocketFrameType}, messages::{SocketInAnyFrame, SocketInFrame, SocketInFramePayload, SocketViewFramePayload}}, try_or_continue, util::{iter::AggregatePermissions, sql::array_agg}};
 
 pub enum WebSocketOutput {
     RocketError(String),
@@ -37,6 +37,8 @@ pub async fn on_rocket_message(msg: Message, ws_actor: &Option<String>, _actor_c
         ws::Message::Close(_) => 
             WebSocketOutput::EmptyClose,
         ws::Message::Binary(bytes) => {
+            println!("Expected input: {:?}", serde_json::to_string(&SocketInFrame::<SocketInFramePayload> { op: SocketFrameType::Data, payload: SocketInFramePayload::ViewPermissions }));
+            println!("Expected input: {:?}", serde_json::to_string(&SocketInFrame::<SocketInFramePayload> { op: SocketFrameType::Data, payload: SocketInFramePayload::View(SocketViewFramePayload { campsite: "a".to_string() }) }));
             let data = cbor_to_struct::<SocketInAnyFrame>(bytes.clone());
     
             if data.is_err() {
@@ -68,7 +70,25 @@ pub async fn on_rocket_message(msg: Message, ws_actor: &Option<String>, _actor_c
                             }
     
                             WebSocketOutput::Ignore
-                        }
+                        },
+                        SocketInFramePayload::ViewPermissions => {
+                            println!("View permissions");
+                            // Use references somehow. I hate lack of GC
+                            let response = SocketDataFrame::<SocketFramePermissionViewPayload>::new(
+                                "PermissionView".to_string(),
+                                SocketFramePermissionViewPayload {
+                                    permissions: permissions.clone(),
+                                },
+                            );
+                            println!("Serde JSON: {:?}", serde_json::to_string(&response));
+                            let binary = response.binary();
+
+                            if let Ok(binary) = binary {
+                                WebSocketOutput::BinaryData(binary)
+                            } else {
+                                WebSocketOutput::RocketError(binary.err().unwrap().to_string())
+                            }
+                        },
                     }
                 },
                 _ => WebSocketOutput::RocketError("Unexpected opcode".to_string())
@@ -79,7 +99,6 @@ pub async fn on_rocket_message(msg: Message, ws_actor: &Option<String>, _actor_c
 }
 
 pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<String>, actor_campsites: &mut Vec<Option<String>>, current_campsite: &mut Option<String>, current_membership: &mut Option<CampsiteMember>, permissions: &mut CampsiteMemberPermissions) -> WebSocketOutput {
-    println!("A message");
     match omsg {
         ReactiveSubjectData::RocketError => 
             WebSocketOutput::RocketError("WS Error received".to_string()),
@@ -157,10 +176,6 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
                 .first::<(i64, Option<Vec<String>>, Option<Vec<Uuid>>, Option<Vec<Uuid>>)>(&mut conn)
                 .map_err(handle_all_db_errors);
 
-            if let Ok(ref new_permissions_to_update) = new_permissions_to_update {
-                println!("Role modified perms: {:?}", new_permissions_to_update.clone());
-            }
-
             // No permissions to redo
             if permissions_are_empty && new_permissions_to_update.as_ref().ok().map_or(true, |x| x.0 == 0) {
                 return WebSocketOutput::BinaryData(binary);
@@ -170,22 +185,24 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
 
             if let Ok(new_perms) = update_ws_permissions(&campsite_id, &current_membership_unwrapped, permissions, permissions_are_empty, bonfires_to_update.unwrap_or(vec![]), categories_to_update.unwrap_or(vec![]), tents_to_update.unwrap_or(vec![])).await {
                 *permissions = new_perms.clone();
-                println!("New permissions: {:?}", new_perms);
             }
 
             WebSocketOutput::BinaryData(binary)
         },
         ReactiveSubjectData::CampsitePermissionUpdated { campsite_id, bonfire_id, category_id, tent_id, user_id, role_id, binary } => {
             if
+                current_campsite.clone().map_or(true, |current_campsite| current_campsite != campsite_id)
                 // Is user that has the permission applied
-                ws_actor.clone().map_or(true, |ws_actor| user_id.map_or(false, |user_id| user_id != ws_actor))
+                || ws_actor.clone().map_or(true, |ws_actor| user_id.map_or(false, |user_id| user_id != ws_actor))
                 // Has the role that has the permission applied
-                || current_membership.clone().map_or(true, |current_membership| role_id.map_or(false, |role_id| current_membership.roles.contains(&Some(role_id))))
+                || current_membership.clone().map_or(true, |current_membership| role_id.map_or(false, |role_id| !current_membership.roles.contains(&Some(role_id))))
             {
+                println!("Ignored");
                 return WebSocketOutput::Ignore;
             }
 
             let ws_actor = ws_actor.clone().unwrap();
+            println!("WS Actor: {:?}", ws_actor);
 
             let permissions_result = &fetch_only_specific_permissions(
                 &campsite_id,
@@ -199,33 +216,44 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
                 )
             )
                 .await;
+            println!("Permission result: {:?}", permissions_result);
             // Give an error and just disallow putting out events of anything else
             if let Err(err) = permissions_result {
                 println!("Error fetching permissions: {:?}", err);
                 *permissions = MEMBER_PERMS_DEFAULT.clone();
                 return WebSocketOutput::Ignore;
             }
+            println!("No error");
             let aggregated = permissions_result.as_ref().unwrap().iter().aggregate_permissions();
 
+            println!("Aggregated: {:?}", aggregated);
             // Only update member's permissions in that place, not the whole campsite
             match (category_id, tent_id) {
                 (Some(category_id), None) => {
+                    println!("Modify categories: {:?}", category_id);
                     permissions.categories.insert(category_id, aggregated);
                 },
                 (Some(_), Some(tent_id)) | (None, Some(tent_id)) => {
+                    println!("Modify tent: {:?}", tent_id);
                     permissions.tents.insert(tent_id, aggregated);
                 },
                 _ => {
+                    println!("Modify bonfire: {:?}", bonfire_id);
                     permissions.bonfires.insert(bonfire_id, aggregated);
                 }
             }
 
+            println!("With data");
             WebSocketOutput::BinaryData(binary)
         },
         // Role created, etc.
-        ReactiveSubjectData::Campsite { campsite_id, binary } => {
-            // Could be used in observer .filter, but borrowing could be less intuitive
-            if current_campsite.clone().map_or(true, |current_campsite| current_campsite != campsite_id.clone()) {
+        ReactiveSubjectData::Campsite { campsite_id, permissions_required, binary } => {
+            if
+                // Could be used in observer .filter, but borrowing could be less intuitive
+                current_campsite.clone().map_or(true, |current_campsite| current_campsite != campsite_id.clone()) ||
+                // For invited created and whatnot
+                permissions.roles.campsite & permissions_required != permissions_required
+            {
                 return WebSocketOutput::Ignore;
             }
             

@@ -70,7 +70,7 @@ pub async fn create_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, "RoleCreated", campsite_role_view_basic(role));
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleCreated", campsite_role_view_basic(role));
 
     return Ok(Json(campsite_role_view_basic(role)));
 }

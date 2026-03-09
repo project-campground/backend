@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use rsky_common::tid::Ticker;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, util::params::ensure_valid_set_uri, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, util::params::ensure_valid_set_uri, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -77,7 +77,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
         .get_result::<Bonfire>(&mut conn)
         .expect("Error inserting bonfire");
 
-    event_next_campsite(event_subject, &auth.campsite.id, "BonfireCreated", bonfire_view_basic(bonfire));
+    event_next_bonfire(event_subject, &bonfire, false, "BonfireCreated", bonfire_view_basic(bonfire));
 
     return Ok(Json(bonfire_view_basic(bonfire)));
 }
