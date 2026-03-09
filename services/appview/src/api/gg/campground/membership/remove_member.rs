@@ -13,7 +13,6 @@ use crate::{database::{establish_connection, profiles::get_profile}, helpers::{a
 
 #[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>&<actor>")]
 pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, actor: &str) -> Result<()> {    
-    println!("A");
     if actor == "" || actor == auth.actor.did {
         return remove_self(auth, event_subject, client, did_document_storage, campsite_id).await;
     } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
@@ -65,7 +64,6 @@ pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
 
 #[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>")]
 pub async fn remove_self(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str) -> Result<()> {    
-    println!("B");
     let (actor, profile) = get_profile(client, did_document_storage, &auth.actor.did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;

@@ -283,15 +283,13 @@ async fn update_post_list_in_db(posts: Vec<ProfilePost>) -> Result<(), &'static 
                 format!("{};{}", x.uri.clone(), x.content.clone())
             })
             .collect();
-    println!("Update tuple: {:?}", update_tuple_string);
 
     // Basically a complicated way of fetching specific list of replies for each parent instead of individually updating and spamming queries
     let content_update_sql = sql("(SELECT ((array_agg(array_to_string((string_to_array(unnest, ';'))[2:], ';')))[1]) FROM ( SELECT unnest(")
         .bind::<Array<VarChar>, _>(update_tuple_string.clone())
         .sql(") ) WHERE split_part(unnest, ';', 1) = \"appview\".\"profile_post\".\"uri\")");
-    println!("SQL {:?}", content_update_sql);
 
-    let u = diesel::update(profile_post::table)
+    diesel::update(profile_post::table)
         .filter(
             profile_post::uri.eq_any(update_tuple_string.iter().map(|x| x.split(";").collect::<Vec<&str>>()[0]))
         )
@@ -300,7 +298,6 @@ async fn update_post_list_in_db(posts: Vec<ProfilePost>) -> Result<(), &'static 
         )
         .execute(&mut conn)
         .expect("Could not update post list");
-    println!("Updated {}", u);
 
     Ok(())
 }

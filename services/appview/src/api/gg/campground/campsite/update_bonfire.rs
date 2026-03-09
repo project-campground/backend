@@ -50,8 +50,6 @@ pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, event_subject: &State<Rea
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
-    println!("Banner URI: {:?}", banner_uri);
-
     let current_date = Utc::now().naive_utc();
 
     let bonfire = diesel::update(appview::bonfire::table)

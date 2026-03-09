@@ -12,6 +12,6 @@ pub fn handle_select_first_error(error: Error) -> XRPCError {
     }
 }
 pub fn handle_all_db_errors(error: Error) -> XRPCError {
-    println!("Handle all err: {:?}", error);
+    println!("Err: {:?}", error);
     XRPCError::InternalServerError
 }

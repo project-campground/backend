@@ -4,7 +4,7 @@ use atproto_identity::storage_lru::LruDidDocumentStorage;
 use reqwest::Client;
 use rocket::State;
 use rxrust::{Observable, SharedScheduler};
-use crate::{api::ws::reactive::{MEMBER_PERMS_DEFAULT, WebSocketOutput, on_reactive_data}, database::actors::get_actor, helpers::ws::{CampsiteMemberPermissions, get_did_from_auth}, realtime::{frames::SocketErrorFrame, messages::{SocketAuthFrame, SocketAuthFramePayload}}};
+use crate::{api::ws::reactive::{MEMBER_PERMS_DEFAULT, WebSocketOutput, on_reactive_data}, database::actors::get_actor, helpers::ws::{CampsiteMemberPermissions, get_did_from_auth}, realtime::frames::SocketErrorFrame};
 
 use crate::realtime::data::{ReactiveSubject, ReactiveSubjectData};
 
@@ -27,7 +27,6 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
             return;
         }
 
-        println!("Expected auth: {:?}", serde_json::to_string(&SocketAuthFrame { op: crate::realtime::frames::SocketFrameType::Auth, payload: Some(SocketAuthFramePayload { service_auth: "example".to_string() }) }));
         let init_message = init_message.as_ref().unwrap().as_ref().unwrap();
         let mut current_campsite: Option<String> = None;
         let mut current_membership: Option<CampsiteMember> = None;
