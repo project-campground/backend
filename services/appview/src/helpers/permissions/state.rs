@@ -21,53 +21,53 @@ impl PermissionState {
             _ => map(),
         }
     }
-    pub fn from_role_tent(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
-        if permissions.tent & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
+    pub fn from_role_content(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
+        if permissions.content & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
     }
     #[allow(dead_code)]
-    pub fn from_role_campsite(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
-        if permissions.campsite & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
+    pub fn from_role_general(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
+        if permissions.general & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
     }
-    pub fn from_tent_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
-        permission.map_or(PermissionState::Inherit, |x| PermissionState::from_tent(x, flag))
+    pub fn from_content_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
+        permission.map_or(PermissionState::Inherit, |x| PermissionState::from_content(x, flag))
     }
-    pub fn from_tent(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
-        if permission.allowed.tent & flag == flag {
+    pub fn from_content(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+        if permission.allowed.content & flag == flag {
             PermissionState::Allowed
-        } else if permission.denied.tent & flag == flag {
+        } else if permission.denied.content & flag == flag {
             PermissionState::Denied
         } else {
             PermissionState::Inherit
         }
     }
-    pub fn from_tent_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: i64) -> PermissionState {
-        Self::from_tent(tent, flag)
+    pub fn from_content_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+        Self::from_content(tent, flag)
             .map_inherit(||
-                Self::from_tent(category, flag)
+                Self::from_content(category, flag)
                     .map_inherit(||
-                        Self::from_tent(bonfire, flag)
+                        Self::from_content(bonfire, flag)
                     )
             )
     }
     #[allow(dead_code)]
-    pub fn from_campsite_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
-        permission.map_or(PermissionState::Inherit, |x| PermissionState::from_campsite(x, flag))
+    pub fn from_general_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
+        permission.map_or(PermissionState::Inherit, |x| PermissionState::from_general(x, flag))
     }
-    pub fn from_campsite(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
-        if permission.allowed.campsite & flag == flag {
+    pub fn from_general(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+        if permission.allowed.general & flag == flag {
             PermissionState::Allowed
-        } else if permission.denied.campsite & flag == flag {
+        } else if permission.denied.general & flag == flag {
             PermissionState::Denied
         } else {
             PermissionState::Inherit
         }
     }
-    pub fn from_campsite_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: i64) -> PermissionState {
-        Self::from_campsite(tent, flag)
+    pub fn from_general_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+        Self::from_general(tent, flag)
             .map_inherit(||
-                Self::from_campsite(category, flag)
+                Self::from_general(category, flag)
                     .map_inherit(||
-                        Self::from_campsite(bonfire, flag)
+                        Self::from_general(bonfire, flag)
                     )
             )
     }

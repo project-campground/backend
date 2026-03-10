@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite_global}, realtime::data::ReactiveSubject, util::params::{AsParamValue, OptionValidity, ensure_valid_modified_uri}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite_global}, realtime::data::ReactiveSubject, util::params::{AsParamValue, OptionValidity, ensure_valid_modified_uri}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -58,7 +58,7 @@ pub async fn update_campsite(auth: CampsiteInfo<'_>, event_subject: &State<React
         XRPCError::BadRequest(x.to_string())
     )?;
 
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_CAMPSITE, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_CAMPSITE, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

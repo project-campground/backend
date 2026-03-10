@@ -7,7 +7,7 @@ use reqwest::Client;
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -26,7 +26,7 @@ pub async fn ban_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
     let inner_body = &body.into_inner();
     if inner_body.reason.clone().map_or(false, |x| x.len() > 200) {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
-    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -98,7 +98,7 @@ fn add_ban(event_subject: &State<ReactiveSubject>, executor: &Actor, campsite: &
 
     let ban = ban.first().unwrap();
 
-    event_next_campsite(event_subject, &campsite.id, CampsitePermissionConsts::BAN_MEMBERS, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
+    event_next_campsite(event_subject, &campsite.id, GeneralPermissionConsts::BAN_MEMBERS, "MemberBanCreated", campsite_ban_view(ban, profile, actor));
     
     Ok(Json(campsite_ban_view(ban, profile, actor)))
 }

@@ -7,7 +7,7 @@ use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view_basic, permissions::TentPermissionConsts, tents::{tent_category_view, tent_view_basic}}, util::iter::AggregatePermissions, xrpc::{
+    database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_permission_view_basic, permissions::ContentPermissionConsts, tents::{tent_category_view, tent_view_basic}}, util::iter::AggregatePermissions, xrpc::{
         campsite::BonfireInfo, error::{Result, XRPCError}
     }
 };
@@ -35,12 +35,12 @@ pub async fn get_tents(auth: BonfireInfo<'_>,  bonfire_id: &str) -> Result<Json<
         )
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
-    let role_tent_permissions = roles
+    let role_content_permissions = roles
         .iter()
-        .fold(0i64, |tent_perm, role|
-            tent_perm | role.tent_permissions
+        .fold(0i64, |content_perm, role|
+            content_perm | role.content_permissions
         );
-    let has_role_permission = role_tent_permissions & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT;
+    let has_role_permission = role_content_permissions & ContentPermissionConsts::VIEW_CONTENT == ContentPermissionConsts::VIEW_CONTENT;
 
     let permissions = campsite_permission::table
         .filter(
@@ -174,7 +174,7 @@ fn filter_permissions_and_get_ids<T>(permissions: T, get_denied: bool) -> impl I
 {
     permissions
         .filter(move |x|
-            (if get_denied { x.denied_tent_permissions } else { x.allowed_tent_permissions }) & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT
+            (if get_denied { x.denied_content_permissions } else { x.allowed_content_permissions }) & ContentPermissionConsts::VIEW_CONTENT == ContentPermissionConsts::VIEW_CONTENT
         )
         .map(|x| x.category_id.or(x.tent_id).unwrap())
 }
@@ -192,9 +192,9 @@ async fn has_perms_to_view_bonfire<'a, T>(actor: &str, role_ids: &Vec<Uuid>, has
     let perms = bonfire_perms.aggregate_permissions();
 
     // Don't need to check role permissions, because they were overridden
-    if perms.allowed.tent & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
+    if perms.allowed.content & ContentPermissionConsts::VIEW_CONTENT == ContentPermissionConsts::VIEW_CONTENT {
         return Ok(true);
-    } else if perms.denied.tent & TentPermissionConsts::VIEW_CONTENT == TentPermissionConsts::VIEW_CONTENT {
+    } else if perms.denied.content & ContentPermissionConsts::VIEW_CONTENT == ContentPermissionConsts::VIEW_CONTENT {
         return Ok(false);
     }
 

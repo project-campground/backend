@@ -3,7 +3,7 @@ use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -27,7 +27,7 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
 
     if bonfire.is_none() {
         return Err(XRPCError::NotFound);
-    } else if !has_tent_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, TentPermissionConsts::VIEW_CONTENT).await? {
+    } else if !has_leveled_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, GeneralPermissionConsts::MANAGE_BONFIRES, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

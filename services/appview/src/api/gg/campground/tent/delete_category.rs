@@ -5,7 +5,7 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::{permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
+    database::establish_connection, helpers::{permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
         campsite::CategoryInfo, error::{Result, XRPCError}
     }
 };
@@ -13,7 +13,7 @@ use crate::{
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.deleteCategory?<category_id>")]
 pub async fn delete_category(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str) -> Result<Json<TentCategoryView>> {
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, CampsitePermissionConsts::MANAGE_TENTS, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

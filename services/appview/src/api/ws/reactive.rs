@@ -8,7 +8,7 @@ use rsky_common::cbor_to_struct;
 use uuid::Uuid;
 use ws::Message;
 
-use crate::{api::ws::permissions::{aggregate_ws_permissions, update_ws_permissions}, database::{campsites::{get_campsite_member, get_roles_from_db}, establish_connection}, helpers::{api::handle_all_db_errors, permissions::{TentPermissionConsts, fetch::{fetch_all_campsite_permissions, fetch_only_specific_permissions}, state::PermissionState}, ws::CampsiteMemberPermissions}, realtime::{data::ReactiveSubjectData, frames::{SocketDataFrame, SocketFramePermissionViewPayload, SocketFrameSerializer, SocketFrameType}, messages::{SocketInAnyFrame, SocketInFramePayload}}, try_or_continue, util::{iter::AggregatePermissions, sql::array_agg}};
+use crate::{api::ws::permissions::{aggregate_ws_permissions, update_ws_permissions}, database::{campsites::{get_campsite_member, get_roles_from_db}, establish_connection}, helpers::{api::handle_all_db_errors, permissions::{ContentPermissionConsts, fetch::{fetch_all_campsite_permissions, fetch_only_specific_permissions}, state::PermissionState}, ws::CampsiteMemberPermissions}, realtime::{data::ReactiveSubjectData, frames::{SocketDataFrame, SocketFramePermissionViewPayload, SocketFrameSerializer, SocketFrameType}, messages::{SocketInAnyFrame, SocketInFramePayload}}, try_or_continue, util::{iter::AggregatePermissions, sql::array_agg}};
 
 pub enum WebSocketOutput {
     RocketError(String),
@@ -21,7 +21,7 @@ pub enum WebSocketOutput {
 
 lazy_static! {
     pub static ref MEMBER_PERMS_DEFAULT: CampsiteMemberPermissions = CampsiteMemberPermissions {
-        roles: PermissionsDictionary { campsite: 0, tent: 0 },
+        roles: PermissionsDictionary { general: 0, content: 0 },
         bonfires: HashMap::new(),
         categories: HashMap::new(),
         tents: HashMap::new(),
@@ -241,7 +241,7 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
                 // Could be used in observer .filter, but borrowing could be less intuitive
                 current_campsite.clone().map_or(true, |current_campsite| current_campsite != campsite_id.clone()) ||
                 // For invited created and whatnot
-                permissions.roles.campsite & permissions_required != permissions_required
+                permissions.roles.general & permissions_required != permissions_required
             {
                 return WebSocketOutput::Ignore;
             }
@@ -257,8 +257,8 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
 
             // Permission check to not have non-mod members see events from mod-only bonfire
             let bonfire_permissions = PermissionState
-                ::from_tent_optional(&permissions.bonfires.get(&bonfire_id), TentPermissionConsts::VIEW_CONTENT)
-                .map_inherit(|| PermissionState::from_role_tent(&permissions.roles, TentPermissionConsts::VIEW_CONTENT));
+                ::from_content_optional(&permissions.bonfires.get(&bonfire_id), ContentPermissionConsts::VIEW_CONTENT)
+                .map_inherit(|| PermissionState::from_role_content(&permissions.roles, ContentPermissionConsts::VIEW_CONTENT));
 
             // To no longer track it
             if deleted {
@@ -280,12 +280,12 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
 
             // Permission check to not have non-mod members see events from mod-only bonfire
             let category_permissions = PermissionState
-                ::from_tent_optional(&permissions.categories.get(&category_id), TentPermissionConsts::VIEW_CONTENT)
+                ::from_content_optional(&permissions.categories.get(&category_id), ContentPermissionConsts::VIEW_CONTENT)
                 .map_inherit(||
                     PermissionState
-                        ::from_tent_optional(&permissions.bonfires.get(&bonfire_id), TentPermissionConsts::VIEW_CONTENT)
+                        ::from_content_optional(&permissions.bonfires.get(&bonfire_id), ContentPermissionConsts::VIEW_CONTENT)
                         .map_inherit(
-                            || PermissionState::from_role_tent(&permissions.roles, TentPermissionConsts::VIEW_CONTENT)
+                            || PermissionState::from_role_content(&permissions.roles, ContentPermissionConsts::VIEW_CONTENT)
                         )
                 );
             // To no longer track it
@@ -308,15 +308,15 @@ pub async fn on_reactive_data(omsg: ReactiveSubjectData, ws_actor: &Option<Strin
 
             // Permission check to not have non-mod members see events from mod-only bonfire
             let tent_permissions = PermissionState
-                ::from_tent_optional(&permissions.tents.get(&tent_id), TentPermissionConsts::VIEW_CONTENT)
+                ::from_content_optional(&permissions.tents.get(&tent_id), ContentPermissionConsts::VIEW_CONTENT)
                 .map_inherit(||
                     PermissionState
-                        ::from_tent_optional(&category_id.map(|x| permissions.categories.get(&x)).flatten(), TentPermissionConsts::VIEW_CONTENT)
+                        ::from_content_optional(&category_id.map(|x| permissions.categories.get(&x)).flatten(), ContentPermissionConsts::VIEW_CONTENT)
                         .map_inherit(
                             || PermissionState
-                                ::from_tent_optional(&permissions.bonfires.get(&bonfire_id), TentPermissionConsts::VIEW_CONTENT)
+                                ::from_content_optional(&permissions.bonfires.get(&bonfire_id), ContentPermissionConsts::VIEW_CONTENT)
                                 .map_inherit(
-                                    || PermissionState::from_role_tent(&permissions.roles, TentPermissionConsts::VIEW_CONTENT)
+                                    || PermissionState::from_role_content(&permissions.roles, ContentPermissionConsts::VIEW_CONTENT)
                                 )
                         )
                 );

@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -28,7 +28,7 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
     }
 
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, CampsitePermissionConsts::MANAGE_TENTS, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -109,7 +109,7 @@ async fn check_category_existence(campsite: &Campsite, member: &CampsiteMember, 
         return Err(XRPCError::BadRequest("Category supplied in 'category_id' does not belong to the same bonfire as supplied in 'bonfire_id' or already existing bonfire".to_string()));
     }
 
-    if !has_tent_perms_or_owner(campsite, moved_bonfire_id, Some(category_id), None, member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+    if !has_leveled_perms_or_owner(campsite, moved_bonfire_id, Some(category_id), None, member, GeneralPermissionConsts::MANAGE_TENTS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -137,7 +137,7 @@ pub async fn check_bonfire_existence(campsite: &Campsite, member: &CampsiteMembe
         return Err(XRPCError::BadRequest("Bonfire supplied in 'bonfire_id' does not exist".to_string()));
     }
 
-    if !has_tent_perms_or_owner(campsite, moved_bonfire_id, None, None, member, CampsitePermissionConsts::MANAGE_TENTS, 0).await? {
+    if !has_leveled_perms_or_owner(campsite, moved_bonfire_id, None, None, member, GeneralPermissionConsts::MANAGE_TENTS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

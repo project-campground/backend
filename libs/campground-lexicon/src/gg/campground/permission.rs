@@ -1,8 +1,8 @@
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PermissionsDictionary {
-    pub campsite: i64,
-    pub tent: i64,
+    pub general: i64,
+    pub content: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

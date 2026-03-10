@@ -4,7 +4,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{api::gg::campground::permission::update_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, permissions::{CampsitePermissionConsts, has_full_tent_perms_from_roles}, roles::ensure_no_higher_role}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::permission::update_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, permissions::{GeneralPermissionConsts, has_full_leveled_perms_from_roles}, roles::ensure_no_higher_role}, realtime::data::ReactiveSubject, xrpc::{
     campsite::{BonfireInfo, CategoryInfo, TentInfo}, error::{Result, XRPCError}
 }};
 
@@ -26,7 +26,7 @@ pub async fn update_tent_role_permission(auth: TentInfo<'_>, event_subject: &Sta
         return Err(XRPCError::NotFound);
     }
 
-    if !(auth.campsite.owner == auth.actor.did || has_full_tent_perms_from_roles(&auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &all_roles, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await?) {
+    if !(auth.campsite.owner == auth.actor.did || has_full_leveled_perms_from_roles(&auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &all_roles, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await?) {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
@@ -73,7 +73,7 @@ pub async fn update_category_role_permission(auth: CategoryInfo<'_>, event_subje
         return Err(XRPCError::NotFound);
     }
 
-    if !(auth.campsite.owner == auth.actor.did || has_full_tent_perms_from_roles(&auth.campsite.id, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &all_roles, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await?) {
+    if !(auth.campsite.owner == auth.actor.did || has_full_leveled_perms_from_roles(&auth.campsite.id, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &all_roles, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await?) {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
@@ -120,7 +120,7 @@ pub async fn update_bonfire_role_permission(auth: BonfireInfo<'_>, event_subject
         return Err(XRPCError::NotFound);
     }
 
-    if !(auth.campsite.owner == auth.actor.did || has_full_tent_perms_from_roles(&auth.campsite.id, &auth.bonfire.id, None, None, &all_roles, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, 0).await?) {
+    if !(auth.campsite.owner == auth.actor.did || has_full_leveled_perms_from_roles(&auth.campsite.id, &auth.bonfire.id, None, None, &all_roles, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await?) {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     

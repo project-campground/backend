@@ -52,7 +52,7 @@ pub async fn update_permission(auth: OneOfInfo<'_>, query: UpdatePermissionsQuer
 }
 
 pub fn ensure_update_permission_good_request(inner_body: &UpdatePermissionBody) -> Result<(), XRPCError> {
-    if (inner_body.permissions.allowed.campsite & inner_body.permissions.denied.campsite) | (inner_body.permissions.allowed.tent & inner_body.permissions.denied.tent) != 0 {
+    if (inner_body.permissions.allowed.general & inner_body.permissions.denied.general) | (inner_body.permissions.allowed.content & inner_body.permissions.denied.content) != 0 {
         Err(XRPCError::BadRequest("Cannot both allow and deny the same permission".to_string()))
     } else {
         Ok(())
@@ -117,7 +117,7 @@ fn insert_permission_if_not_empty(
     let current_date = Utc::now().naive_utc();
     let mut conn = establish_connection().unwrap();
 
-    if permissions.allowed.campsite | permissions.allowed.tent | permissions.denied.campsite | permissions.denied.tent == 0 {
+    if permissions.allowed.general | permissions.allowed.content | permissions.denied.general | permissions.denied.content == 0 {
         return Err(XRPCError::BadRequest("Expected at least one denied or allowed permission".to_string()));
     }
 
@@ -134,10 +134,10 @@ fn insert_permission_if_not_empty(
             created_at: current_date,
             updated_by: actor.clone(),
             updated_at: current_date,
-            allowed_campsite_permissions: permissions.allowed.campsite,
-            allowed_tent_permissions: permissions.allowed.tent,
-            denied_campsite_permissions: permissions.denied.campsite,
-            denied_tent_permissions: permissions.denied.tent,
+            allowed_general_permissions: permissions.allowed.general,
+            allowed_content_permissions: permissions.allowed.content,
+            denied_general_permissions: permissions.denied.general,
+            denied_content_permissions: permissions.denied.content,
         })
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_select_first_error)?
@@ -157,7 +157,7 @@ fn update_or_delete_role_permission<Predicate: diesel::Expression + diesel::expr
         <Predicate as diesel::Expression>::SqlType: BoolOrNullableBool,
 {
     let mut conn = establish_connection().unwrap();
-    if permissions.allowed.campsite | permissions.allowed.tent | permissions.denied.campsite | permissions.denied.tent == 0 {
+    if permissions.allowed.general | permissions.allowed.content | permissions.denied.general | permissions.denied.content == 0 {
         diesel::delete(
             campsite_permission::table
         )
@@ -174,21 +174,21 @@ fn update_or_delete_role_permission<Predicate: diesel::Expression + diesel::expr
             predicate.clone(),
         )
         .set((
-            campsite_permission::allowedcampsitepermissions
+            campsite_permission::allowedgeneralpermissions
                 .eq(
-                    permissions.allowed.campsite
+                    permissions.allowed.general
                 ),
-            campsite_permission::deniedcampsitepermissions
+            campsite_permission::deniedgeneralpermissions
                 .eq(
-                    permissions.denied.campsite
+                    permissions.denied.general
                 ),
-            campsite_permission::allowedtentpermissions
+            campsite_permission::allowedcontentpermissions
                 .eq(
-                        permissions.allowed.tent
+                        permissions.allowed.content
                     ),
-            campsite_permission::deniedtentpermissions
+            campsite_permission::deniedcontentpermissions
                 .eq(
-                    permissions.denied.tent
+                    permissions.denied.content
                 )
         ))
         .get_result::<CampsitePermission>(&mut conn)

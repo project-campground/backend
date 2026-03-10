@@ -3,7 +3,7 @@ use campground_lexicon::gg::campground::membership::CampsiteBanView;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -11,7 +11,7 @@ use crate::{database::establish_connection, helpers::{api::handle_select_first_e
 pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, actor: &str) -> Result<Json<CampsiteBanView>> {    
     if actor == auth.actor.did {
         return Err(XRPCError::Forbidden("Member cannot delete ban from themselves".to_string()));
-    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::BAN_MEMBERS, 0).await? {
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -58,7 +58,7 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
-        CampsitePermissionConsts::BAN_MEMBERS,
+        GeneralPermissionConsts::BAN_MEMBERS,
         "MemberBanDeleted",
         campsite_ban_view(&member_ban, &profile, &target_actor)
     );

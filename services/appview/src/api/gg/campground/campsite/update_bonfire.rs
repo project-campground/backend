@@ -5,7 +5,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, util::params::{OptionValidity, ensure_valid_modified_uri}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, util::params::{OptionValidity, ensure_valid_modified_uri}, xrpc::{
     campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
@@ -46,7 +46,7 @@ pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, event_subject: &State<Rea
 
     let mut conn = establish_connection().unwrap();
 
-    if !has_tent_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, GeneralPermissionConsts::MANAGE_BONFIRES, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

@@ -10,15 +10,15 @@ impl<'a, T> AggregatePermissions<PermissionsDictionary> for T
 {
     fn aggregate_permissions(&self) -> PermissionsDictionary {
         let tuple = &mut (0i64, 0i64);
-        let (campsite_perm, tent_perm) = self
+        let (general_perm, content_perm) = self
             .clone()
             .fold(tuple, |perm, role| {
-                perm.0 |= role.campsite_permissions;
-                perm.1 |= role.tent_permissions;
+                perm.0 |= role.general_permissions;
+                perm.1 |= role.content_permissions;
                 perm
             });
 
-        PermissionsDictionary { campsite: campsite_perm.clone(), tent: tent_perm.clone() }
+        PermissionsDictionary { general: general_perm.clone(), content: content_perm.clone() }
     }
 }
 impl<'a, T> AggregatePermissions<PermissionsStateDictionary> for T
@@ -30,18 +30,18 @@ impl<'a, T> AggregatePermissions<PermissionsStateDictionary> for T
         self
         .clone()
         .for_each(|perm| {
-            flip_perms(&mut aggregated_perms.0, perm.allowed_campsite_permissions, perm.denied_campsite_permissions);
-            flip_perms(&mut aggregated_perms.1, perm.allowed_tent_permissions, perm.denied_tent_permissions);
+            flip_perms(&mut aggregated_perms.0, perm.allowed_general_permissions, perm.denied_general_permissions);
+            flip_perms(&mut aggregated_perms.1, perm.allowed_content_permissions, perm.denied_content_permissions);
         });
         
         PermissionsStateDictionary {
             allowed: PermissionsDictionary {
-                campsite: aggregated_perms.0.0,
-                tent: aggregated_perms.1.0,
+                general: aggregated_perms.0.0,
+                content: aggregated_perms.1.0,
             },
             denied: PermissionsDictionary {
-                campsite: aggregated_perms.0.1,
-                tent: aggregated_perms.1.1,
+                general: aggregated_perms.0.1,
+                content: aggregated_perms.1.1,
             }
         }
     }
@@ -55,18 +55,18 @@ pub fn aggregate_permissions_double_ref<'a, T>(permissions: T) -> PermissionsSta
     permissions
         .clone()
         .for_each(|perm| {
-            flip_perms(&mut aggregated_perms.0, perm.allowed_campsite_permissions, perm.denied_campsite_permissions);
-            flip_perms(&mut aggregated_perms.1, perm.allowed_tent_permissions, perm.denied_tent_permissions);
+            flip_perms(&mut aggregated_perms.0, perm.allowed_general_permissions, perm.denied_general_permissions);
+            flip_perms(&mut aggregated_perms.1, perm.allowed_content_permissions, perm.denied_content_permissions);
         });
 
     PermissionsStateDictionary {
         allowed: PermissionsDictionary {
-            campsite: aggregated_perms.0.0,
-            tent: aggregated_perms.1.0,
+            general: aggregated_perms.0.0,
+            content: aggregated_perms.1.0,
         },
         denied: PermissionsDictionary {
-            campsite: aggregated_perms.0.1,
-            tent: aggregated_perms.1.1,
+            general: aggregated_perms.0.1,
+            content: aggregated_perms.1.1,
         }
     }
 }

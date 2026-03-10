@@ -33,7 +33,7 @@ pub fn fetch_all_campsite_permissions(campsite_id: &str, actor: &str) -> Result<
 /// If tent is some, then it fetches bonfire and tent level permission.
 /// If category is some, then it fetches bonfire and category level permissions.
 /// If category and tent are specified, then it fetches from bonfire all the way to tent level, including category-level.
-pub async fn fetch_tent_permissions(campsite_id: &str, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, actor: &str, role_ids: &Vec<Uuid>) -> Result<Vec<CampsitePermission>, XRPCError> {
+pub async fn fetch_leveled_permissions(campsite_id: &str, bonfire_id: &str, category_id: Option<Uuid>, tent_id: Option<Uuid>, actor: &str, role_ids: &Vec<Uuid>) -> Result<Vec<CampsitePermission>, XRPCError> {
     let mut conn = establish_connection().unwrap();
     campsite_permission::table
         .filter(

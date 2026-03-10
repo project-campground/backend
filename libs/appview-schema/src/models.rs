@@ -223,10 +223,10 @@ pub mod appview {
         #[diesel(column_name = mentionable)]
         pub mentionable: bool,
 
-        #[diesel(column_name = campsitepermissions)]
-        pub campsite_permissions: i64,
-        #[diesel(column_name = tentpermissions)]
-        pub tent_permissions: i64,
+        #[diesel(column_name = generalpermissions)]
+        pub general_permissions: i64,
+        #[diesel(column_name = contentpermissions)]
+        pub content_permissions: i64,
 
         pub color: i32,
         #[diesel(column_name = colorsecondary)]
@@ -272,14 +272,14 @@ pub mod appview {
         #[diesel(column_name = tentid)]
         pub tent_id: Option<Uuid>,
 
-        #[diesel(column_name = allowedcampsitepermissions)]
-        pub allowed_campsite_permissions: i64,
-        #[diesel(column_name = deniedcampsitepermissions)]
-        pub denied_campsite_permissions: i64,
-        #[diesel(column_name = allowedtentpermissions)]
-        pub allowed_tent_permissions: i64,
-        #[diesel(column_name = deniedtentpermissions)]
-        pub denied_tent_permissions: i64,
+        #[diesel(column_name = allowedgeneralpermissions)]
+        pub allowed_general_permissions: i64,
+        #[diesel(column_name = deniedgeneralpermissions)]
+        pub denied_general_permissions: i64,
+        #[diesel(column_name = allowedcontentpermissions)]
+        pub allowed_content_permissions: i64,
+        #[diesel(column_name = deniedcontentpermissions)]
+        pub denied_content_permissions: i64,
 
         #[diesel(column_name = createdby)]
         pub created_by: String,

@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, database::establish_connection, helpers::{api::handle_select_first_error, permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CategoryInfo, error::{Result, XRPCError}
 }};
 
@@ -24,7 +24,7 @@ pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<Reactiv
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
     }
 
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, CampsitePermissionConsts::MANAGE_TENTS, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

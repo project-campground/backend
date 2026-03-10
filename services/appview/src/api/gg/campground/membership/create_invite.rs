@@ -8,7 +8,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_campsite, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_campsite, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -29,7 +29,7 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
         return Err(XRPCError::BadRequest("Expected 'expires_at' property to not result in already expired invite".to_string()));
     }
 
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::CREATE_INVITES, 0).await? {
+    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::CREATE_INVITES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -53,7 +53,7 @@ pub async fn create_invite(auth: CampsiteInfo<'_>, event_subject: &State<Reactiv
         .get_result::<CampsiteInvite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(event_subject, &auth.campsite.id, CampsitePermissionConsts::MANAGE_INVITES, "InviteCreated", campsite_invite_view_campsite(invite, &profile, &actor));
+    event_next_campsite(event_subject, &auth.campsite.id, GeneralPermissionConsts::MANAGE_INVITES, "InviteCreated", campsite_invite_view_campsite(invite, &profile, &actor));
 
     return Ok(Json(campsite_invite_view_campsite(invite, &profile, &actor)));
 }

@@ -7,7 +7,7 @@ use reqwest::Client;
 use rocket::State;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::campsite_member_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::{event_next, event_next_campsite}}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
+use crate::{database::{establish_connection, profiles::get_profile}, helpers::{api::handle_select_first_error, campsites::campsite_member_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::{event_next, event_next_campsite}}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -15,7 +15,7 @@ use crate::{database::{establish_connection, profiles::get_profile}, helpers::{a
 pub async fn remove_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, campsite_id: &str, actor: &str) -> Result<()> {    
     if actor == "" || actor == auth.actor.did {
         return remove_self(auth, event_subject, client, did_document_storage, campsite_id).await;
-    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::KICK_MEMBERS, 0).await? {
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::KICK_MEMBERS, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

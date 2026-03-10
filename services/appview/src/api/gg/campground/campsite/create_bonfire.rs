@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use rsky_common::tid::Ticker;
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{CampsitePermissionConsts, has_role_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, util::params::ensure_valid_set_uri, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::bonfire_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, util::params::ensure_valid_set_uri, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -27,7 +27,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
     } else if description.len() > 200 {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
-    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, CampsitePermissionConsts::MANAGE_BONFIRES, 0).await? {
+    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_BONFIRES, 0).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     let avatar_uri = &ensure_valid_set_uri(avatar_uri)

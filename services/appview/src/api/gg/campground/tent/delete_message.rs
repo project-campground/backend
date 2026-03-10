@@ -10,7 +10,7 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{TentPermissionConsts, has_tent_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -70,9 +70,9 @@ pub async fn delete_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSu
         .first::<(TentMessage, Option<Actor>, Option<Profile>, Option<CampsiteMember>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let required_perms = if msg.0.created_by != auth.actor.did { TentPermissionConsts::VIEW_CONTENT | TentPermissionConsts::MANAGE_CONTENT } else { TentPermissionConsts::VIEW_CONTENT };
+    let required_perms = if msg.0.created_by != auth.actor.did { ContentPermissionConsts::VIEW_CONTENT | ContentPermissionConsts::MANAGE_CONTENT } else { ContentPermissionConsts::VIEW_CONTENT };
 
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

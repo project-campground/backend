@@ -139,8 +139,8 @@ pub fn campsite_role_view_basic(role: &CampsiteRole) -> CampsiteRoleViewBasic {
         color: role.color,
         color_secondary: role.color_secondary,
         permissions: PermissionsDictionary {
-            campsite: role.campsite_permissions,
-            tent: role.tent_permissions,
+            general: role.general_permissions,
+            content: role.content_permissions,
         },
         priority: role.priority,
         created_by: role.created_by.clone(),
@@ -162,12 +162,12 @@ pub fn campsite_permission_view_basic(permission: &CampsitePermission) -> Campsi
 
         permissions: PermissionsStateDictionary {
             allowed: PermissionsDictionary {
-                campsite: permission.allowed_campsite_permissions,
-                tent: permission.allowed_tent_permissions,
+                general: permission.allowed_general_permissions,
+                content: permission.allowed_content_permissions,
             },
             denied: PermissionsDictionary {
-                campsite: permission.denied_campsite_permissions,
-                tent: permission.denied_tent_permissions,
+                general: permission.denied_general_permissions,
+                content: permission.denied_content_permissions,
             },
         },
     };
@@ -187,12 +187,12 @@ pub fn campsite_permission_view_detailed(permission: &CampsitePermission) -> Cam
 
         permissions: PermissionsStateDictionary {
             allowed: PermissionsDictionary {
-                campsite: permission.allowed_campsite_permissions,
-                tent: permission.allowed_tent_permissions,
+                general: permission.allowed_general_permissions,
+                content: permission.allowed_content_permissions,
             },
             denied: PermissionsDictionary {
-                campsite: permission.denied_campsite_permissions,
-                tent: permission.denied_tent_permissions,
+                general: permission.denied_general_permissions,
+                content: permission.denied_content_permissions,
             },
         },
 

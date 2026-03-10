@@ -4,7 +4,7 @@ use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, sq
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::campsite_permission_view_detailed, permissions::{CampsitePermissionConsts, TentPermissionConsts, has_tent_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, helpers::{api::handle_all_db_errors, campsites::campsite_permission_view_detailed, permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}}, xrpc::{
     campsite::{BonfireInfo, CategoryInfo, OneOfInfo, TentInfo}, error::{Result, XRPCError}
 }};
 
@@ -34,7 +34,7 @@ pub async fn get_permissions(auth: OneOfInfo<'_>, query: GetPermissionsQuery) ->
 }
 
 pub async fn get_tent_permissions(auth: TentInfo<'_>, non_self: bool) -> Result<Json<GetCampsitePermissionsOutput>> {    
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &auth.member, CampsitePermissionConsts::MANAGE_ROLES, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &auth.member, GeneralPermissionConsts::MANAGE_ROLES, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 
@@ -66,7 +66,7 @@ pub async fn get_tent_permissions(auth: TentInfo<'_>, non_self: bool) -> Result<
 }
 
 pub async fn get_category_permissions(auth: CategoryInfo<'_>, non_self: bool) -> Result<Json<GetCampsitePermissionsOutput>> {    
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
@@ -98,7 +98,7 @@ pub async fn get_category_permissions(auth: CategoryInfo<'_>, non_self: bool) ->
 }
 
 pub async fn get_bonfire_permissions(auth: BonfireInfo<'_>, non_self: bool) -> Result<Json<GetCampsitePermissionsOutput>> {    
-    if !has_tent_perms_or_owner(&auth.campsite, &auth.bonfire.id, None, None, &auth.member, CampsitePermissionConsts::MANAGE_ROLES, TentPermissionConsts::VIEW_CONTENT).await? {
+    if !has_leveled_perms_or_owner(&auth.campsite, &auth.bonfire.id, None, None, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, ContentPermissionConsts::VIEW_CONTENT).await? {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
     
