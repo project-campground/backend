@@ -3,15 +3,13 @@ use campground_lexicon::gg::campground::membership::CampsiteBanView;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}}, xrpc::{
-    campsite::CampsiteInfo, error::{Result, XRPCError}
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}}, xrpc::{
+    campsite::CampsiteInfo, error::Result
 }};
 
 #[get("/xrpc/gg.campground.membership.getMemberBan?<campsite_id>&<actor>")]
 pub async fn get_member_ban(auth: CampsiteInfo<'_>, campsite_id: &str, actor: &str) -> Result<Json<CampsiteBanView>> {
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0));
 
     let mut conn = establish_connection().unwrap();
 

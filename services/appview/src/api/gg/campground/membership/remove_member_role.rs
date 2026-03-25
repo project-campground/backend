@@ -6,7 +6,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 use diesel::pg::expression::dsl::array_remove;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}, ws::event_next}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}, ws::event_next}, realtime::data::{ReactiveSubject, ReactiveSubjectData}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -48,10 +48,10 @@ pub async fn remove_member_role(auth: CampsiteInfo<'_>, event_subject: &State<Re
     }
 
     ensure_no_higher_role(auth.campsite.owner == auth.actor.did, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
-    
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::GIVE_ROLES, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+
+    expect_permission!(
+        has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::GIVE_ROLES, 0)
+    );
     
     let updated_members = diesel::update(campsite_member::table)
         .filter(

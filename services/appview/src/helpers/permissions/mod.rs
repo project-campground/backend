@@ -8,6 +8,16 @@ use uuid::Uuid;
 
 use crate::{database::campsites::get_specific_roles, helpers::permissions::{fetch::fetch_leveled_permissions, state::PermissionState}, util::iter::AggregatePermissions, xrpc::error::XRPCError};
 
+#[macro_export]
+macro_rules! expect_permission {
+    ($expr: expr) => {
+        if !$expr.await? {
+            use crate::xrpc::error::XRPCError;
+            return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+        }
+    };
+}
+
 pub struct GeneralPermissionConsts { }
 impl GeneralPermissionConsts {
     pub const MANAGE_CAMPSITE: i64 = 0b1;
@@ -45,8 +55,21 @@ pub async fn has_role_permissions(member: &CampsiteMember, general_perms: i64, c
     
     Ok((content_perms & perms.content == content_perms) && (general_perms & perms.general == general_perms))
 }
+pub async fn has_any_role_permissions(member: &CampsiteMember, general_perms: i64) -> Result<bool, XRPCError> {
+    let member_role_ids: &Vec<Uuid> = &member.roles.iter().filter_map(|&x| x).collect::<Vec<Uuid>>();
+    let roles = &get_specific_roles(member_role_ids)?;
+    
+    let perms = roles
+        .iter()
+        .aggregate_permissions();
+    
+    Ok(general_perms & perms.content != 0)
+}
 pub async fn has_role_perms_or_owner(campsite: &Campsite, member: &CampsiteMember, general_perms: i64, content_perms: i64) -> Result<bool, XRPCError> {
     if campsite.owner == member.user_id { Ok(true) } else { has_role_permissions(member, general_perms, content_perms).await }
+}
+pub async fn has_any_role_perms_or_owner(campsite: &Campsite, member: &CampsiteMember, general_perms: i64) -> Result<bool, XRPCError> {
+    if campsite.owner == member.user_id { Ok(true) } else { has_any_role_permissions(member, general_perms).await }
 }
 pub async fn has_role_perms_from_roles_or_owner(campsite: &Campsite, member: &CampsiteMember, roles: &Vec<CampsiteRole>, general_perms: i64, content_perms: i64) -> Result<bool, XRPCError> {
     if campsite.owner == member.user_id {

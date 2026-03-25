@@ -39,7 +39,7 @@ pub async fn create_campsite(auth: Authorization<'_>, event_subject: &State<Reac
         .clone()
         .ensure_validity(|x| x.len() <= 32)
         .map_err(|_|
-            XRPCError::BadRequest("Expected 'vanity_url' property to have a string of up to 32 characters".to_string())
+            XRPCError::BadRequest("Expected 'vanityUrl' property to have a string of up to 32 characters".to_string())
         )?;
     let tags = &tags
         .clone()
@@ -87,7 +87,7 @@ pub async fn create_campsite(auth: Authorization<'_>, event_subject: &State<Reac
             .expect("Error loading other campsites");
         existing_vanity_count > 0
     }) {
-        return Err(XRPCError::Forbidden("Cannot use that 'vanity_url', as a campsite is already using it".to_string()));
+        return Err(XRPCError::Forbidden("Cannot use that 'vanityUrl', as a campsite is already using it".to_string()));
     }
 
     let mut ticker = Ticker::new();

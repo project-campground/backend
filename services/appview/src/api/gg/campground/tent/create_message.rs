@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, expect_permission, helpers::{api::handle_select_first_error, permissions::{ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -51,9 +51,9 @@ pub async fn create_message<'a>(auth: TentInfo<'_>, event_subject: &State<Reacti
         return Err(XRPCError::BadRequest("Expected 'replies' parameters to have valid UUIDs".to_string()));
     }
 
-    if !has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, ContentPermissionConsts::VIEW_CONTENT | ContentPermissionConsts::CREATE_CONTENT).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(
+        has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, ContentPermissionConsts::VIEW_CONTENT | ContentPermissionConsts::CREATE_CONTENT)
+    );
 
     let replies_query: Vec<TentMessage> = tent_message::table
         .filter(

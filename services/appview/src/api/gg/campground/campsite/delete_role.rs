@@ -4,7 +4,7 @@ use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, roles::{CampsiteRoleFlag, ensure_no_higher_role}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -36,9 +36,7 @@ pub async fn delete_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
 
     ensure_no_higher_role(auth.actor.did == auth.campsite.owner, &mut all_roles.clone(), given_role.priority, auth.member.roles.clone())?;
 
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0));
 
     diesel::delete(campsite_role::table)
         .filter(

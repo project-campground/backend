@@ -8,7 +8,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -36,10 +36,8 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
     if role_not_found.is_some() {
         return Err(XRPCError::BadRequest(format!("Did not find '{}' role in this campsite", role_not_found.unwrap().0)));
     }
-    
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0));
 
     let actor_max_priority = roles
         .iter()

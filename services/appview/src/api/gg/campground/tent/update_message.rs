@@ -12,7 +12,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor}, helpers::{tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
+    database::{establish_connection, profiles::get_profile_from_actor}, expect_permission, helpers::{permissions::{ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_message_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
@@ -67,6 +67,10 @@ pub async fn update_message(auth: TentInfo<'_>, event_subject: &State<ReactiveSu
     } else if content == msg.content {
         return Err(XRPCError::BadRequest("Message already has the same content".to_string()));
     }
+
+    expect_permission!(
+        has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, 0, ContentPermissionConsts::VIEW_CONTENT)
+    );
 
     let updated_at = Utc::now().naive_utc();
 

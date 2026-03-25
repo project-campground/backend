@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, permissions::{ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
     campsite::TentInfo, error::{Result, XRPCError}
 }};
 
@@ -28,9 +28,9 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
     }
 
-    if !has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(
+        has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
+    );
 
     let remove_category = inner_body.category_id.clone().map_or(false, |x| x == "");
     let category_id =

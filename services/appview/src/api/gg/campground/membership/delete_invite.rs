@@ -4,15 +4,13 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_campsite, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::{handle_all_db_errors, handle_select_first_error}, campsites::campsite_invite_view_campsite, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
 #[post("/xrpc/gg.campground.membership.deleteInvite?<campsite_id>&<invite_id>")]
 pub async fn delete_invite(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>,  campsite_id: &str, invite_id: &str) -> Result<Json<CampsiteInviteViewCampsite>> {    
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_INVITES, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_INVITES, 0));
 
     let mut conn = establish_connection().unwrap();
 

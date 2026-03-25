@@ -7,16 +7,16 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
 use crate::{
-    database::establish_connection, helpers::{permissions::{GeneralPermissionConsts, ContentPermissionConsts, has_leveled_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
+    database::establish_connection, expect_permission, helpers::{permissions::{ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner}, tents::tent_view_basic, ws::event_next_tent}, realtime::data::ReactiveSubject, xrpc::{
         campsite::TentInfo, error::{Result, XRPCError}
     }
 };
 
 #[post("/xrpc/gg.campground.tent.deleteTent?<tent_id>")]
 pub async fn delete_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, tent_id: &str) -> Result<Json<TentViewBasic>> {    
-    if !has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(
+        has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
+    );
 
     let mut conn = establish_connection().unwrap();
 

@@ -4,15 +4,21 @@ use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
 use crate::{
-    database::establish_connection, helpers::{api::handle_all_db_errors, campsites::campsite_member_view_detailed}, xrpc::{
-        campsite::CampsiteInfoBasic, error::Result
+    database::establish_connection, expect_permission, helpers::{api::handle_all_db_errors, campsites::campsite_member_view_detailed, permissions::{GeneralPermissionConsts, has_any_role_perms_or_owner}}, xrpc::{
+        campsite::CampsiteInfo, error::Result
     }
 };
 
 #[get("/xrpc/gg.campground.membership.getMembersDetailed?<campsite_id>&<limit>&<offset>")]
-pub async fn get_members_detailed(_auth: CampsiteInfoBasic<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput<CampsiteMemberViewDetailed>>> {
+pub async fn get_members_detailed(auth: CampsiteInfo<'_>, campsite_id: &str, limit: Option<i64>, offset: Option<i64>) -> Result<Json<GetMembersOutput<CampsiteMemberViewDetailed>>> {
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
+
+    expect_permission!(has_any_role_perms_or_owner(
+        &auth.campsite,
+        &auth.member,
+        GeneralPermissionConsts::KICK_MEMBERS | GeneralPermissionConsts::BAN_MEMBERS | GeneralPermissionConsts::MUTE_MEMBERS | GeneralPermissionConsts::GIVE_ROLES
+    ));
 
     let mut conn = establish_connection().unwrap();
 

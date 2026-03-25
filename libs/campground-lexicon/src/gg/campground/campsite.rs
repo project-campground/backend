@@ -17,11 +17,6 @@ pub struct CampsiteViewBasic {
 
     pub member_count: usize,
     pub owner: String,
-
-    pub created_by: String,
-    pub created_at: String,
-    pub updated_by: String,
-    pub updated_at: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -46,7 +41,7 @@ pub struct CampsiteViewDetailed {
 
     pub bonfires: Vec<BonfireViewBasic>,
     pub roles: Vec<CampsiteRoleViewBasic>,
-    pub member: CampsiteMemberViewBasic,
+    pub me: CampsiteMemberViewBasic,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

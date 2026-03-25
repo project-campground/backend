@@ -162,10 +162,10 @@ pub mod appview {
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteBan {
-        #[diesel(column_name = userid)]
-        pub user_id: String,
         #[diesel(column_name = campsiteid)]
         pub campsite_id: String,
+        #[diesel(column_name = userid)]
+        pub user_id: String,
 
         pub reason: Option<String>,
 

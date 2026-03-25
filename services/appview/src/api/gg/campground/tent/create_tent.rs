@@ -6,8 +6,8 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{establish_connection, profiles::get_profile_from_actor}, helpers::{api::handle_select_first_error, permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner}, tents::{tent_message_view_basic, tent_view_basic}, ws::{event_next_campsite, event_next_tent}}, realtime::data::ReactiveSubject, xrpc::{
-    campsite::CampsiteInfo, error::{Result, XRPCError}
+use crate::{database::{establish_connection, profiles::get_profile_from_actor}, expect_permission, helpers::{api::handle_select_first_error, permissions::{ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner}, tents::{tent_message_view_basic, tent_view_basic}, ws::{event_next_campsite, event_next_tent}}, realtime::data::ReactiveSubject, xrpc::{
+    campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
 #[derive(Deserialize)]
@@ -22,7 +22,7 @@ pub struct CreateTentBody {
 }
 
 #[post("/xrpc/gg.campground.tent.createTent?<campsite_id>&<bonfire_id>", data = "<body>")]
-pub async fn create_tent(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, bonfire_id: &str, body: Json<CreateTentBody>) -> Result<Json<TentViewBasic>> {    
+pub async fn create_tent(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, bonfire_id: &str, body: Json<CreateTentBody>) -> Result<Json<TentViewBasic>> {    
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
@@ -55,24 +55,24 @@ pub async fn create_tent(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
         )
         .first::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
-
-    if !has_leveled_perms_or_owner(&auth.campsite, &bonfire_id, category_id.clone(), None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
-
+    
     let existing_tent_count = crate::schema::appview::tent::table
         .filter(
             crate::schema::appview::tent::campsiteid
-                .eq(campsite_id)
-        )
+                    .eq(campsite_id)
+            )
         .count()
         .first::<i64>(&mut conn)
         .expect("Error loading bonfires");
     
-    if existing_tent_count >= 500 {
-        return Err(XRPCError::Forbidden("Cannot create more than 500 tents in a campsite".to_string()));
+    if existing_tent_count >= 200 {
+        return Err(XRPCError::Forbidden("Cannot create more than 200 tents in a campsite".to_string()));
     }
 
+    expect_permission!(
+        has_leveled_perms_or_owner(&auth.campsite, &auth.bonfire.id, category_id.clone(), None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
+    );
+    
     let current_date = Utc::now().naive_utc();
 
     let tents = &diesel::insert_into(crate::schema::appview::tent::table)

@@ -5,7 +5,7 @@ use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite_global}, realtime::data::ReactiveSubject, util::params::{AsParamValue, OptionValidity, ensure_valid_modified_uri}, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_view_basic, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite_global}, realtime::data::ReactiveSubject, util::params::{AsParamValue, OptionValidity, ensure_valid_modified_uri}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -37,7 +37,7 @@ pub async fn update_campsite(auth: CampsiteInfo<'_>, event_subject: &State<React
         .as_value()
         .ensure_validity(|x| x.len() <= 32)
         .map_err(|_|
-            XRPCError::BadRequest("Expected 'vanity_url' property to have a string of up to 32 characters".to_string())
+            XRPCError::BadRequest("Expected 'vanityUrl' property to have a string of up to 32 characters".to_string())
         )?;
     let tags = &tags
         .clone()
@@ -58,9 +58,7 @@ pub async fn update_campsite(auth: CampsiteInfo<'_>, event_subject: &State<React
         XRPCError::BadRequest(x.to_string())
     )?;
 
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_CAMPSITE, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_CAMPSITE, 0));
 
     let mut conn = establish_connection().unwrap();
 

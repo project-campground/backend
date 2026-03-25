@@ -6,7 +6,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, permissions::{ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner}, tents::tent_category_view, ws::event_next_category}, realtime::data::ReactiveSubject, xrpc::{
     campsite::BonfireInfo, error::{Result, XRPCError}
 }};
 
@@ -26,9 +26,9 @@ pub async fn create_category(auth: BonfireInfo<'_>, event_subject: &State<Reacti
     } else if inner_body.description.len() > 200 {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
     }
-
+    
     let mut conn = establish_connection().unwrap();
-
+    
     let existing_category_count = crate::schema::appview::tent_category::table
         .filter(
             crate::schema::appview::tent_category::campsiteid
@@ -42,6 +42,10 @@ pub async fn create_category(auth: BonfireInfo<'_>, event_subject: &State<Reacti
         return Err(XRPCError::Forbidden("Cannot create more than 25 tent categories in a bonfire".to_string()));
     }
 
+    expect_permission!(
+        has_leveled_perms_or_owner(&auth.campsite, &auth.bonfire.id, None, None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
+    );
+    
     let current_date = Utc::now().naive_utc();
 
     let category = &diesel::insert_into(crate::schema::appview::tent_category::table)

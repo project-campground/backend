@@ -32,8 +32,8 @@ pub async fn create_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
 
     let existing_roles = get_roles_from_db(&auth.campsite.id)?;
 
-    if existing_roles.len() >= 150 {
-        return Err(XRPCError::Forbidden("Cannot create more than 150 roles in a campsite".to_string()));
+    if existing_roles.len() >= 100 {
+        return Err(XRPCError::Forbidden("Cannot create more than 100 roles in a campsite".to_string()));
     }
 
     ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &existing_roles, permissions)?;

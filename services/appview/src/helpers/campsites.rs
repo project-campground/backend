@@ -18,10 +18,6 @@ pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
             .collect(),
         member_count: campsite.member_dids.len(),
         owner: campsite.owner.clone(),
-        created_by: campsite.created_by.clone(),
-        created_at: serialize_datetime(campsite.created_at),
-        updated_by: campsite.updated_by.clone(),
-        updated_at: serialize_datetime(campsite.updated_at)
     };
 }
 
@@ -45,7 +41,7 @@ pub fn campsite_view_detailed(campsite: &Campsite, bonfires: Vec<BonfireViewBasi
         updated_at: serialize_datetime(campsite.updated_at),
         bonfires: bonfires,
         roles: roles,
-        member,
+        me: member,
     };
 }
 

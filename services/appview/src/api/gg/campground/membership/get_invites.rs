@@ -3,7 +3,7 @@ use campground_lexicon::gg::campground::membership::{CampsiteInviteViewCampsite,
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_campsite, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}}, xrpc::{
+use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_invite_view_campsite, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}}, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -16,9 +16,7 @@ pub async fn get_invites(auth: CampsiteInfo<'_>, campsite_id: &str, limit: Optio
         return Err(XRPCError::BadRequest("Expected limit query to be between and including 1 and 100".to_string()));
     }
 
-    if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_INVITES, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
-    }
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::MANAGE_INVITES, 0));
 
     let mut conn = establish_connection().unwrap();
     let invites = campsite_invite::table

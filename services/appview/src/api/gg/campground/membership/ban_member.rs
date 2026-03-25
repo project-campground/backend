@@ -7,7 +7,7 @@ use reqwest::Client;
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
-use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{api::gg::campground::membership::remove_member::{ensure_user_isnt_higher, remove_campsite_member}, database::{actors::get_actor, establish_connection}, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -26,9 +26,9 @@ pub async fn ban_member(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
     let inner_body = &body.into_inner();
     if inner_body.reason.clone().map_or(false, |x| x.len() > 200) {
         return Err(XRPCError::BadRequest("Expected 'description' property to have a string of up to 200 characters".to_string()));
-    } else if !has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0).await? {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
+
+    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0));
 
     let mut conn = establish_connection().unwrap();
 
