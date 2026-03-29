@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, i32};
 
 use appview_schema::{models::appview::CampsiteRole, schema::appview::campsite_role};
 use campground_lexicon::gg::campground::campsite::{CampsiteRoleViewBasic, CampsiteRolesMovedOutput, GetCampsiteRolesOutput};
@@ -43,10 +43,9 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
         .iter()
         .filter(|x| auth.member.roles.contains(&Some(x.id)))
         .max_by(|x, y| x.priority.cmp(&y.priority))
-        .unwrap()
-        .priority;
+        .map_or(i32::MAX, |role| role.priority);
 
-    let max_given_priority = roles_by_priority.values().max().unwrap();
+    let max_given_priority = roles_by_priority.values().max().unwrap_or(&i32::MAX);
 
     if auth.campsite.owner != auth.member.user_id && actor_max_priority <= *max_given_priority {
         return Err(XRPCError::Forbidden("One of role supplied priorities is lower than actor's max role priority".to_string()));

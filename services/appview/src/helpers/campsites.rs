@@ -1,8 +1,8 @@
-use appview_schema::models::appview::{Actor, Bonfire, Campsite, CampsiteBan, CampsiteInvite, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
+use appview_schema::{models::appview::{Actor, Bonfire, Campsite, CampsiteBan, CampsiteInvite, CampsiteMember, CampsitePermission, CampsiteRole, Profile}};
 use campground_lexicon::gg::campground::{actor::ProfileViewBasic, campsite::{BonfireViewBasic, BonfireViewDetailed, CampsitePermissionViewBasic, CampsitePermissionViewDetailed, CampsiteRoleViewBasic, CampsiteViewBasic, CampsiteViewDetailed}, membership::{CampsiteBanView, CampsiteInviteViewCampsite, CampsiteInviteViewGlobal, CampsiteMemberViewAuthor, CampsiteMemberViewBasic, CampsiteMemberViewDetailed}, permission::{PermissionsDictionary, PermissionsStateDictionary}, tent::{TentCategoryView, TentViewBasic}};
 use uuid::Uuid;
 
-use crate::helpers::{util::serialize_datetime, views::{profile_view_basic_deleted_profile, profile_view_basic_from_db, profile_view_detailed_from_db}};
+use crate::helpers::{roles::to_role_motion, util::serialize_datetime, views::{profile_view_basic_deleted_profile, profile_view_basic_from_db, profile_view_detailed_from_db}};
 
 pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
     return CampsiteViewBasic {
@@ -132,8 +132,12 @@ pub fn campsite_role_view_basic(role: &CampsiteRole) -> CampsiteRoleViewBasic {
         name: role.name.clone(),
         display_separately: role.display_separately.clone(),
         mentionable: role.mentionable.clone(),
-        color: role.color,
-        color_secondary: role.color_secondary,
+        colors: role
+            .colors
+            .iter()
+            .filter_map(|color| color.map(|color| color as u32))
+            .collect::<Vec<u32>>(),
+        motion: to_role_motion(role.motion),
         permissions: PermissionsDictionary {
             general: role.general_permissions,
             content: role.content_permissions,

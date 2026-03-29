@@ -45,6 +45,19 @@ pub struct CampsiteViewDetailed {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CampsiteRoleMotion {
+    #[serde(alias = "none")]
+    None,
+    #[serde(alias = "linear")]
+    Linear,
+    #[serde(alias = "wave")]
+    Wave,
+    #[serde(alias = "radial")]
+    Radial,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CampsiteRoleViewBasic {
     pub id: Uuid,
@@ -59,8 +72,8 @@ pub struct CampsiteRoleViewBasic {
     
     pub priority: i32,
     
-    pub color: i32,
-    pub color_secondary: i32,
+    pub colors: Vec<u32>,
+    pub motion: CampsiteRoleMotion,
     
     pub created_by: String,
     pub created_at: String,

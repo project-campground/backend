@@ -228,10 +228,6 @@ pub mod appview {
         #[diesel(column_name = contentpermissions)]
         pub content_permissions: i64,
 
-        pub color: i32,
-        #[diesel(column_name = colorsecondary)]
-        pub color_secondary: i32,
-
         pub priority: i32,
 
         #[diesel(column_name = createdby)]
@@ -246,6 +242,9 @@ pub mod appview {
 
         pub members: Vec<Option<String>>,
         pub flags: i32,
+
+        pub colors: Vec<Option<i32>>,
+        pub motion: i16,
     }
 
     #[derive(

@@ -1,12 +1,12 @@
 use appview_schema::{models::appview::{Campsite, CampsiteMember, CampsiteRole}, schema::appview::campsite_role};
-use campground_lexicon::gg::campground::{campsite::CampsiteRoleViewBasic, permission::PermissionsDictionary};
+use campground_lexicon::gg::campground::{campsite::{CampsiteRoleMotion, CampsiteRoleViewBasic}, permission::PermissionsDictionary};
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, aggregate_member_permissions}, roles::ensure_no_higher_role, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::{campsites::get_roles_from_db, establish_connection}, helpers::{api::handle_select_first_error, campsites::campsite_role_view_basic, permissions::{GeneralPermissionConsts, aggregate_member_permissions}, roles::{ensure_no_higher_role, from_role_motion}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 
@@ -14,21 +14,24 @@ use crate::{database::{campsites::get_roles_from_db, establish_connection}, help
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
 pub struct UpdateRoleBody {
     name: Option<String>,
-    color: Option<i32>,
-    color_secondary: Option<i32>,
+    motion: Option<CampsiteRoleMotion>,
+    colors: Option<Vec<u32>>,
     display_separately: Option<bool>,
     mentionable: Option<bool>,
-    // priority: Option<i32>,
     permissions: Option<PermissionsDictionary>,
 }
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.campsite.updateRole?<campsite_id>&<role_id>", data = "<body>")]
 pub async fn update_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, role_id: &str, body: Json<UpdateRoleBody>) -> Result<Json<CampsiteRoleViewBasic>> {    
-    let UpdateRoleBody { name, color, color_secondary, display_separately, mentionable, permissions } = &body.into_inner();
+    let UpdateRoleBody { name, colors, motion, display_separately, mentionable, permissions } = &body.into_inner();
     if name.clone().map_or(false, |x| x.len() == 0 || x.len() > 64) {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 1 to 64 characters".to_string()));
+    } else if colors.clone().map_or(false, |colors| colors.len() > 5) {
+        return Err(XRPCError::BadRequest("Expected 'colors' property to be an array with max length of 5".to_string()));
     }
+
+    println!("Motion: {:?}", motion);
 
     let mut conn = establish_connection().unwrap();
     
@@ -62,14 +65,24 @@ pub async fn update_role(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveS
             // Stuff changed
             campsite_role::name
                 .eq(name.clone().unwrap_or(role.name.clone())),
-            campsite_role::color
-                .eq(color.unwrap_or(role.color)),
+            campsite_role::colors
+                .eq(
+                    colors
+                    .clone()
+                    .map_or(role.colors.clone(),
+                        |colors|
+                            colors
+                                .iter()
+                                .map(|&color| Some(color as i32))
+                                .collect::<Vec<Option<i32>>>()
+                    )
+                ),
+            campsite_role::motion
+                .eq(motion.clone().map_or(role.motion, |motion| from_role_motion(motion))),
             campsite_role::displayseparately
                 .eq(display_separately.unwrap_or(role.display_separately)),
             campsite_role::mentionable
                 .eq(mentionable.unwrap_or(role.mentionable)),
-            campsite_role::colorsecondary
-                .eq(color_secondary.unwrap_or(role.color_secondary)),
             campsite_role::contentpermissions
                 .eq(permissions.as_ref().map(|x| x.content).unwrap_or(role.content_permissions)),
             campsite_role::generalpermissions

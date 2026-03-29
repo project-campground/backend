@@ -109,8 +109,6 @@ pub mod appview {
             mentionable -> Bool,
             generalpermissions -> Int8,
             contentpermissions -> Int8,
-            color -> Int4,
-            colorsecondary -> Int4,
             priority -> Int4,
             createdby -> Varchar,
             createdat -> Timestamp,
@@ -118,6 +116,8 @@ pub mod appview {
             updatedat -> Timestamp,
             members -> Array<Nullable<Text>>,
             flags -> Int4,
+            colors -> Array<Nullable<Int4>>,
+            motion -> Int2,
         }
     }
 
