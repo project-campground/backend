@@ -70,7 +70,7 @@ pub struct CampsiteRoleViewBasic {
 
     pub permissions: PermissionsDictionary,
     
-    pub priority: i32,
+    pub position: i32,
     
     pub colors: Vec<u32>,
     pub motion: CampsiteRoleMotion,
@@ -124,7 +124,7 @@ pub struct BonfireViewBasic {
     pub description: String,
     pub avatar_uri: Option<String>,
     pub banner_uri: Option<String>,
-    pub priority: i32,
+    pub position: i32,
     pub created_by: String,
     pub created_at: String,
     pub updated_by: String,
@@ -170,7 +170,7 @@ pub struct GetCampsitePermissionsOutput {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CampsiteRolesMovedOutput {
-    pub roles_by_priority: HashMap<Uuid, i32>,
+    pub roles_by_position: HashMap<Uuid, i32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

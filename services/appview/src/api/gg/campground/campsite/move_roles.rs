@@ -15,15 +15,15 @@ use crate::{database::{campsites::get_roles_from_db, establish_connection}, expe
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
 pub struct MoveRoleBody {
-    roles_by_priority: HashMap<Uuid, i32>,
+    roles_by_position: HashMap<Uuid, i32>,
 }
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.campsite.moveRoles?<campsite_id>", data = "<body>")]
 pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, body: Json<MoveRoleBody>) -> Result<Json<GetCampsiteRolesOutput>> {    
-    let MoveRoleBody { roles_by_priority } = &body.into_inner();
+    let MoveRoleBody { roles_by_position } = &body.into_inner();
 
-    if roles_by_priority.len() < 1 {
+    if roles_by_position.len() < 1 {
         return Err(XRPCError::BadRequest("Expected at least one role provided".to_string()));
     }
 
@@ -32,7 +32,7 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
     let roles = &get_roles_from_db(&auth.campsite.id)?;
     let role_ids = roles.iter().map(|x| x.id).collect::<Vec<Uuid>>();
 
-    let role_not_found = roles_by_priority.iter().find(|x| !role_ids.contains(x.0));
+    let role_not_found = roles_by_position.iter().find(|x| !role_ids.contains(x.0));
     if role_not_found.is_some() {
         return Err(XRPCError::BadRequest(format!("Did not find '{}' role in this campsite", role_not_found.unwrap().0)));
     }
@@ -45,13 +45,13 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
         .max_by(|x, y| x.priority.cmp(&y.priority))
         .map_or(i32::MAX, |role| role.priority);
 
-    let max_given_priority = roles_by_priority.values().max().unwrap_or(&i32::MAX);
+    let max_given_priority = roles_by_position.values().max().unwrap_or(&i32::MAX);
 
     if auth.campsite.owner != auth.member.user_id && actor_max_priority <= *max_given_priority {
         return Err(XRPCError::Forbidden("One of role supplied priorities is lower than actor's max role priority".to_string()));
     }
 
-    let supplied_role_ids = roles_by_priority.keys();
+    let supplied_role_ids = roles_by_position.keys();
     let supplied_roles_max_priority = roles
         .iter()
         .filter(|x| supplied_role_ids.clone().find(|y| **y == x.id).is_some())
@@ -64,7 +64,7 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
     }
 
     let current_date = Utc::now().naive_utc();
-    let array_role_priorities = roles_by_priority
+    let array_role_priorities = roles_by_position
         .iter()
         .map(|x| format!("{}:{}", x.0, x.1))
         .collect::<Vec<String>>();
@@ -102,7 +102,7 @@ pub async fn move_roles(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSu
         .map(campsite_role_view_basic)
         .collect::<Vec<CampsiteRoleViewBasic>>();
 
-    event_next_campsite(event_subject, &auth.campsite.id, 0, "RolesMoved", CampsiteRolesMovedOutput { roles_by_priority: roles_by_priority.clone(), });
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RolesMoved", CampsiteRolesMovedOutput { roles_by_position: roles_by_position.clone(), });
 
     return Ok(Json(GetCampsiteRolesOutput { roles: updated_roles }));
 }

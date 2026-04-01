@@ -18,7 +18,7 @@ pub struct CreateTentBody {
     category_id: Option<String>,
     r#type: i16,
     view_type: i16,
-    priority: i32,
+    position: i32,
 }
 
 #[post("/xrpc/gg.campground.tent.createTent?<campsite_id>&<bonfire_id>", data = "<body>")]
@@ -86,7 +86,7 @@ pub async fn create_tent(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSu
                 description: inner_body.description.clone(),
                 r#type: inner_body.r#type,
                 view_type: inner_body.view_type,
-                priority: inner_body.priority,
+                priority: inner_body.position,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
                 updated_by: auth.actor.did.clone(),

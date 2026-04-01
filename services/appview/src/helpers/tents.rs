@@ -12,7 +12,7 @@ pub fn tent_category_view(category: &TentCategory) -> TentCategoryView {
         bonfire_id: category.bonfire_id.clone(),
         name: category.name.clone(),
         description: category.description.clone(),
-        priority: category.priority,
+        position: category.priority,
         created_by: category.created_by.clone(),
         created_at: serialize_datetime(category.created_at),
         updated_by: category.updated_by.clone(),
@@ -32,7 +32,7 @@ pub fn tent_view_basic(tent: &Tent) -> TentViewBasic {
             _ => TentType::Text,
         },
         view_type: tent.view_type,
-        priority: tent.priority,
+        position: tent.priority,
     };
 }
 
@@ -48,7 +48,7 @@ pub fn tent_view_detailed(tent: &Tent) -> TentViewDetailed {
             _ => TentType::Text,
         },
         view_type: tent.view_type,
-        priority: tent.priority,
+        position: tent.priority,
         created_by: tent.created_by.clone(),
         created_at: serialize_datetime(tent.created_at),
         updated_by: tent.updated_by.clone(),

@@ -15,7 +15,7 @@ use crate::{database::establish_connection, expect_permission, helpers::{api::ha
 pub struct CreateCategoryBody {
     name: String,
     description: String,
-    priority: i32,
+    position: i32,
 }
 
 #[post("/xrpc/gg.campground.tent.createCategory?<bonfire_id>", data = "<body>")]
@@ -56,7 +56,7 @@ pub async fn create_category(auth: BonfireInfo<'_>, event_subject: &State<Reacti
                 bonfire_id: bonfire_id.to_string(),
                 name: inner_body.name.clone(),
                 description: inner_body.description.clone(),
-                priority: inner_body.priority,
+                priority: inner_body.position,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
                 updated_by: auth.actor.did,

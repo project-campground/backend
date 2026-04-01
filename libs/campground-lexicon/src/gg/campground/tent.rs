@@ -29,7 +29,7 @@ pub struct TentViewBasic {
     pub r#type: TentType,
     pub view_type: i16,
 
-    pub priority: i32,
+    pub position: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -45,7 +45,7 @@ pub struct TentViewDetailed {
     pub r#type: TentType,
     pub view_type: i16,
 
-    pub priority: i32,
+    pub position: i32,
 
     pub created_by: String,
     pub created_at: String,
@@ -63,7 +63,7 @@ pub struct TentCategoryView {
     pub name: String,
     pub description: String,
 
-    pub priority: i32,
+    pub position: i32,
     
     pub created_by: String,
     pub created_at: String,

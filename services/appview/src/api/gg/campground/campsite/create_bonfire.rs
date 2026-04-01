@@ -15,14 +15,14 @@ use crate::{database::establish_connection, expect_permission, helpers::{api::ha
 pub struct CreateBonfireBody<'a> {
     name: String,
     description: String,
-    priority: i32,
+    position: i32,
     avatar_uri: Option<&'a str>,
     banner_uri: Option<&'a str>,
 }
 
 #[post("/xrpc/gg.campground.campsite.createBonfire?<campsite_id>", data = "<body>")]
 pub async fn create_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, body: Json<CreateBonfireBody<'_>>) -> Result<Json<BonfireViewBasic>> {    
-    let CreateBonfireBody { name, description, priority, avatar_uri, banner_uri } = &body.into_inner();
+    let CreateBonfireBody { name, description, position, avatar_uri, banner_uri } = &body.into_inner();
     if name.len() < 3 || name.len() > 48 {
         return Err(XRPCError::BadRequest("Expected 'name' property to have a string of length 3 to 48 characters".to_string()));
     } else if description.len() > 200 {
@@ -68,7 +68,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
                 description: description.clone(),
                 avatar_uri: avatar_uri.clone(),
                 banner_uri: banner_uri.clone(),
-                priority: *priority,
+                priority: *position,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,
                 updated_by: auth.actor.did,

@@ -14,13 +14,14 @@ use crate::{database::establish_connection, expect_permission, helpers::{api::ha
 pub struct UpdateBonfireBody<'a> {
     name: Option<String>,
     description: Option<String>,
+    position: Option<i32>,
     avatar_uri: Option<&'a str>,
     banner_uri: Option<&'a str>,
 }
 
 #[post("/xrpc/gg.campground.campsite.updateBonfire?<bonfire_id>", data = "<body>")]
 pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, bonfire_id: &str, body: Json<UpdateBonfireBody<'a>>) -> Result<Json<BonfireViewBasic>> {    
-    let UpdateBonfireBody { name, description, avatar_uri, banner_uri } = &body.into_inner();
+    let UpdateBonfireBody { name, description, position, avatar_uri, banner_uri } = &body.into_inner();
     let name = &name
         .clone()
         .ensure_validity(|x| x.len() >= 3 && x.len() <= 48)
@@ -64,6 +65,8 @@ pub async fn update_bonfire<'a>(auth: BonfireInfo<'_>, event_subject: &State<Rea
                 .eq(name.clone().unwrap_or(auth.bonfire.name)),
             appview::bonfire::description
                 .eq(description.clone().unwrap_or(auth.bonfire.description)),
+            appview::bonfire::priority
+                .eq(position.clone().unwrap_or(auth.bonfire.priority)),
             appview::bonfire::avataruri
                 .eq(avatar_uri.clone().with_fallback(auth.bonfire.avatar_uri)),
             appview::bonfire::banneruri

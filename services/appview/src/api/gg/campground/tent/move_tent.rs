@@ -1,7 +1,9 @@
+use std::ops::Add;
+
 use appview_schema::{models::appview::{Bonfire, Campsite, CampsiteMember, Tent, TentCategory}, schema::appview};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not, sql_types::BigInt};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -15,7 +17,7 @@ use crate::{database::establish_connection, expect_permission, helpers::{api::ha
 pub struct MoveTentBody {
     bonfire_id: Option<String>,
     category_id: Option<String>,
-    priority: Option<i32>,
+    position: Option<i32>,
 }
 
 #[allow(unused_variables)]
@@ -24,7 +26,7 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
     let inner_body = &body.into_inner();
 
     // No reason to do anything with the request
-    if inner_body.bonfire_id.is_none() && inner_body.category_id.is_none() && inner_body.priority.is_none() {
+    if inner_body.bonfire_id.is_none() && inner_body.category_id.is_none() && inner_body.position.is_none() {
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
     }
 
@@ -53,6 +55,12 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
     }
     let moved_category = if remove_category { None } else { category_id.or(auth.tent.category_id.clone()) };
 
+    // Make room for the tent; if there is already a tent in that position, make sure position is slightly more unique and is more consistent
+    // among the client and so would the experience (since if it also gets sorted by ID, it would be confusing why sometimes tent refuses to move)
+    if let Some(position) = inner_body.position {
+        make_room_for_tent(&auth.tent.bonfire_id, moved_category, position)?;
+    }
+
     let current_date = Utc::now().naive_utc();
     
     let updated_tent = diesel::update(crate::schema::appview::tent::table)
@@ -65,7 +73,7 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
         .set((
             // All the new settings
             appview::tent::priority
-                .eq(inner_body.priority.clone().unwrap_or(auth.tent.priority)),
+                .eq(inner_body.position.clone().unwrap_or(auth.tent.priority)),
             appview::tent::categoryid
                 .eq(moved_category),
             appview::tent::bonfireid
@@ -84,6 +92,75 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
     event_next_tent(event_subject, &auth.tent, false, "TentMoved", tent_view_basic(updated_tent));
 
     return Ok(Json(tent_view_basic(updated_tent)));
+}
+
+fn make_room_for_tent(bonfire_id: &str, category_id: Option<Uuid>, position: i32) -> Result<(), XRPCError> {
+    let mut conn = establish_connection().unwrap();
+
+    println!("Category ID: {:?}, Position: {:?}", category_id, position);
+    let exists_tents_there = appview::tent::table
+        .filter(
+            appview::tent::bonfireid
+                .eq(bonfire_id)
+                // Only see if there are tents in the same position AND category
+                // It doesn't affect how it appears if it's in different category
+                .and(
+                    appview::tent::categoryid
+                        .eq(category_id)
+                )
+                .and(
+                    appview::tent::priority
+                        .eq(position)
+                )
+        )
+        .count()
+        .first::<i64>(&mut conn)
+        .map_err(handle_select_first_error)?;
+    println!("Tents exist there: {:?}", exists_tents_there);
+
+    // No other tents to update
+    if exists_tents_there < 1 {
+        return Ok(());
+    }
+
+    // Make other tents go below it (since client is expected to add 1 when putting below a tent already)
+    let updated = diesel::update(crate::schema::appview::tent::table)
+        .filter(
+            appview::tent::bonfireid
+                .eq(bonfire_id)
+                .and(
+                    // Don't really care about tents outside the category, their position doesn't affect anything
+                    appview::tent::categoryid
+                        .eq(category_id)
+                )
+                // Update only tents at that position and below
+                .and(
+                    appview::tent::priority
+                        .ge(position)
+                )
+                // Make sure it can even go down
+                .and(
+                    not(
+                        appview::tent::priority
+                            .cast::<BigInt>()
+                            .add(1)
+                            .gt(i32::MAX as i64)
+                    )
+                )
+        )
+        .set((
+            appview::tent::priority
+                .eq(
+                    appview::tent::priority
+                        .add(1)
+                ),
+        ))
+        .load::<Tent>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    println!("Updated tents: {:?}", updated);
+
+    Ok(())
 }
 
 async fn check_category_existence(campsite: &Campsite, member: &CampsiteMember, moved_bonfire_id: &str, category_id: Uuid) -> Result<String, XRPCError> {    

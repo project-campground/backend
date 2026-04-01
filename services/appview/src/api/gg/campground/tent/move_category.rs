@@ -1,7 +1,9 @@
-use appview_schema::{models::appview::{Tent, TentCategory}, schema::appview};
+use std::ops::{Add, Sub};
+
+use appview_schema::{models::appview::{Tent, TentCategory}, schema::appview::{self, tent_category}};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
-use diesel::{ExpressionMethods, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not, sql_types::BigInt};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
@@ -13,43 +15,45 @@ use crate::{api::gg::campground::tent::move_tent::check_bonfire_existence, datab
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
 pub struct MoveCategoryBody {
     bonfire_id: Option<String>,
-    priority: Option<i32>,
+    position: Option<i32>,
 }
 
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.moveCategory?<category_id>", data = "<body>")]
 pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str, body: Json<MoveCategoryBody>) -> Result<Json<TentCategoryView>> {    
     let inner_body = &body.into_inner();
-    if inner_body.bonfire_id.is_none() && inner_body.priority.is_none() {
+    if inner_body.bonfire_id.is_none() && inner_body.position.is_none() {
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
     }
 
     expect_permission!(
         has_leveled_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
     );
-
-    let mut conn = establish_connection().unwrap();
-
+    
     let moved_bonfire = inner_body.bonfire_id.clone().unwrap_or(auth.category.bonfire_id.clone());
-
+    
     // To make sure they are not moving to category that doesn't exist
     if moved_bonfire != auth.category.bonfire_id {
         check_bonfire_existence(&auth.campsite, &auth.member, &moved_bonfire)
             .await?;
     }
     let current_date = Utc::now().naive_utc();
-    
+
+    let mut conn = establish_connection().unwrap();
+
+    if let Some(position) = inner_body.position {
+        make_room_for_category(&auth.category.bonfire_id, position)?;
+    }
+
     let updated_category = diesel::update(crate::schema::appview::tent_category::table)
         .filter(
             appview::tent_category::id
-                .eq(
-                    &auth.category.id
-                )
+                .eq(&auth.category.id)
         )
         .set((
             // All the new settings
             appview::tent_category::priority
-                .eq(inner_body.priority.clone().unwrap_or(auth.category.priority)),
+                .eq(inner_body.position.clone().unwrap_or(auth.category.priority)),
             appview::tent_category::bonfireid
                 .eq(&moved_bonfire),
             // Mandatory
@@ -84,4 +88,57 @@ pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<Reactiv
     event_next_category(event_subject, &updated_category, false, "CategoryMoved", tent_category_view(updated_category));
 
     return Ok(Json(tent_category_view(updated_category)));
+}
+
+fn make_room_for_category(bonfire_id: &str, position: i32) -> Result<(), XRPCError> {
+    let mut conn = establish_connection().unwrap();
+
+    let exists_categories_there = tent_category::table
+        .filter(
+            tent_category::bonfireid
+                .eq(bonfire_id)
+                .and(
+                    tent_category::priority
+                        .eq(position)
+                )
+        )
+        .count()
+        .first::<i64>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    // No other categories to update
+    if exists_categories_there < 1 {
+        return Ok(());
+    }
+
+    // Make other categories go above it (since client is expected to subtract 1 when putting above a category already)
+    diesel::update(crate::schema::appview::tent_category::table)
+        .filter(
+            tent_category::bonfireid
+                .eq(bonfire_id)
+                // Don't move all tents; it would change nothing. Instead, make a gap for that position specifically
+                .and(
+                    tent_category::priority
+                        .ge(position)
+                )
+                .and(
+                    not(
+                        tent_category::priority
+                            .cast::<BigInt>()
+                            .add(1)
+                            .gt(i32::MAX as i64)
+                    )
+                )
+        )
+        .set((
+            tent_category::priority
+                .eq(
+                    tent_category::priority
+                        .sub(1)
+                ),
+        ))
+        .execute(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    Ok(())
 }
