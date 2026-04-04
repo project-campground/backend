@@ -68,6 +68,7 @@ pub async fn create_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
                 description: description.clone(),
                 avatar_uri: avatar_uri.clone(),
                 banner_uri: banner_uri.clone(),
+                home: false,
                 priority: *position,
                 created_by: auth.actor.did.clone(),
                 created_at: current_date,

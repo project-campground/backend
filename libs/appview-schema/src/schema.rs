@@ -24,6 +24,7 @@ pub mod appview {
             createdat -> Timestamp,
             updatedby -> Varchar,
             updatedat -> Timestamp,
+            home -> Bool,
         }
     }
 

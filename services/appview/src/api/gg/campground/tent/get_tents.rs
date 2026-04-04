@@ -63,7 +63,7 @@ pub async fn get_tents(auth: BonfireInfo<'_>,  bonfire_id: &str) -> Result<Json<
             .iter()
             .filter(|x| x.role_id.map_or_else(|| x.user_id.clone().unwrap() == auth.actor.did, |y| member_role_ids.contains(&Some(y))));    
 
-    if !has_perms_to_view_bonfire(&auth.actor.did, member_roles, has_role_permission, current_member_permissions).await? {
+    if !(auth.bonfire.home || has_perms_to_view_bonfire(&auth.actor.did, member_roles, has_role_permission, current_member_permissions).await?) {
         return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
     }
 

@@ -321,6 +321,8 @@ pub mod appview {
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
+
+        pub home: bool,
     }
 
     #[derive(

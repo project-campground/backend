@@ -21,16 +21,22 @@ pub struct MoveCategoryBody {
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.moveCategory?<category_id>", data = "<body>")]
 pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, category_id: &str, body: Json<MoveCategoryBody>) -> Result<Json<TentCategoryView>> {    
-    let inner_body = &body.into_inner();
-    if inner_body.bonfire_id.is_none() && inner_body.position.is_none() {
+    let MoveCategoryBody { bonfire_id, position } = &body.into_inner();
+    if bonfire_id.is_none() && position.is_none() {
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
+    } else if
+        bonfire_id.clone().map_or(true, |bonfire_id| auth.category.bonfire_id == bonfire_id) ||
+        position.map_or(true, |position| auth.category.priority == position)
+    {
+        // Failing seems like a bad DX if there is some weird bug happening
+        return Ok(Json(tent_category_view(&auth.category)));
     }
 
     expect_permission!(
         has_leveled_perms_or_owner(&auth.campsite, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
     );
     
-    let moved_bonfire = inner_body.bonfire_id.clone().unwrap_or(auth.category.bonfire_id.clone());
+    let moved_bonfire = bonfire_id.clone().unwrap_or(auth.category.bonfire_id.clone());
     
     // To make sure they are not moving to category that doesn't exist
     if moved_bonfire != auth.category.bonfire_id {
@@ -41,8 +47,8 @@ pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<Reactiv
 
     let mut conn = establish_connection().unwrap();
 
-    if let Some(position) = inner_body.position {
-        make_room_for_category(&auth.category.bonfire_id, position)?;
+    if let Some(position) = position {
+        make_room_for_category(&auth.category.bonfire_id, *position)?;
     }
 
     let updated_category = diesel::update(crate::schema::appview::tent_category::table)
@@ -53,7 +59,7 @@ pub async fn move_category(auth: CategoryInfo<'_>, event_subject: &State<Reactiv
         .set((
             // All the new settings
             appview::tent_category::priority
-                .eq(inner_body.position.clone().unwrap_or(auth.category.priority)),
+                .eq(position.unwrap_or(auth.category.priority)),
             appview::tent_category::bonfireid
                 .eq(&moved_bonfire),
             // Mandatory

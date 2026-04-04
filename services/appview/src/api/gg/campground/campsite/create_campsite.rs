@@ -175,6 +175,7 @@ pub async fn create_campsite(auth: Authorization<'_>, event_subject: &State<Reac
                 avatar_uri: avatar_uri.clone(),
                 banner_uri: banner_uri.clone(),
                 priority: 0,
+                home: true,
                 created_by: actor.did.clone(),
                 created_at: current_date,
                 updated_by: actor.did.clone(),

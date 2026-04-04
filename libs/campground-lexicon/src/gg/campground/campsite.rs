@@ -125,10 +125,7 @@ pub struct BonfireViewBasic {
     pub avatar_uri: Option<String>,
     pub banner_uri: Option<String>,
     pub position: i32,
-    pub created_by: String,
-    pub created_at: String,
-    pub updated_by: String,
-    pub updated_at: String,
+    pub home: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -141,12 +138,13 @@ pub struct BonfireViewDetailed {
     pub avatar_uri: Option<String>,
     pub banner_uri: Option<String>,
     pub priority: i32,
+    pub home: bool,
     pub created_by: String,
     pub created_at: String,
     pub updated_by: String,
     pub updated_at: String,
     pub tents: Vec<TentViewBasic>,
-    pub categories: Vec<TentCategoryView>
+    pub categories: Vec<TentCategoryView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

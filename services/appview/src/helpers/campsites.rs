@@ -212,10 +212,7 @@ pub fn bonfire_view_basic(bonfire: &Bonfire) -> BonfireViewBasic {
         avatar_uri: bonfire.avatar_uri.clone(),
         banner_uri: bonfire.banner_uri.clone(),
         position: bonfire.priority,
-        created_by: bonfire.created_by.clone(),
-        created_at: serialize_datetime(bonfire.created_at),
-        updated_by: bonfire.updated_by.clone(),
-        updated_at: serialize_datetime(bonfire.updated_at)
+        home: bonfire.home,
     };
 }
 pub fn bonfire_view_detailed(bonfire: &Bonfire, tents: Vec<TentViewBasic>, categories: Vec<TentCategoryView>) -> BonfireViewDetailed {
@@ -227,6 +224,7 @@ pub fn bonfire_view_detailed(bonfire: &Bonfire, tents: Vec<TentViewBasic>, categ
         avatar_uri: bonfire.avatar_uri.clone(),
         banner_uri: bonfire.banner_uri.clone(),
         priority: bonfire.priority,
+        home: bonfire.home,
         created_by: bonfire.created_by.clone(),
         created_at: serialize_datetime(bonfire.created_at),
         updated_by: bonfire.updated_by.clone(),

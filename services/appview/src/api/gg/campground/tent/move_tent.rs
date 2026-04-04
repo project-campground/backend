@@ -23,29 +23,45 @@ pub struct MoveTentBody {
 #[allow(unused_variables)]
 #[post("/xrpc/gg.campground.tent.moveTent?<tent_id>", data = "<body>")]
 pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, tent_id: &str, body: Json<MoveTentBody>) -> Result<Json<TentViewBasic>> {    
-    let inner_body = &body.into_inner();
+    let MoveTentBody { bonfire_id, category_id, position } = &body.into_inner();
 
     // No reason to do anything with the request
-    if inner_body.bonfire_id.is_none() && inner_body.category_id.is_none() && inner_body.position.is_none() {
+    if bonfire_id.is_none() && category_id.is_none() && position.is_none() {
         return Err(XRPCError::BadRequest("Expected at least one property in the body".to_string()));
+    } else if
+        bonfire_id.clone().map_or(true, |bonfire_id| auth.tent.bonfire_id == bonfire_id) ||
+        category_id.clone().map_or(
+            true,
+            |category_id|
+                auth.tent.category_id.map_or("".to_string(), |x| x.to_string()) == category_id
+        ) ||
+        position.map_or(
+            true,
+            |position|
+                auth.tent.priority == position
+        )
+    {
+        // Failing seems like a bad DX if there is some weird bug happening
+        return Ok(Json(tent_view_basic(&auth.tent)));
     }
 
     expect_permission!(
         has_leveled_perms_or_owner(&auth.campsite, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id), &auth.member, GeneralPermissionConsts::MANAGE_TENTS, ContentPermissionConsts::VIEW_CONTENT)
     );
 
-    let remove_category = inner_body.category_id.clone().map_or(false, |x| x == "");
+    let remove_category = category_id.clone().map_or(false, |x| x == "");
+    // Parsed
     let category_id =
-        if inner_body.category_id.is_none() || remove_category {
+        if category_id.is_none() || remove_category {
             None
         } else {
-            Some(Uuid::try_parse(inner_body.category_id.clone().unwrap().as_str())
+            Some(Uuid::try_parse(category_id.clone().unwrap().as_str())
                 .map_err(|_| XRPCError::BadRequest("Invalid category_id UUID format".to_string()))?)
         };
 
     let mut conn = establish_connection().unwrap();
 
-    let moved_bonfire = inner_body.bonfire_id.clone().unwrap_or(auth.tent.bonfire_id.clone());
+    let moved_bonfire = bonfire_id.clone().unwrap_or(auth.tent.bonfire_id.clone());
 
     // To make sure they are not moving to category that doesn't exist
     if !remove_category && category_id.map_or(false, |x| Some(x) != auth.tent.category_id) {
@@ -57,8 +73,8 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
 
     // Make room for the tent; if there is already a tent in that position, make sure position is slightly more unique and is more consistent
     // among the client and so would the experience (since if it also gets sorted by ID, it would be confusing why sometimes tent refuses to move)
-    if let Some(position) = inner_body.position {
-        make_room_for_tent(&auth.tent.bonfire_id, moved_category, position)?;
+    if let Some(position) = position {
+        make_room_for_tent(&auth.tent.bonfire_id, moved_category, *position)?;
     }
 
     let current_date = Utc::now().naive_utc();
@@ -73,7 +89,7 @@ pub async fn move_tent(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject
         .set((
             // All the new settings
             appview::tent::priority
-                .eq(inner_body.position.clone().unwrap_or(auth.tent.priority)),
+                .eq(position.clone().unwrap_or(auth.tent.priority)),
             appview::tent::categoryid
                 .eq(moved_category),
             appview::tent::bonfireid
@@ -124,7 +140,7 @@ fn make_room_for_tent(bonfire_id: &str, category_id: Option<Uuid>, position: i32
     }
 
     // Make other tents go below it (since client is expected to add 1 when putting below a tent already)
-    let updated = diesel::update(crate::schema::appview::tent::table)
+    diesel::update(crate::schema::appview::tent::table)
         .filter(
             appview::tent::bonfireid
                 .eq(bonfire_id)
@@ -151,14 +167,11 @@ fn make_room_for_tent(bonfire_id: &str, category_id: Option<Uuid>, position: i32
         .set((
             appview::tent::priority
                 .eq(
-                    appview::tent::priority
-                        .add(1)
+                    appview::tent::priority + 1
                 ),
         ))
         .load::<Tent>(&mut conn)
         .map_err(handle_select_first_error)?;
-
-    println!("Updated tents: {:?}", updated);
 
     Ok(())
 }

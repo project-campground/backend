@@ -1,32 +1,18 @@
-use appview_schema::{models::appview::Bonfire, schema::appview};
+use appview_schema::schema::appview;
 use campground_lexicon::gg::campground::campsite::BonfireViewBasic;
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
 use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::bonfire_view_basic, permissions::{ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner}, ws::event_next_bonfire}, realtime::data::ReactiveSubject, xrpc::{
-    campsite::CampsiteInfo, error::{Result, XRPCError}
+    campsite::BonfireInfo, error::Result
 }};
 
-#[post("/xrpc/gg.campground.campsite.deleteBonfire?<campsite_id>&<bonfire_id>")]
-pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, bonfire_id: &str) -> Result<Json<BonfireViewBasic>> {    
+#[post("/xrpc/gg.campground.campsite.deleteBonfire?<bonfire_id>")]
+pub async fn delete_bonfire(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, bonfire_id: &str) -> Result<Json<BonfireViewBasic>> {    
     let mut conn = establish_connection().unwrap();
 
-    let existing_bonfires = appview::bonfire::table
-        .filter(
-            appview::bonfire::campsiteid
-                .eq(campsite_id)
-        )
-        .load::<Bonfire>(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    if existing_bonfires.len() < 2 {
-        return Err(XRPCError::Forbidden("Cannot delete last bonfire".to_string()));
-    }
-
-    let bonfire = existing_bonfires.iter().find(|x| x.id == bonfire_id);
-
-    if bonfire.is_none() {
-        return Err(XRPCError::NotFound);
+    if auth.bonfire.home {
+        return Err(crate::xrpc::error::XRPCError::BadRequest("Can't delete home bonfire".to_string()));
     }
 
     expect_permission!(has_leveled_perms_or_owner(&auth.campsite, &bonfire_id, None, None, &auth.member, GeneralPermissionConsts::MANAGE_BONFIRES, ContentPermissionConsts::VIEW_CONTENT));
@@ -34,7 +20,7 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
     diesel::delete(appview::bonfire::table)
         .filter(
             appview::bonfire::campsiteid
-                .eq(campsite_id)
+                .eq(&auth.bonfire.campsite_id)
                 .and(
                     appview::bonfire::id
                         .eq(bonfire_id)
@@ -43,9 +29,7 @@ pub async fn delete_bonfire(auth: CampsiteInfo<'_>, event_subject: &State<Reacti
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let bonfire = bonfire.unwrap();
+    event_next_bonfire(event_subject, &auth.bonfire, true, "BonfireDeleted", bonfire_view_basic(&auth.bonfire));
 
-    event_next_bonfire(event_subject, &bonfire, true, "BonfireDeleted", bonfire_view_basic(bonfire));
-
-    return Ok(Json(bonfire_view_basic(bonfire)));
+    return Ok(Json(bonfire_view_basic(&auth.bonfire)));
 }
