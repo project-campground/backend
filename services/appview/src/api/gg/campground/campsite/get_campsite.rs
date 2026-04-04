@@ -1,9 +1,9 @@
 use appview_schema::models::appview::{Bonfire, Campsite, CampsiteRole};
-use campground_lexicon::gg::campground::campsite::{BonfireViewBasic, CampsiteRoleViewBasic, CampsiteViewDetailed};
+use campground_lexicon::gg::campground::{bonfire::BonfireViewBasic, campsite::CampsiteViewDetailed, role::RoleViewBasic};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
-use crate::{database::{campsites::get_full_campsite_member, establish_connection}, helpers::{api::handle_select_first_error, campsites::{bonfire_view_basic, campsite_member_view_basic, campsite_role_view_basic, campsite_view_detailed}}, xrpc::{
+use crate::{database::{campsites::get_full_campsite_member, establish_connection}, helpers::api::handle_select_first_error, views::{bonfires::bonfire_view_basic, campsites::campsite_view_detailed, members::member_view_basic, roles::role_view_basic}, xrpc::{
     campsite::CampsiteInfoBasic, error::Result
 }};
 
@@ -27,10 +27,10 @@ pub async fn get_campsite(auth: CampsiteInfoBasic<'_>, campsite_id: &str) -> Res
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
-        .map(campsite_role_view_basic)
-        .collect::<Vec<CampsiteRoleViewBasic>>();
+        .map(role_view_basic)
+        .collect::<Vec<RoleViewBasic>>();
     let (member, member_profile) = get_full_campsite_member(campsite_id, &auth.actor.did)?;
-    let campsite_view = campsite_view_detailed(campsite, bonfires, roles, campsite_member_view_basic(&member, &member_profile, &auth.actor));
+    let campsite_view = campsite_view_detailed(campsite, bonfires, roles, member_view_basic(&member, &member_profile, &auth.actor));
 
     return Ok(Json(campsite_view));
 }

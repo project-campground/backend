@@ -2,30 +2,36 @@ use appview_schema::models::appview::Campsite;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::{actor::GetMeOutput, campsite::CampsiteViewBasic};
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
-use rocket::{serde::json::Json,State};
 use reqwest::Client;
+use rocket::{State, serde::json::Json};
 
 use crate::{
     database::{establish_connection, profiles},
-    helpers::{api::handle_all_db_errors, campsites::campsite_view_basic, views::{profile_record, profile_view_basic}},
+    helpers::api::handle_all_db_errors,
+    views::{
+        campsites::campsite_view_basic,
+        profiles::{profile_record, profile_view_basic},
+    },
     xrpc::{
         auth::Authorization,
-        error::{Result, XRPCError}
-    }
+        error::{Result, XRPCError},
+    },
 };
 
 #[get("/xrpc/gg.campground.actor.getMe")]
-pub async fn get_me(auth: Authorization<'_>, client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>) -> Result<Json<GetMeOutput>> {
+pub async fn get_me(
+    auth: Authorization<'_>,
+    client: &State<Client>,
+    did_document_storage: &State<LruDidDocumentStorage>,
+) -> Result<Json<GetMeOutput>> {
     let mut conn = establish_connection().unwrap();
-    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, auth.actor_did.as_str())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
+    let (actor, db_profile) =
+        profiles::get_profile(client, did_document_storage, auth.actor_did.as_str())
+            .await
+            .map_err(|_| XRPCError::Unauthorized)?;
 
-    let campsite_ids_filtered: Vec<String> = actor
-        .campsites
-        .iter()
-        .filter_map(|x| x.clone())
-        .collect();
+    let campsite_ids_filtered: Vec<String> =
+        actor.campsites.iter().filter_map(|x| x.clone()).collect();
 
     let campsites = if actor.campsites.is_empty() {
         vec![]
@@ -39,5 +45,8 @@ pub async fn get_me(auth: Authorization<'_>, client: &State<Client>, did_documen
             .collect::<Vec<CampsiteViewBasic>>()
     };
 
-    return Ok(Json(GetMeOutput { campsites, profile: profile_view_basic(&actor, &profile_record(db_profile)) }));
+    return Ok(Json(GetMeOutput {
+        campsites,
+        profile: profile_view_basic(&actor, &profile_record(db_profile)),
+    }));
 }

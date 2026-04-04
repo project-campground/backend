@@ -10,10 +10,6 @@ pub fn routes() -> Vec<rocket::Route> {
         update_category::update_category,
         move_category::move_category,
         delete_category::delete_category,
-        get_messages::get_messages,
-        create_message::create_message,
-        update_message::update_message,
-        delete_message::delete_message,
     ]
 }
 
@@ -23,11 +19,8 @@ mod create_tent;
 mod update_tent;
 mod move_tent;
 mod delete_tent;
+
 mod create_category;
 mod update_category;
 mod move_category;
 mod delete_category;
-mod get_messages;
-mod create_message;
-mod update_message;
-mod delete_message;

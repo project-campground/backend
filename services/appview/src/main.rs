@@ -148,6 +148,7 @@ mod realtime;
 mod database;
 mod helpers;
 mod util;
+mod views;
 mod config;
 mod api;
 pub use appview_schema::schema;

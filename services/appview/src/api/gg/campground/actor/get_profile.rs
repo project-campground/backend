@@ -4,19 +4,25 @@ use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::actor::{Profile, ProfileViewDetailed};
 use chrono::DateTime;
 use lexicon_cid::CidGeneric;
-use rocket::{serde::json::Json,State};
 use reqwest::Client;
+use rocket::{State, serde::json::Json};
 use rsky_lexicon::com::atproto::repo::Blob;
 
 use crate::{
     database::profiles,
-    helpers::views::profile_view_detailed,
-    xrpc::error::{Result, XRPCError}
+    views::profiles::profile_view_detailed,
+    xrpc::error::{Result, XRPCError},
 };
 
 #[get("/xrpc/gg.campground.actor.getProfile?<actor>")]
-pub async fn get_profile(client: &State<Client>, did_document_storage: &State<LruDidDocumentStorage>, actor: &str) -> Result<Json<ProfileViewDetailed>> {
-    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor).await.map_err(|_| XRPCError::NotFound)?;
+pub async fn get_profile(
+    client: &State<Client>,
+    did_document_storage: &State<LruDidDocumentStorage>,
+    actor: &str,
+) -> Result<Json<ProfileViewDetailed>> {
+    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor)
+        .await
+        .map_err(|_| XRPCError::NotFound)?;
     let record = Profile {
         display_name: db_profile.display_name,
         description: db_profile.description,
@@ -49,7 +55,7 @@ pub async fn get_profile(client: &State<Client>, did_document_storage: &State<Lr
         created_at: match db_profile.created_at {
             Some(datetime) => DateTime::from_str(&datetime).ok(),
             None => None,
-        }
+        },
     };
 
     return Ok(Json(profile_view_detailed(&actor, &record)));

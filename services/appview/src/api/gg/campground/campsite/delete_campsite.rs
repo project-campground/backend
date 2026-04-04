@@ -3,7 +3,7 @@ use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
 use diesel::{ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl, dsl::array_remove};
 use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, helpers::{api::handle_select_first_error, ws::event_next_campsite_global}, realtime::data::ReactiveSubject, xrpc::{
+use crate::{database::establish_connection, helpers::api::handle_select_first_error, helpers::ws::event_next_campsite_global, realtime::data::ReactiveSubject, xrpc::{
     campsite::CampsiteInfo, error::{Result, XRPCError}
 }};
 

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 pub enum ContentComponent {
     System(SystemMessage)
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "message")]
 #[serde(rename_all = "camelCase")]

@@ -1,31 +1,62 @@
-use appview_schema::{models::appview::CampsiteMember, schema::appview::{campsite_member, campsite_permission}};
-use campground_lexicon::gg::campground::campsite::CampsitePermissionViewDetailed;
+use appview_schema::{
+    models::appview::CampsiteMember,
+    schema::appview::{campsite_member, campsite_permission},
+};
+use campground_lexicon::gg::campground::permission::PermissionViewDetailed;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
-use crate::{api::gg::campground::permission::update_permission::{UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request}, database::establish_connection, helpers::{api::handle_select_first_error, campsites::campsite_permission_view_detailed, permissions::{GeneralPermissionConsts, has_full_leveled_perms}}, realtime::data::ReactiveSubject, xrpc::{
-    campsite::{BonfireInfo, CategoryInfo, TentInfo}, error::{Result, XRPCError}
-}};
+use crate::{
+    api::gg::campground::permission::update_permission::{
+        UpdatePermissionBody, create_or_modify_permission, ensure_update_permission_good_request,
+    },
+    database::establish_connection,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{GeneralPermissionConsts, has_full_leveled_perms},
+    },
+    realtime::data::ReactiveSubject,
+    views::permissions::permission_view_detailed,
+    xrpc::{
+        campsite::{BonfireInfo, CategoryInfo, TentInfo},
+        error::{Result, XRPCError},
+    },
+};
 
-pub async fn update_tent_user_permission(auth: TentInfo<'_>, event_subject: &State<ReactiveSubject>, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>> {    
+pub async fn update_tent_user_permission(
+    auth: TentInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    actor: &str,
+    body: Json<UpdatePermissionBody>,
+) -> Result<Json<PermissionViewDetailed>> {
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
 
     let mut conn = establish_connection().unwrap();
 
-    if !(auth.campsite.owner == auth.actor.did || has_full_leveled_perms(&auth.campsite.id, &auth.tent.bonfire_id, auth.tent.category_id.clone(), Some(auth.tent.id.clone()), &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await?) {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    if !(auth.campsite.owner == auth.actor.did
+        || has_full_leveled_perms(
+            &auth.campsite.id,
+            &auth.tent.bonfire_id,
+            auth.tent.category_id.clone(),
+            Some(auth.tent.id.clone()),
+            &auth.member,
+            GeneralPermissionConsts::MANAGE_ROLES,
+            0,
+        )
+        .await?)
+    {
+        return Err(XRPCError::Forbidden(
+            "No given permission to do that".to_string(),
+        ));
     }
 
     campsite_member::table
         .filter(
             campsite_member::userid
                 .eq(actor)
-                .and(
-                    campsite_member::campsiteid
-                        .eq(&auth.campsite.id)
-                )
+                .and(campsite_member::campsiteid.eq(&auth.campsite.id)),
         )
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -42,34 +73,46 @@ pub async fn update_tent_user_permission(auth: TentInfo<'_>, event_subject: &Sta
         &inner_body.permissions,
         &campsite_permission::userid
             .eq(actor)
-            .and(
-                campsite_permission::tentid
-                    .eq(auth.tent.id)
-            ),
+            .and(campsite_permission::tentid.eq(auth.tent.id)),
     )?;
-    
-    Ok(Json(campsite_permission_view_detailed(permission)))
+
+    Ok(Json(permission_view_detailed(permission)))
 }
 
-pub async fn update_category_user_permission(auth: CategoryInfo<'_>, event_subject: &State<ReactiveSubject>, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>> {    
+pub async fn update_category_user_permission(
+    auth: CategoryInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    actor: &str,
+    body: Json<UpdatePermissionBody>,
+) -> Result<Json<PermissionViewDetailed>> {
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
 
     let mut conn = establish_connection().unwrap();
 
-    if !(auth.campsite.owner == auth.actor.did || has_full_leveled_perms(&auth.campsite.id, &auth.category.bonfire_id, Some(auth.category.id.clone()), None, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await?) {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    if !(auth.campsite.owner == auth.actor.did
+        || has_full_leveled_perms(
+            &auth.campsite.id,
+            &auth.category.bonfire_id,
+            Some(auth.category.id.clone()),
+            None,
+            &auth.member,
+            GeneralPermissionConsts::MANAGE_ROLES,
+            0,
+        )
+        .await?)
+    {
+        return Err(XRPCError::Forbidden(
+            "No given permission to do that".to_string(),
+        ));
     }
 
     campsite_member::table
         .filter(
             campsite_member::userid
                 .eq(actor)
-                .and(
-                    campsite_member::campsiteid
-                        .eq(&auth.campsite.id)
-                )
+                .and(campsite_member::campsiteid.eq(&auth.campsite.id)),
         )
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -86,34 +129,46 @@ pub async fn update_category_user_permission(auth: CategoryInfo<'_>, event_subje
         &inner_body.permissions,
         &campsite_permission::userid
             .eq(actor)
-            .and(
-                campsite_permission::categoryid
-                    .eq(auth.category.id)
-            ),
+            .and(campsite_permission::categoryid.eq(auth.category.id)),
     )?;
-    
-    Ok(Json(campsite_permission_view_detailed(permission)))
+
+    Ok(Json(permission_view_detailed(permission)))
 }
 
-pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, event_subject: &State<ReactiveSubject>, actor: &str, body: Json<UpdatePermissionBody>) -> Result<Json<CampsitePermissionViewDetailed>> {    
+pub async fn update_bonfire_user_permission(
+    auth: BonfireInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    actor: &str,
+    body: Json<UpdatePermissionBody>,
+) -> Result<Json<PermissionViewDetailed>> {
     let inner_body = &body.into_inner();
 
     ensure_update_permission_good_request(inner_body)?;
 
     let mut conn = establish_connection().unwrap();
 
-    if !(auth.campsite.owner == auth.actor.did || has_full_leveled_perms(&auth.campsite.id, &auth.bonfire.id, None, None, &auth.member, GeneralPermissionConsts::MANAGE_ROLES, 0).await?) {
-        return Err(XRPCError::Forbidden("No given permission to do that".to_string()));
+    if !(auth.campsite.owner == auth.actor.did
+        || has_full_leveled_perms(
+            &auth.campsite.id,
+            &auth.bonfire.id,
+            None,
+            None,
+            &auth.member,
+            GeneralPermissionConsts::MANAGE_ROLES,
+            0,
+        )
+        .await?)
+    {
+        return Err(XRPCError::Forbidden(
+            "No given permission to do that".to_string(),
+        ));
     }
 
     campsite_member::table
         .filter(
             campsite_member::userid
                 .eq(actor)
-                .and(
-                    campsite_member::campsiteid
-                        .eq(&auth.campsite.id)
-                )
+                .and(campsite_member::campsiteid.eq(&auth.campsite.id)),
         )
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -130,11 +185,8 @@ pub async fn update_bonfire_user_permission(auth: BonfireInfo<'_>, event_subject
         &inner_body.permissions,
         &campsite_permission::userid
             .eq(actor)
-            .and(
-                campsite_permission::bonfireid
-                    .eq(&auth.bonfire.id)
-            ),
+            .and(campsite_permission::bonfireid.eq(&auth.bonfire.id)),
     )?;
-    
-    Ok(Json(campsite_permission_view_detailed(permission)))
+
+    Ok(Json(permission_view_detailed(permission)))
 }

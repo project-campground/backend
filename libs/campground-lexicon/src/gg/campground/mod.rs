@@ -8,3 +8,7 @@ pub mod tent;
 pub mod actor;
 pub mod profile;
 pub mod content;
+pub mod role;
+pub mod bonfire;
+pub mod invite;
+pub mod message;

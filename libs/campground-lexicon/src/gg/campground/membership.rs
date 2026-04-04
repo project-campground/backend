@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::gg::campground::{actor::{ProfileViewBasic, ProfileViewDetailed}, campsite::{CampsiteRoleViewBasic, CampsiteViewBasic}};
+use crate::gg::campground::{actor::{ProfileViewBasic, ProfileViewDetailed}, role::RoleViewBasic};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsiteMemberViewBasic {
+pub struct MemberViewBasic {
     pub user: ProfileViewBasic,
     pub nickname: Option<String>,
     pub roles: Vec<Uuid>,
@@ -13,7 +13,7 @@ pub struct CampsiteMemberViewBasic {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsiteMemberViewDetailed {
+pub struct MemberViewDetailed {
     pub user: ProfileViewDetailed,
     pub campsite_id: String,
     pub joined_at: String,
@@ -24,7 +24,7 @@ pub struct CampsiteMemberViewDetailed {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsiteMemberViewAuthor {
+pub struct MemberViewAuthor {
     pub user: ProfileViewBasic,
     pub nickname: Option<String>,
     pub roles: Vec<Uuid>,
@@ -33,30 +33,7 @@ pub struct CampsiteMemberViewAuthor {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CampsiteInviteViewCampsite {
-    pub id: Uuid,
-    pub allowed_amount: Option<i32>,
-    pub expires_at: Option<String>,
-    pub created_at: String,
-    pub created_by: ProfileViewBasic,
-    pub used: i32,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CampsiteInviteViewGlobal {
-    pub id: Uuid,
-    pub campsite: CampsiteViewBasic,
-    pub allowed_amount: Option<i32>,
-    pub expires_at: Option<String>,
-    pub created_at: String,
-    pub created_by: ProfileViewBasic,
-    pub used: i32,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CampsiteBanView {
+pub struct MemberBanView {
     pub user: ProfileViewBasic,
     pub user_id: String,
     pub campsite_id: String,
@@ -69,21 +46,15 @@ pub struct CampsiteBanView {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GetCampsiteMemberBansOutput {
-    pub member_bans: Vec<CampsiteBanView>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetCampsiteInvitesOutput {
-    pub invites: Vec<CampsiteInviteViewCampsite>,
+pub struct GetMemberBansOutput {
+    pub member_bans: Vec<MemberBanView>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ModifyMemberRolesOutput {
     pub members: Vec<String>,
-    pub role: CampsiteRoleViewBasic,
+    pub role: RoleViewBasic,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

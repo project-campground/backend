@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{campsite::CampsitePermissionViewBasic, content::ContentComponent, membership::CampsiteMemberViewAuthor};
+use crate::gg::campground::permission::PermissionViewBasic;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -73,54 +73,8 @@ pub struct TentCategoryView {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TentMessageViewBasic {
-    pub id: Uuid,
-    pub campsite_id: String,
-    pub bonfire_id: String,
-    pub tent_id: Uuid,
-
-    pub r#type: Option<MessageType>,
-    pub content: String,
-    pub components: Option<Vec<ContentComponent>>,
-    pub replying_to: Vec<Uuid>,
-    
-    // pub created_by: String,
-    pub created_by: CampsiteMemberViewAuthor,
-    
-    pub created_at: String,
-    pub updated_at: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TentMessageViewWithReplies {
-    pub id: Uuid,
-    pub campsite_id: String,
-    pub bonfire_id: String,
-    pub tent_id: Uuid,
-    
-    pub r#type: Option<MessageType>,
-    pub content: String,
-    pub replying_to: Vec<TentMessageViewBasic>,
-    pub replying_to_count: usize,
-    pub components: Option<Vec<ContentComponent>>,
-    
-    // pub created_by: String,
-    pub created_by: CampsiteMemberViewAuthor,
-    pub created_at: String,
-    pub updated_at: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct GetTentsOutput {
-    pub permissions: Vec<CampsitePermissionViewBasic>,
+    pub permissions: Vec<PermissionViewBasic>,
     pub tents: Vec<TentViewBasic>,
     pub categories: Vec<TentCategoryView>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetTentMessagesOutput {
-    pub messages: Vec<TentMessageViewWithReplies>,
 }

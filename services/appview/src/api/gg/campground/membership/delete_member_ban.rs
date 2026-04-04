@@ -1,19 +1,46 @@
-use appview_schema::{models::appview::{Actor, CampsiteBan, Profile}, schema::appview::{self, campsite_ban}};
-use campground_lexicon::gg::campground::membership::CampsiteBanView;
+use appview_schema::{
+    models::appview::{Actor, CampsiteBan, Profile},
+    schema::appview::{self, campsite_ban},
+};
+use campground_lexicon::gg::campground::membership::MemberBanView;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
-use crate::{database::establish_connection, expect_permission, helpers::{api::handle_select_first_error, campsites::campsite_ban_view, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite}, realtime::data::ReactiveSubject, xrpc::{
-    campsite::CampsiteInfo, error::{Result, XRPCError}
-}};
+use crate::{
+    database::establish_connection,
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        ws::event_next_campsite,
+    },
+    realtime::data::ReactiveSubject,
+    views::members::member_ban_view,
+    xrpc::{
+        campsite::CampsiteInfo,
+        error::{Result, XRPCError},
+    },
+};
 
 #[post("/xrpc/gg.campground.membership.deleteMemberBan?<campsite_id>&<actor>")]
-pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<ReactiveSubject>, campsite_id: &str, actor: &str) -> Result<Json<CampsiteBanView>> {    
+pub async fn delete_member_ban(
+    auth: CampsiteInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    campsite_id: &str,
+    actor: &str,
+) -> Result<Json<MemberBanView>> {
     if actor == auth.actor.did {
-        return Err(XRPCError::Forbidden("Member cannot delete ban from themselves".to_string()));
+        return Err(XRPCError::Forbidden(
+            "Member cannot delete ban from themselves".to_string(),
+        ));
     }
 
-    expect_permission!(has_role_perms_or_owner(&auth.campsite, &auth.member, GeneralPermissionConsts::BAN_MEMBERS, 0));
+    expect_permission!(has_role_perms_or_owner(
+        &auth.campsite,
+        &auth.member,
+        GeneralPermissionConsts::BAN_MEMBERS,
+        0
+    ));
 
     let mut conn = establish_connection().unwrap();
 
@@ -21,25 +48,10 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
         .filter(
             campsite_ban::campsiteid
                 .eq(campsite_id)
-                .and(
-                    campsite_ban::userid
-                        .eq(actor)
-                )
+                .and(campsite_ban::userid.eq(actor)),
         )
-        .left_join(
-            appview::profile::table
-                .on(
-                    appview::profile::creator
-                        .eq(campsite_ban::userid)
-                )
-        )
-        .inner_join(
-            appview::actor::table
-                .on(
-                    appview::actor::did
-                        .eq(campsite_ban::userid)
-                )
-        )
+        .left_join(appview::profile::table.on(appview::profile::creator.eq(campsite_ban::userid)))
+        .inner_join(appview::actor::table.on(appview::actor::did.eq(campsite_ban::userid)))
         .first::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
@@ -47,10 +59,7 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
         .filter(
             campsite_ban::campsiteid
                 .eq(campsite_id)
-                .and(
-                    campsite_ban::userid
-                        .eq(actor)
-                )
+                .and(campsite_ban::userid.eq(actor)),
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -60,8 +69,8 @@ pub async fn delete_member_ban(auth: CampsiteInfo<'_>, event_subject: &State<Rea
         &auth.campsite.id,
         GeneralPermissionConsts::BAN_MEMBERS,
         "MemberBanDeleted",
-        campsite_ban_view(&member_ban, &profile, &target_actor)
+        member_ban_view(&member_ban, &profile, &target_actor),
     );
 
-    Ok(Json(campsite_ban_view(&member_ban, &profile, &target_actor)))
+    Ok(Json(member_ban_view(&member_ban, &profile, &target_actor)))
 }
