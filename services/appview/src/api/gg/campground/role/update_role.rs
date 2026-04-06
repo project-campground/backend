@@ -33,8 +33,8 @@ pub struct UpdateRoleBody {
     name: Option<String>,
     motion: Option<RoleMotion>,
     colors: Option<Vec<u32>>,
-    display_separately: Option<bool>,
-    mentionable: Option<bool>,
+    raised: Option<bool>,
+    pingable: Option<bool>,
     permissions: Option<PermissionsDictionary>,
 }
 
@@ -54,8 +54,8 @@ pub async fn update_role(
         name,
         colors,
         motion,
-        display_separately,
-        mentionable,
+        raised,
+        pingable,
         permissions,
     } = &body.into_inner();
     if name.clone().map_or(false, |x| x.len() == 0 || x.len() > 64) {
@@ -111,8 +111,8 @@ pub async fn update_role(
                 .clone()
                 .map_or(role.motion, |motion| from_role_motion(motion))),
             campsite_role::displayseparately
-                .eq(display_separately.unwrap_or(role.display_separately)),
-            campsite_role::mentionable.eq(mentionable.unwrap_or(role.mentionable)),
+                .eq(raised.unwrap_or(role.display_separately)),
+            campsite_role::mentionable.eq(pingable.unwrap_or(role.mentionable)),
             campsite_role::contentpermissions.eq(permissions
                 .as_ref()
                 .map(|x| x.content)

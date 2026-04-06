@@ -30,8 +30,8 @@ pub struct CreateRoleBody {
     name: String,
     motion: Option<RoleMotion>,
     colors: Option<Vec<u32>>,
-    display_separately: Option<bool>,
-    mentionable: Option<bool>,
+    raised: Option<bool>,
+    pingable: Option<bool>,
     permissions: PermissionsDictionary,
 }
 
@@ -46,8 +46,8 @@ pub async fn create_role(
         name,
         motion,
         colors,
-        display_separately,
-        mentionable,
+        raised,
+        pingable,
         permissions,
     } = &body.into_inner();
     if name.len() == 0 || name.len() > 64 {
@@ -96,8 +96,8 @@ pub async fn create_role(
                     .collect::<Vec<Option<i32>>>()
             }),
             motion: motion.clone().map_or(0, |motion| from_role_motion(motion)),
-            display_separately: display_separately.clone().unwrap_or(false),
-            mentionable: mentionable.clone().unwrap_or(false),
+            display_separately: raised.clone().unwrap_or(false),
+            mentionable: pingable.clone().unwrap_or(false),
             general_permissions: permissions.general,
             content_permissions: permissions.content,
             priority: lowest_priority.priority + 1,

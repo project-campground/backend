@@ -24,12 +24,11 @@ pub struct RoleViewBasic {
     pub campsite_id: String,
     
     pub name: String,
-    pub display_separately: bool,
-    pub mentionable: bool,
+    pub raised: bool,
+    pub pingable: bool,
     pub flags: i32,
 
     pub permissions: PermissionsDictionary,
-    
     pub position: i32,
     
     pub colors: Vec<u32>,

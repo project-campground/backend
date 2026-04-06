@@ -18,8 +18,8 @@ pub fn role_view_basic(role: &CampsiteRole) -> RoleViewBasic {
         id: role.id.clone(),
         campsite_id: role.campsite_id.clone(),
         name: role.name.clone(),
-        display_separately: role.display_separately.clone(),
-        mentionable: role.mentionable.clone(),
+        raised: role.display_separately.clone(),
+        pingable: role.mentionable.clone(),
         colors: role
             .colors
             .iter()

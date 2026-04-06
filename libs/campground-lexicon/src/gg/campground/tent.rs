@@ -8,13 +8,6 @@ use crate::gg::campground::permission::PermissionViewBasic;
 pub enum TentType {
     Text = 0,
 }
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-#[non_exhaustive]
-pub enum MessageType {
-    Default = 0,
-    System = 1,
-}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
