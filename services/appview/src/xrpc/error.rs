@@ -4,11 +4,11 @@ use serde::Serialize;
 #[derive(Debug, thiserror::Error)]
 pub enum XRPCError {
     #[error("(400) Bad request")]
-    BadRequest,
+    BadRequest(String),
     #[error("(401) Unauthorized")]
     Unauthorized,
     #[error("(403) Forbidden")]
-    Forbidden,
+    Forbidden(String),
     #[error("(404) Not found")]
     NotFound,
     #[error("(413) Payload too large")]
@@ -27,9 +27,9 @@ pub enum XRPCError {
 impl<'r> Responder<'r, 'static> for XRPCError {
     fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
         let status = match self {
-            Self::BadRequest => rocket::http::Status::BadRequest,
+            Self::BadRequest(_) => rocket::http::Status::BadRequest,
             Self::Unauthorized => rocket::http::Status::Unauthorized,
-            Self::Forbidden => rocket::http::Status::Forbidden,
+            Self::Forbidden(_) => rocket::http::Status::Forbidden,
             Self::NotFound => rocket::http::Status::NotFound,
             Self::PayloadTooLarge => rocket::http::Status::PayloadTooLarge,
             Self::TooManyRequests => rocket::http::Status::TooManyRequests,
@@ -42,6 +42,7 @@ impl<'r> Responder<'r, 'static> for XRPCError {
             error: status.reason().unwrap_or(&status.to_string()).to_string(),
             message: match self {
                 Self::Other(err) => Some(err.to_string()),
+                Self::BadRequest(err_message) | Self::Forbidden(err_message) => Some(err_message),
                 _ => None,
             },
         };

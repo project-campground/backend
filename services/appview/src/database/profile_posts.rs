@@ -41,36 +41,36 @@ pub fn resolve_post_uri(uri: &str) -> Result<(String, String, Option<String>), &
     Ok((uri_formatted, author_did, if split_uri.len() < 5 { None } else { Some(split_uri[4].to_string()) }))
 }
 
-pub async fn fill_profile_posts_with_records(client: &Client, did_document_storage: &LruDidDocumentStorage, author_did: String, parent_uri: Option<String>, posts: Vec<ProfilePost>) -> Result<Vec<ProfilePost>, &'static str> {
-    let mut new_post_list = posts.clone();
-
+pub async fn fill_profile_posts_with_records(client: &Client, did_document_storage: &LruDidDocumentStorage, author_did: &str, parent_uri: Option<String>, optional_parent: bool, posts: &mut Vec<ProfilePost>) -> Result<(), &'static str> {
     // TODO: Firehose auto-update?
     let post_records = fetch_record_list::<ProfilePostRecord>(
-        author_did.as_str(),
+        author_did,
         "gg.campground.profile.post",
         client,
         did_document_storage,
         &DNS_RESOLVER
     )
         .await
-        .map_err(|_| "Failed to fetch post records")
+        .map_err(|err| format!("Failed to fetch post records: {:?}", err))
         .unwrap();
-    
+
     // Because Rust
-    let post_uris: Vec<String> = posts.iter().map(|x| x.uri.clone()).clone().collect();
-    
+    let post_uris: Vec<String> = posts.iter().map(|x| x.uri.clone()).collect();
+
     // Some of the new record that weren't found before
-    let posts_to_add: Vec<ProfilePost> =
-        post_records
+    let posts_to_add: &Vec<ProfilePost> =
+        &post_records
             .records
             .iter()
-            .filter(|x| x.value.parent_uri == parent_uri)
-            .filter(|x| !post_uris.contains(&x.uri))
+            .filter(|x|
+                (optional_parent || x.value.parent_uri == parent_uri)
+                && !post_uris.contains(&x.uri)
+            )
             .map(|x| db_post_from_only_record(x))
             .collect();
-    
-    let posts_modified =
-        post_records
+
+    let posts_modified: &Vec<ProfilePost> =
+        &post_records
             .records
             .iter()
             .filter(|x|
@@ -84,18 +84,21 @@ pub async fn fill_profile_posts_with_records(client: &Client, did_document_stora
                     )
             )
             .map(|x| db_post_from_only_record(x))
-            .collect::<Vec<ProfilePost>>();
-
+            .collect();
+    
     insert_post_list_into_db(posts_to_add.clone()).await?;
     update_post_list_in_db(posts_modified.clone()).await?;
-    new_post_list.extend(posts_to_add.clone());
 
+    posts.extend(posts_to_add.clone());
+    
     let fmt = "%Y-%m-%d %H:%M:%S.%f";
-    new_post_list
+
+    posts
         .sort_by(|a, b|
             NaiveDateTime::parse_from_str(b.indexed_at.as_str(), fmt).unwrap().cmp(&NaiveDateTime::parse_from_str(a.indexed_at.as_str(), fmt).unwrap())
         );
-    Ok(new_post_list)
+
+    Ok(())
 }
 pub async fn get_single_profile_post<T>(client: &Client, did_document_storage: &LruDidDocumentStorage, post_query: Result<T, diesel::result::Error>, author_did: &str, post_tid: &str, _fn: fn(ProfilePost) -> T) -> Result<(Actor, T), &'static str> {
     let author_actor = get_actor(client, did_document_storage, author_did).await.map_err(|_| "Error fetching actor")?;
@@ -122,7 +125,7 @@ pub async fn get_single_profile_post<T>(client: &Client, did_document_storage: &
     }
 }
 
-pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>) -> Result<usize, &'static str> {
+pub async fn delete_post_record_from_db(uri: &str, parent_uri: Option<String>) -> Result<usize, &'static str> {
     let mut conn = establish_connection().unwrap();
 
     // To have an up-to-date reply list
@@ -136,7 +139,7 @@ pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>)
                     profile_post::replies
                         .eq(
                             sql("array_remove(replies, ")
-                                .bind::<VarChar, _>(uri.clone())
+                                .bind::<VarChar, _>(uri)
                                 .sql(")")
                         )
                 )
@@ -150,7 +153,7 @@ pub async fn delete_post_record_from_db(uri: String, parent_uri: Option<String>)
             profile_post::table
                 .filter(
                     profile_post::uri
-                        .eq(uri.clone())
+                        .eq(uri)
                 )
         )
         .execute(&mut conn)
@@ -280,15 +283,13 @@ async fn update_post_list_in_db(posts: Vec<ProfilePost>) -> Result<(), &'static 
                 format!("{};{}", x.uri.clone(), x.content.clone())
             })
             .collect();
-    println!("Update tuple: {:?}", update_tuple_string);
 
     // Basically a complicated way of fetching specific list of replies for each parent instead of individually updating and spamming queries
     let content_update_sql = sql("(SELECT ((array_agg(array_to_string((string_to_array(unnest, ';'))[2:], ';')))[1]) FROM ( SELECT unnest(")
         .bind::<Array<VarChar>, _>(update_tuple_string.clone())
         .sql(") ) WHERE split_part(unnest, ';', 1) = \"appview\".\"profile_post\".\"uri\")");
-    println!("SQL {:?}", content_update_sql);
 
-    let u = diesel::update(profile_post::table)
+    diesel::update(profile_post::table)
         .filter(
             profile_post::uri.eq_any(update_tuple_string.iter().map(|x| x.split(";").collect::<Vec<&str>>()[0]))
         )
@@ -297,7 +298,6 @@ async fn update_post_list_in_db(posts: Vec<ProfilePost>) -> Result<(), &'static 
         )
         .execute(&mut conn)
         .expect("Could not update post list");
-    println!("Updated {}", u);
 
     Ok(())
 }

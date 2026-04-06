@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-diesel = { version = "=2.3.1", features = ["chrono", "postgres", "r2d2"] }
+diesel = { version = "=2.3.1", features = ["chrono", "postgres", "r2d2", "uuid", "chrono", "serde_json"] }
 serde = "1.0.203"
+serde_json = "1.0.118"
+uuid = { version = "1.19.0", features = ["v7", "serde"] }
+chrono = { version = "0.4.24", features = ["serde"] }

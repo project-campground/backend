@@ -17,7 +17,7 @@ pub struct GetRecordResponse<T> {
 #[derive(Deserialize)]
 pub struct GetRecordListResponse<T> {
     pub records: Vec<GetRecordResponse<T>>,
-    pub cursor: String,
+    pub cursor: Option<String>,
 }
 
 pub async fn fetch_record<'a, T>(

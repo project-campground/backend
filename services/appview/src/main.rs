@@ -51,6 +51,7 @@ use rocket::shield::{Shield, NoSniff};
 use rocket::{Request, Response};
 use rocket::http::{Header, Status};
 use anyhow::Result;
+use rxrust::{ObservableFactory, Shared};
 use xrpc::error::XRPCError;
 
 use askama as _;
@@ -76,9 +77,9 @@ async fn all_options() {
 #[catch(default)]
 async fn default_catcher(status: Status, _request: &Request<'_>) -> XRPCError {
     match status.code {
-        400 => XRPCError::BadRequest,
+        400 => XRPCError::BadRequest("Bad request".to_string()),
         401 => XRPCError::Unauthorized,
-        403 => XRPCError::Forbidden,
+        403 => XRPCError::Forbidden("Forbidden".to_string()),
         404 => XRPCError::NotFound,
         413 => XRPCError::PayloadTooLarge,
         429 => XRPCError::TooManyRequests,
@@ -118,11 +119,14 @@ pub async fn init() -> Result<rocket::Rocket<rocket::Build>> {
         .user_agent(APP_USER_AGENT)
         .build()?;
 
+    let event_subject: ReactiveSubject = Shared::subject();
+
     let rocket = rocket::build()
         .mount("/", routes![all_options])
         .mount("/", api::routes())
         .manage(client)
         .manage(did_document_cache)
+        .manage(event_subject)
         .attach(shield)
         .attach(CORS)
         .register("/", catchers![default_catcher]);
@@ -140,9 +144,13 @@ async fn main() -> Result<()> {
 }
 
 mod xrpc;
+mod realtime;
 mod database;
 mod helpers;
 mod util;
+mod views;
 mod config;
 mod api;
 pub use appview_schema::schema;
+
+use crate::realtime::data::ReactiveSubject;

@@ -17,7 +17,7 @@ services:
         context: ../
         dockerfile: ./pds/Dockerfile
     container_name: pds
-    image: ghcr.io/bluesky-social/pds:0.4.67
+    image: ghcr.io/bluesky-social/pds:0.4.208
     network_mode: host
     restart: unless-stopped
     volumes:

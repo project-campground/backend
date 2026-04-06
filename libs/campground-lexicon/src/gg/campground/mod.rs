@@ -1,5 +1,14 @@
 pub mod home_server;
 pub mod activity;
 pub mod socials;
+pub mod campsite;
+pub mod membership;
+pub mod permission;
+pub mod tent;
 pub mod actor;
 pub mod profile;
+pub mod content;
+pub mod role;
+pub mod bonfire;
+pub mod invite;
+pub mod message;

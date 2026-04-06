@@ -1,24 +1,22 @@
-#![
-    allow(dead_code)
-]
+#![allow(dead_code)]
 
 use std::str::FromStr;
 
 use appview_schema::models::appview::{Actor, ProfilePost};
 use campground_lexicon::gg::campground::actor::Profile;
-use campground_lexicon::gg::campground::profile::{ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented};
-use chrono::{DateTime, Utc};
+use campground_lexicon::gg::campground::profile::{
+    ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented,
+};
+use chrono::DateTime;
 
-use crate::helpers::views::profile_view_basic;
+use crate::views::util::parse_datetime;
+use crate::views::profiles::profile_view_basic;
 
-pub fn parse_datetime(datetime: Option<DateTime<Utc>>) -> Option<String> {
-    match datetime {
-        Some(dt) => Some(dt.to_rfc3339()),
-        None => None,
-    }
-}
-
-pub fn profile_post_view_basic(actor: &Actor, profile: &Profile, profile_post: &ProfilePost) -> ProfilePostViewBasic {
+pub fn profile_post_view_basic(
+    actor: &Actor,
+    profile: &Profile,
+    profile_post: &ProfilePost,
+) -> ProfilePostViewBasic {
     return ProfilePostViewBasic {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
@@ -31,11 +29,16 @@ pub fn profile_post_view_basic(actor: &Actor, profile: &Profile, profile_post: &
         updated_at: match profile_post.updated_at.clone() {
             Some(datetime) => parse_datetime(DateTime::from_str(&datetime).ok()),
             None => None,
-        }
+        },
     };
 }
 
-pub fn profile_post_view_parented(actor: &Actor, profile: &Profile, profile_post: &ProfilePost, parent: &Option<ProfilePostViewBasic>) -> ProfilePostViewParented {
+pub fn profile_post_view_parented(
+    actor: &Actor,
+    profile: &Profile,
+    profile_post: &ProfilePost,
+    parent: &Option<ProfilePostViewBasic>,
+) -> ProfilePostViewParented {
     return ProfilePostViewParented {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
@@ -53,7 +56,13 @@ pub fn profile_post_view_parented(actor: &Actor, profile: &Profile, profile_post
     };
 }
 
-pub fn profile_post_view_detailed(actor: &Actor, profile: &Profile, profile_post: &ProfilePost, replies: Vec<ProfilePostViewBasic>, parent: &Option<ProfilePostViewBasic>) -> ProfilePostViewDetailed {
+pub fn profile_post_view_detailed(
+    actor: &Actor,
+    profile: &Profile,
+    profile_post: &ProfilePost,
+    replies: Vec<ProfilePostViewBasic>,
+    parent: &Option<ProfilePostViewBasic>,
+) -> ProfilePostViewDetailed {
     return ProfilePostViewDetailed {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),

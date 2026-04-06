@@ -20,5 +20,6 @@ pub fn lower_list<T>(list: Vec<T>) -> Vec<String>
     lowered
 }
 
-pub mod views;
-pub mod posts;
+pub mod api;
+pub mod permissions;
+pub mod ws;
