@@ -31,7 +31,7 @@ pub enum ReactiveSubjectData {
     // Within campsite + has appropriate perms to view it
     Campsite {
         campsite_id: String,
-        permissions_required: i64,
+        permissions_required: u64,
         binary: Vec<u8>
     },
     #[allow(dead_code)]

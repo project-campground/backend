@@ -18,7 +18,7 @@ impl<'a, T> AggregatePermissions<PermissionsDictionary> for T
                 perm
             });
 
-        PermissionsDictionary { general: general_perm.clone(), content: content_perm.clone() }
+        PermissionsDictionary { general: general_perm.clone() as u64, content: content_perm.clone() as u64 }
     }
 }
 impl<'a, T> AggregatePermissions<PermissionsStateDictionary> for T
@@ -26,7 +26,7 @@ impl<'a, T> AggregatePermissions<PermissionsStateDictionary> for T
 {
     fn aggregate_permissions(&self) -> PermissionsStateDictionary {
         // (campsite(allowed, disallowed), tent(allowed, disallowed))
-        let aggregated_perms = &mut ((0i64, 0i64), (0i64, 0i64));
+        let aggregated_perms = &mut ((0u64, 0u64), (0u64, 0u64));
         self
         .clone()
         .for_each(|perm| {
@@ -51,7 +51,7 @@ pub fn aggregate_permissions_double_ref<'a, T>(permissions: T) -> PermissionsSta
     where T: Iterator<Item = &'a &'a CampsitePermission> + Clone
 {
         // (campsite(allowed, disallowed), tent(allowed, disallowed))
-    let aggregated_perms = &mut ((0i64, 0i64), (0i64, 0i64));
+    let aggregated_perms = &mut ((0u64, 0u64), (0u64, 0u64));
     permissions
         .clone()
         .for_each(|perm| {
@@ -70,7 +70,7 @@ pub fn aggregate_permissions_double_ref<'a, T>(permissions: T) -> PermissionsSta
         }
     }
 }
-fn flip_perms(tuple: &mut (i64, i64), allowed: i64, disallowed: i64) {
-    tuple.0 |= allowed;
-    tuple.1 |= disallowed;
+fn flip_perms(tuple: &mut (u64, u64), allowed: i64, disallowed: i64) {
+    tuple.0 |= allowed as u64;
+    tuple.1 |= disallowed as u64;
 }

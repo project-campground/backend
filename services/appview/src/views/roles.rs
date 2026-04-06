@@ -27,8 +27,8 @@ pub fn role_view_basic(role: &CampsiteRole) -> RoleViewBasic {
             .collect::<Vec<u32>>(),
         motion: to_role_motion(role.motion),
         permissions: PermissionsDictionary {
-            general: role.general_permissions,
-            content: role.content_permissions,
+            general: role.general_permissions as u64,
+            content: role.content_permissions as u64,
         },
         position: role.priority,
         created_by: role.created_by.clone(),

@@ -51,7 +51,7 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
         .map_err(handle_select_first_error)?;
     let role_content_permissions = roles.iter().fold(0i64, |content_perm, role| {
         content_perm | role.content_permissions
-    });
+    }) as u64;
     let has_role_permission = role_content_permissions & ContentPermissionConsts::VIEW_CONTENT
         == ContentPermissionConsts::VIEW_CONTENT;
 
@@ -162,9 +162,9 @@ where
     permissions
         .filter(move |x| {
             (if get_denied {
-                x.denied_content_permissions
+                x.denied_content_permissions as u64
             } else {
-                x.allowed_content_permissions
+                x.allowed_content_permissions as u64
             }) & ContentPermissionConsts::VIEW_CONTENT
                 == ContentPermissionConsts::VIEW_CONTENT
         })

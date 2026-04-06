@@ -115,12 +115,12 @@ pub async fn update_role(
             campsite_role::mentionable.eq(pingable.unwrap_or(role.mentionable)),
             campsite_role::contentpermissions.eq(permissions
                 .as_ref()
-                .map(|x| x.content)
-                .unwrap_or(role.content_permissions)),
+                .map(|x| x.content as i64)
+                .unwrap_or(role.content_permissions as i64)),
             campsite_role::generalpermissions.eq(permissions
                 .as_ref()
-                .map(|x| x.general)
-                .unwrap_or(role.general_permissions)),
+                .map(|x| x.general as i64)
+                .unwrap_or(role.general_permissions as i64)),
         ))
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;

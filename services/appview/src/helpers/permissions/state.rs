@@ -21,17 +21,17 @@ impl PermissionState {
             _ => map(),
         }
     }
-    pub fn from_role_content(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
+    pub fn from_role_content(permissions: &PermissionsDictionary, flag: u64) -> PermissionState {
         if permissions.content & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
     }
     #[allow(dead_code)]
-    pub fn from_role_general(permissions: &PermissionsDictionary, flag: i64) -> PermissionState {
+    pub fn from_role_general(permissions: &PermissionsDictionary, flag: u64) -> PermissionState {
         if permissions.general & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
     }
-    pub fn from_content_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
+    pub fn from_content_optional(permission: &Option<&PermissionsStateDictionary>, flag: u64) -> PermissionState {
         permission.map_or(PermissionState::Inherit, |x| PermissionState::from_content(x, flag))
     }
-    pub fn from_content(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+    pub fn from_content(permission: &PermissionsStateDictionary, flag: u64) -> PermissionState {
         if permission.allowed.content & flag == flag {
             PermissionState::Allowed
         } else if permission.denied.content & flag == flag {
@@ -40,7 +40,7 @@ impl PermissionState {
             PermissionState::Inherit
         }
     }
-    pub fn from_content_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+    pub fn from_content_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: u64) -> PermissionState {
         Self::from_content(tent, flag)
             .map_inherit(||
                 Self::from_content(category, flag)
@@ -50,10 +50,10 @@ impl PermissionState {
             )
     }
     #[allow(dead_code)]
-    pub fn from_general_optional(permission: &Option<&PermissionsStateDictionary>, flag: i64) -> PermissionState {
+    pub fn from_general_optional(permission: &Option<&PermissionsStateDictionary>, flag: u64) -> PermissionState {
         permission.map_or(PermissionState::Inherit, |x| PermissionState::from_general(x, flag))
     }
-    pub fn from_general(permission: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+    pub fn from_general(permission: &PermissionsStateDictionary, flag: u64) -> PermissionState {
         if permission.allowed.general & flag == flag {
             PermissionState::Allowed
         } else if permission.denied.general & flag == flag {
@@ -62,7 +62,7 @@ impl PermissionState {
             PermissionState::Inherit
         }
     }
-    pub fn from_general_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: i64) -> PermissionState {
+    pub fn from_general_three_level(bonfire: &PermissionsStateDictionary, category: &PermissionsStateDictionary, tent: &PermissionsStateDictionary, flag: u64) -> PermissionState {
         Self::from_general(tent, flag)
             .map_inherit(||
                 Self::from_general(category, flag)

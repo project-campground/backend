@@ -201,10 +201,10 @@ fn insert_permission_if_not_empty(
             created_at: current_date,
             updated_by: actor.clone(),
             updated_at: current_date,
-            allowed_general_permissions: permissions.allowed.general,
-            allowed_content_permissions: permissions.allowed.content,
-            denied_general_permissions: permissions.denied.general,
-            denied_content_permissions: permissions.denied.content,
+            allowed_general_permissions: permissions.allowed.general as i64,
+            allowed_content_permissions: permissions.allowed.content as i64,
+            denied_general_permissions: permissions.denied.general as i64,
+            denied_content_permissions: permissions.denied.content as i64,
         })
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_select_first_error)?
@@ -246,10 +246,10 @@ where
     Ok(diesel::update(campsite_permission::table)
         .filter(predicate.clone())
         .set((
-            campsite_permission::allowedgeneralpermissions.eq(permissions.allowed.general),
-            campsite_permission::deniedgeneralpermissions.eq(permissions.denied.general),
-            campsite_permission::allowedcontentpermissions.eq(permissions.allowed.content),
-            campsite_permission::deniedcontentpermissions.eq(permissions.denied.content),
+            campsite_permission::allowedgeneralpermissions.eq(permissions.allowed.general as i64),
+            campsite_permission::deniedgeneralpermissions.eq(permissions.denied.general as i64),
+            campsite_permission::allowedcontentpermissions.eq(permissions.allowed.content as i64),
+            campsite_permission::deniedcontentpermissions.eq(permissions.denied.content as i64),
         ))
         .get_result::<CampsitePermission>(&mut conn)
         .map_err(handle_select_first_error)?)

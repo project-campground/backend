@@ -19,12 +19,12 @@ pub fn permission_view_basic(permission: &CampsitePermission) -> PermissionViewB
 
         permissions: PermissionsStateDictionary {
             allowed: PermissionsDictionary {
-                general: permission.allowed_general_permissions,
-                content: permission.allowed_content_permissions,
+                general: permission.allowed_general_permissions as u64,
+                content: permission.allowed_content_permissions as u64,
             },
             denied: PermissionsDictionary {
-                general: permission.denied_general_permissions,
-                content: permission.denied_content_permissions,
+                general: permission.denied_general_permissions as u64,
+                content: permission.denied_content_permissions as u64,
             },
         },
     };
@@ -44,12 +44,12 @@ pub fn permission_view_detailed(permission: &CampsitePermission) -> PermissionVi
 
         permissions: PermissionsStateDictionary {
             allowed: PermissionsDictionary {
-                general: permission.allowed_general_permissions,
-                content: permission.allowed_content_permissions,
+                general: permission.allowed_general_permissions as u64,
+                content: permission.allowed_content_permissions as u64,
             },
             denied: PermissionsDictionary {
-                general: permission.denied_general_permissions,
-                content: permission.denied_content_permissions,
+                general: permission.denied_general_permissions as u64,
+                content: permission.denied_content_permissions as u64,
             },
         },
 

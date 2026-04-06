@@ -82,7 +82,7 @@ pub fn event_next<TData, TFn>(event_subject: &State<ReactiveSubject>, data_type:
     }
 }
 
-pub fn event_next_campsite<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, permissions_required: i64, data_type: &str, payload: T) where T: Serialize {
+pub fn event_next_campsite<T>(event_subject: &State<ReactiveSubject>, campsite_id: &String, permissions_required: u64, data_type: &str, payload: T) where T: Serialize {
     event_next(event_subject, data_type, payload, |binary|
         ReactiveSubjectData::Campsite {
             campsite_id: campsite_id.clone(),
