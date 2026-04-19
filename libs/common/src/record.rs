@@ -1,9 +1,11 @@
+use std::panic;
+
 use anyhow::Result;
 use atproto_identity::{resolve::resolve_subject, storage_lru::LruDidDocumentStorage};
 use hickory_resolver::TokioResolver;
 use reqwest::Client;
 use rsky_lexicon::com::atproto::repo::Blob;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::fetch_did_document;
 
@@ -27,7 +29,7 @@ pub async fn fetch_record<'a, T>(
     client: &Client,
     did_document_storage: &LruDidDocumentStorage,
     dns_resolver: &TokioResolver
-) -> Result<GetRecordResponse<T>>
+) -> Result<ResponseResult<GetRecordResponse<T>>>
 where T: for<'de> Deserialize<'de> + 'a
 {
     let actor = resolve_subject(client, dns_resolver, actor).await?;
@@ -46,7 +48,7 @@ where T: for<'de> Deserialize<'de> + 'a
         .get(url)
         .send()
         .await?
-        .json::<GetRecordResponse<T>>()
+        .json::<ResponseResult<GetRecordResponse<T>>>()
         .await?)
 }
 
@@ -57,13 +59,44 @@ pub fn get_blob_ref(blob: &Option<Blob>) -> Option<String> {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum ResponseResult<T> {
+    Error {
+        error: String,
+        message: String,
+    },
+    Ok(T)
+}
+
+impl<T> ResponseResult<T> {
+    pub fn unwrap(self) -> T {
+        match self {
+            ResponseResult::Ok(value) => value,
+            _ => panic!("Unwrapped 'Error' in ResponseResult"),
+        }
+    }
+    pub fn option(self) -> Option<T> {
+        match self {
+            ResponseResult::Ok(value) => Some(value),
+            _ => None,
+        }
+    }
+    pub fn ordinary(self) -> Result<T, String> {
+        match self {
+            ResponseResult::Ok(value) => Ok(value),
+            ResponseResult::Error { error: _, message } => Err(message),
+        }
+    }
+}
+
 pub async fn fetch_record_list<'a, T>(
     actor: &str,
     collection: &str,
     client: &Client,
     did_document_storage: &LruDidDocumentStorage,
     dns_resolver: &TokioResolver
-) -> Result<GetRecordListResponse<T>>
+) -> Result<ResponseResult<GetRecordListResponse<T>>>
 where T: for<'de> Deserialize<'de> + 'a
 {
     let actor = resolve_subject(client, dns_resolver, actor).await?;
@@ -82,6 +115,6 @@ where T: for<'de> Deserialize<'de> + 'a
         .get(url)
         .send()
         .await?
-        .json::<GetRecordListResponse<T>>()
+        .json::<ResponseResult<GetRecordListResponse<T>>>()
         .await?)
 }

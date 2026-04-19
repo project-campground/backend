@@ -50,6 +50,13 @@ pub enum ProfileLabels {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ProfileViewEmpty {
+    pub did: String,
+    pub handle: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileViewBasic {
     pub did: String,
     pub handle: String,
@@ -107,10 +114,17 @@ pub struct GetProfilesOutput {
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum ProfileViewBasicOrEmpty {
+    Basic(ProfileViewBasic),
+    Empty(ProfileViewEmpty)
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMeOutput {
     pub campsites: Vec<CampsiteViewBasic>,
-    pub profile: ProfileViewBasic,
+    pub profile: ProfileViewBasicOrEmpty,
 }
 
 /// Metadata about the requesting account's relationship with the subject account.

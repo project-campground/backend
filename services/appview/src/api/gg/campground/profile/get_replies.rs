@@ -62,8 +62,7 @@ pub async fn get_replies(
         false,
         &mut posts,
     )
-    .await
-    .map_err(|_| XRPCError::InternalServerError)?;
+    .await?;
 
     // let posts = profile_posts::get_profile_posts(client, did_document_storage, uri.to_string(), limit, offset).await.map_err(|_| XRPCError::NotFound)?;
     let actors = post_authors::get_authors_from_posts(&posts, false);

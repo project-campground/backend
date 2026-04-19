@@ -46,7 +46,7 @@ pub async fn unindex_post(
     .await
     .map_err(|_| XRPCError::NotFound)?;
     let (_, db_profile) =
-        profiles::get_profile(auth.client, auth.did_document_storage, actor.did.as_str())
+        profiles::get_existing_profile(auth.client, auth.did_document_storage, actor.did.as_str())
             .await
             .map_err(|_| XRPCError::NotFound)?;
 

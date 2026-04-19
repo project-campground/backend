@@ -5,7 +5,7 @@ use std::str::FromStr;
 use appview_schema::models::appview::Actor;
 use appview_schema::models::appview::Profile as SchemaProfile;
 use campground_lexicon::gg::campground::actor::{
-    Profile, ProfileView, ProfileViewBasic, ProfileViewDetailed,
+    Profile, ProfileView, ProfileViewBasic, ProfileViewBasicOrEmpty, ProfileViewDetailed, ProfileViewEmpty
 };
 use chrono::DateTime;
 use common::get_blob_ref;
@@ -13,6 +13,33 @@ use lexicon_cid::CidGeneric;
 use rsky_lexicon::com::atproto::repo::Blob;
 
 use crate::views::util::parse_datetime;
+
+pub fn profile_view_basic_or_empty(actor: &Actor, profile: &Option<SchemaProfile>) -> ProfileViewBasicOrEmpty {
+    match profile {
+        Some(profile) => ProfileViewBasicOrEmpty::Basic(ProfileViewBasic {
+            did: actor.did.clone(),
+            handle: match &actor.handle {
+                Some(handle) => handle.clone(),
+                None => "handle.invalid".to_string(),
+            },
+            tagline: profile.tagline.clone(),
+            display_name: profile.display_name.clone(),
+            avatar: get_blob_ref(&avatar_from_cid(profile.avatar_cid.clone())),
+            created_at: profile.created_at.clone(),
+            activity: None,
+            status: None,
+            viewer: None,
+            labels: None,
+        }),
+        None => ProfileViewBasicOrEmpty::Empty(ProfileViewEmpty {
+            did: actor.did.clone(),
+            handle: match &actor.handle {
+                Some(handle) => handle.clone(),
+                None => "handle.invalid".to_string(),
+            },
+        })
+    }
+}
 
 pub fn profile_view_basic(actor: &Actor, profile: &Profile) -> ProfileViewBasic {
     ProfileViewBasic {

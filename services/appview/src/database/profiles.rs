@@ -3,12 +3,12 @@ use appview_schema::models::appview::Actor;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::actor::Profile as ProfileRecord;
 use chrono::Utc;
-use common::{fetch_record, get_blob_ref};
+use common::{ResponseResult, fetch_record, get_blob_ref};
 use diesel::result::Error::NotFound;
 use reqwest::Client;
 
 use diesel::prelude::*;
-use crate::database::actors::get_actor;
+use crate::{database::actors::get_actor, xrpc::error::XRPCError};
 use crate::DNS_RESOLVER;
 use crate::database::{
     establish_connection,
@@ -40,6 +40,13 @@ pub async fn get_profiles(client: &Client, did_document_storage: &LruDidDocument
                     did_document_storage,
                     &DNS_RESOLVER
                 ).await?;
+
+                if let ResponseResult::Error { error: _, message: _ } = profile_record {
+                    continue;
+                }
+
+                let profile_record = profile_record.unwrap();
+
                 let profile = Profile {
                     cid: profile_record.cid.to_string(),
                     uri: format!("at://{}/gg.campground.actor.profile/self", actor),
@@ -70,19 +77,35 @@ pub async fn get_profiles(client: &Client, did_document_storage: &LruDidDocument
     Ok(db_profiles)
 }
 
-pub async fn get_profile(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: &str) -> Result<(Actor, Profile)> {
+pub async fn get_profile(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: &str) -> Result<(Actor, Option<Profile>)> {
     let actor = get_actor(client, did_document_storage, actor).await?;
 
     get_profile_from_actor(client, did_document_storage, actor).await
 }
-pub async fn get_profile_from_actor(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: Actor) -> Result<(Actor, Profile)> {
+pub async fn get_existing_profile(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: &str) -> Result<(Actor, Profile)> {
+    let (actor, profile) = get_profile(client, did_document_storage, actor).await?;
+
+    match profile {
+        None => Err(XRPCError::NotFound.into()),
+        Some(profile) => Ok((actor, profile))
+    }
+}
+pub async fn get_existing_profile_from_actor(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: Actor) -> Result<(Actor, Profile)> {
+    let (actor, profile) = get_profile_from_actor(client, did_document_storage, actor).await?;
+
+    match profile {
+        None => Err(XRPCError::NotFound.into()),
+        Some(profile) => Ok((actor, profile))
+    }
+}
+pub async fn get_profile_from_actor(client: &Client, did_document_storage: &LruDidDocumentStorage, actor: Actor) -> Result<(Actor, Option<Profile>)> {
     let mut conn = establish_connection().unwrap();
     let db_profile = crate::schema::appview::profile::table
         .filter(crate::schema::appview::profile::creator.eq(&actor.did))
         .first::<Profile>(&mut conn);
 
     match db_profile {
-        Ok(profile) => Ok((actor, profile)),
+        Ok(profile) => Ok((actor, Some(profile))),
         Err(NotFound) => {
             let profile_record = fetch_record::<ProfileRecord>(
                 &actor.did,
@@ -92,6 +115,12 @@ pub async fn get_profile_from_actor(client: &Client, did_document_storage: &LruD
                 did_document_storage,
                 &DNS_RESOLVER
             ).await?;
+
+            if let ResponseResult::Error { error: _, message: _ } = profile_record {
+                return Ok((actor, None));
+            }
+
+            let profile_record = profile_record.unwrap();
 
             let profile = Profile {
                 cid: profile_record.cid.to_string(),
@@ -115,7 +144,7 @@ pub async fn get_profile_from_actor(client: &Client, did_document_storage: &LruD
             diesel::insert_into(crate::schema::appview::profile::table)
                 .values(&profile)
                 .execute(&mut conn)?;
-            Ok((actor, profile))
+            Ok((actor, Some(profile)))
         },
         Err(e) => Err(e.into()),
     }

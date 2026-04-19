@@ -13,7 +13,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile},
+    database::{establish_connection, profiles::get_existing_profile},
     helpers::{api::handle_all_db_errors, ws::event_next},
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
     util::params::{OptionValidity, ensure_valid_set_uri},
@@ -95,7 +95,7 @@ pub async fn create_campsite(
         .map(|x| x.to_string());
 
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = &get_profile(client, did_document_storage, &auth.actor_did)
+    let (actor, profile) = &get_existing_profile(client, did_document_storage, &auth.actor_did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 

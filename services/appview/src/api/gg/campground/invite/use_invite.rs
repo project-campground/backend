@@ -14,7 +14,7 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile},
+    database::{establish_connection, profiles::get_existing_profile},
     helpers::{
         api::handle_select_first_error,
         ws::{event_next, event_next_campsite},
@@ -34,7 +34,7 @@ pub async fn use_invite(
     invite_id: &str,
 ) -> Result<Json<CampsiteViewBasic>> {
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = &get_profile(auth.client, auth.did_document_storage, &auth.actor_did)
+    let (actor, profile) = &get_existing_profile(auth.client, auth.did_document_storage, &auth.actor_did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 

@@ -47,7 +47,7 @@ use atproto_identity::{resolve::{create_resolver, resolve_subject}, storage_lru:
 use crate::jetstream::*;
 use campground_lexicon::gg::campground::{actor::Profile, home_server::HomeServer};
 use chrono::Utc;
-use common::fetch_record;
+use common::{ResponseResult, fetch_record};
 use diesel::prelude::*;
 use hickory_resolver::TokioResolver;
 use lazy_static::lazy_static;
@@ -95,6 +95,12 @@ async fn discover_actor(actor: &str, force: Option<bool>) -> Result<()> {
 
     let home_server = fetch_record::<HomeServer>(actor, "gg.campground.homeServer", "self", &HTTP_CLIENT, &DID_DOCUMENT_STORAGE, &DNS_RESOLVER).await?;
 
+    if let ResponseResult::Error { error: _, message: _ } = home_server {
+        return Ok(());
+    }
+
+    let home_server = home_server.unwrap();
+
     if home_server.value.did == "" || !home_server.value.did.starts_with("did:") {
         // Only index actors with a valid Campground home server
         return Ok(())
@@ -105,7 +111,7 @@ async fn discover_actor(actor: &str, force: Option<bool>) -> Result<()> {
             // Validate that the handle resolves back to the DID
             let resolved = resolve_subject(&HTTP_CLIENT, &DNS_RESOLVER, handle).await?;
             if resolved != did {
-                return Ok(())
+                return Ok(());
             }
 
             let actor = Actor {

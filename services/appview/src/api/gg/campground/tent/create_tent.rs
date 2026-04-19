@@ -10,7 +10,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor},
+    database::{establish_connection, profiles::get_existing_profile_from_actor},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -157,7 +157,7 @@ pub async fn create_tent(
         .map_err(handle_select_first_error)?;
     let first_message = first_message.first().unwrap();
 
-    let (_, profile) = get_profile_from_actor(
+    let (_, profile) = get_existing_profile_from_actor(
         &auth.auth.client,
         &auth.auth.did_document_storage,
         auth.actor.clone(),

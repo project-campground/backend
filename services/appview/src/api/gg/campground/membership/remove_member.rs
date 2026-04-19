@@ -11,7 +11,7 @@ use rocket::State;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile},
+    database::{establish_connection, profiles::get_existing_profile},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -105,7 +105,7 @@ pub async fn remove_self(
     did_document_storage: &State<LruDidDocumentStorage>,
     campsite_id: &str,
 ) -> Result<()> {
-    let (actor, profile) = get_profile(client, did_document_storage, &auth.actor.did)
+    let (actor, profile) = get_existing_profile(client, did_document_storage, &auth.actor.did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 

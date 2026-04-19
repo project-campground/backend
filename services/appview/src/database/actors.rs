@@ -3,7 +3,7 @@ use atproto_identity::storage_lru::LruDidDocumentStorage;
 use atproto_identity::{plc, web};
 use atproto_identity::resolve::resolve_subject;
 use campground_lexicon::gg::campground::home_server::HomeServer;
-use common::fetch_record;
+use common::{ResponseResult, fetch_record};
 use diesel::result::Error::NotFound;
 use reqwest::Client;
 
@@ -47,7 +47,13 @@ pub async fn get_actors(client: &Client, did_document_storage: &LruDidDocumentSt
                         .find(|&handle| handle.starts_with("at://"));
                 
                     let home_server = fetch_record::<HomeServer>(&actor, "gg.campground.homeServer", "self", client, did_document_storage, &DNS_RESOLVER).await?;
-                    
+
+                    if let ResponseResult::Error { error: _, message: _ } = home_server {
+                        continue;
+                    }
+
+                    let home_server = home_server.unwrap();
+
                     if home_server.value.did != "" && home_server.value.did.starts_with("did:") {
                         match handle {
                             Some(handle) => {
@@ -162,6 +168,12 @@ pub async fn index_actor(client: &Client, did_document_storage: &LruDidDocumentS
         .find(|&handle| handle.starts_with("at://"));
 
     let home_server = fetch_record::<HomeServer>(actor, "gg.campground.homeServer", "self", client, did_document_storage, &DNS_RESOLVER).await?;
+
+    if let ResponseResult::Error { error: _, message: _ } = home_server {
+        return Ok(());
+    }
+
+    let home_server = home_server.unwrap();
 
     if home_server.value.did == "" || !home_server.value.did.starts_with("did:") {
         // Only index actors with a valid Campground home server

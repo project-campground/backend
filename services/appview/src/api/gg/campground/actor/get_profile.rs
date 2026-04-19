@@ -20,7 +20,7 @@ pub async fn get_profile(
     did_document_storage: &State<LruDidDocumentStorage>,
     actor: &str,
 ) -> Result<Json<ProfileViewDetailed>> {
-    let (actor, db_profile) = profiles::get_profile(client, did_document_storage, actor)
+    let (actor, db_profile) = profiles::get_existing_profile(client, did_document_storage, actor)
         .await
         .map_err(|_| XRPCError::NotFound)?;
     let record = Profile {

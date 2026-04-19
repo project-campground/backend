@@ -88,8 +88,7 @@ pub async fn get_post(
         false,
         &mut replies,
     )
-    .await
-    .map_err(|_| XRPCError::InternalServerError)?;
+    .await?;
 
     let mut actors = post_authors::get_authors_from_posts(&replies, true);
     actors.insert(author_actor.did);

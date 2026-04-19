@@ -11,7 +11,7 @@ use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor},
+    database::establish_connection,
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -36,9 +36,6 @@ pub async fn delete_message(
     message_id: &str,
 ) -> Result<Json<MessageViewBasic>> {
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = get_profile_from_actor(client, did_document_storage, auth.actor.clone())
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
 
     if auth.tent.r#type != 0 {
         return Err(XRPCError::BadRequest(

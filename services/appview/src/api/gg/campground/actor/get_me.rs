@@ -10,7 +10,7 @@ use crate::{
     helpers::api::handle_all_db_errors,
     views::{
         campsites::campsite_view_basic,
-        profiles::{profile_record, profile_view_basic},
+        profiles::profile_view_basic_or_empty,
     },
     xrpc::{
         auth::Authorization,
@@ -47,6 +47,6 @@ pub async fn get_me(
 
     return Ok(Json(GetMeOutput {
         campsites,
-        profile: profile_view_basic(&actor, &profile_record(db_profile)),
+        profile: profile_view_basic_or_empty(&actor, &db_profile),
     }));
 }
