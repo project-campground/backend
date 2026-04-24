@@ -1,10 +1,11 @@
 use appview_schema::models::appview::ProfilePost;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::profile::GetProfilePostsOutput;
+use campground_lexicon::gg::campground::profile::{GetProfilePostsOutput, ProfilePostViewBasic};
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl,
     RunQueryDsl, TextExpressionMethods,
 };
+use itertools::Itertools;
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
 
@@ -141,16 +142,32 @@ async fn get_posts_with_replies(
     let posts_query: &Vec<(ProfilePost, Option<ProfilePost>)> = &pp1
         .filter(pp1.field(profile_post::uri).like(uri_format))
         .order_by(pp1.field(profile_post::indexedat).desc())
+        .left_join(
+            pp2.on(pp1.field(profile_post::parenturi).is_not_null().and(
+                pp1.field(profile_post::parenturi)
+                    .assume_not_null()
+                    .eq(pp2.field(profile_post::uri)),
+            )),
+        )
         .limit(limit)
         .offset(offset)
-        .left_join(
-            pp2.on(pp1
-                .field(profile_post::parenturi)
-                .eq(pp2.field(profile_post::uri).nullable())),
-        )
         // .select((profile_post::all_columns, profile_post::all_columns))
         .load::<(ProfilePost, Option<ProfilePost>)>(&mut conn)
         .map_err(handle_all_db_errors)?;
+
+    println!(
+        "--- Posts query: {:?}",
+        posts_query
+            .iter()
+            .map(|(x, y)| format!(
+                "{}: {:?} ({:?}) with parent {:?}",
+                x.uri,
+                x.content,
+                x.parent_uri,
+                y.clone().map(|x| x.content),
+            ))
+            .collect::<Vec<String>>()
+    );
 
     // To use existing methods
     let mut posts: Vec<ProfilePost> = posts_query.iter().map(|x| x.0.clone()).collect();
@@ -176,12 +193,14 @@ async fn get_posts_with_replies(
         posts_query
             .into_iter()
             .filter(|x| x.1.is_some())
-            .map(|x| x.1.clone().unwrap()),
+            .map(|x| x.1.clone().unwrap())
+            .unique_by(|x| x.uri.clone()),
         &profiles,
     );
-    let mut parents = populated_parents
+    let parents = populated_parents
         .iter()
-        .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2));
+        .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
+        .collect::<Vec<ProfilePostViewBasic>>();
 
     // now with parents as well
     let mapped_posts = post_authors::populate_profile_posts_with_authors(posts, &profiles)
@@ -192,7 +211,7 @@ async fn get_posts_with_replies(
                 &None
             } else {
                 let parent_uri = x.2.parent_uri.clone().unwrap();
-                &parents.find(|y| y.uri == parent_uri)
+                &parents.iter().find(|y| y.uri == parent_uri).cloned()
             };
 
             profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, found_parent)
