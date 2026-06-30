@@ -7,7 +7,11 @@ use uuid::Uuid;
 pub enum ReactiveSubjectData {
     RocketMessage(ws::Message),
     RocketError,
-    // For users, wherever they are in app
+    /// # Summary
+    /// For all actors who are members of a campsite, wherever they are in app, regardless if they are actively viewing the campsite or not.
+    /// # Remarks
+    /// This is useful WebSocket message for events like campsite avatar changes, where all members should see the new avatar even if they are not actively viewing the campsite.
+    /// This reduces the need for refreshing the client to reflect the globally visible changes in the campsite.
     CampsiteGlobal {
         campsite_id: String,
         binary: Vec<u8>
@@ -17,23 +21,34 @@ pub enum ReactiveSubjectData {
         to_actor: String,
         binary: Vec<u8>
     },
-    // For users, wherever they are + modifying WebSocket filtering
+    /// This event is visible to actor who joined or created a campsite.
+    /// Internally, this also modifies campsite filtering for the any active WebSockets from the actor.
     CampsiteAdded {
         campsite_id: String,
         to_actor: String,
         binary: Vec<u8>,
     },
+    /// This event is visible to actor who left a campsite or to everyone who were in a campsite that was deleted.
+    /// Internally, this also modifies campsite filtering for the any active WebSockets from the members of the campsite.
     CampsiteRemoved {
         campsite_id: String,
         to_actor: String,
         binary: Vec<u8>,
     },
-    // Within campsite + has appropriate perms to view it
+    /// # Summary
+    /// Redirects a campsite WebSocket message to any member who has the specified permissions in the campsite and is currently viewing the campsite.
+    /// # Remarks
+    /// This is useful for events that may be campsite-wide, but not bound to any tent, category or bonfire. Examples of this are role and role list modifications, as well as invite creation.
+    /// 
+    /// > **DANGER:** For events like campsite invite creation, it should require `MANAGE_INVITES` permission and not be visible to every member, as it could easily be abused by allowing anyone to invite to any campsite, whether it's private or not.
     Campsite {
         campsite_id: String,
         permissions_required: u64,
         binary: Vec<u8>
     },
+    /// Redirects a campsite WebSocket message to any member who can view the bonfire and is currently viewing the campsite.
+    /// 
+    /// > **NOTE:** This only requires permissions to have bonfire visible in the API.
     #[allow(dead_code)]
     Bonfire {
         campsite_id: String,
@@ -41,6 +56,9 @@ pub enum ReactiveSubjectData {
         deleted: bool,
         binary: Vec<u8>
     },
+    /// Redirects a campsite WebSocket message to any member who can view the bonfire and is currently viewing the campsite.
+    /// 
+    /// > **NOTE:** This only requires permissions to have tent category visible in the API.
     Category {
         campsite_id: String,
         bonfire_id: String,
@@ -48,6 +66,9 @@ pub enum ReactiveSubjectData {
         deleted: bool,
         binary: Vec<u8>
     },
+    /// Redirects a campsite WebSocket message to any member who can view the bonfire and is currently viewing the campsite.
+    /// 
+    /// > **NOTE:** This only requires permissions to have tent visible in the API.
     Tent {
         campsite_id: String,
         bonfire_id: String,
@@ -56,7 +77,10 @@ pub enum ReactiveSubjectData {
         deleted: bool,
         binary: Vec<u8>
     },
-    // For updating WebSocket known permissions
+    /// # Summary
+    /// This is similar to other Campsite WS messages, but it also updates actor's permissions in the campsite known to WebSocket.
+    /// # Remarks
+    /// This is only used for roles added to or removed from members in the campsite.
     MemberRolesModified {
         campsite_id: String,
         actors: Vec<String>,
@@ -65,6 +89,10 @@ pub enum ReactiveSubjectData {
         removed: bool,
         binary: Vec<u8>,
     },
+    /// # Summary
+    /// This is similar to other Campsite WS messages, but it also updates actor's permissions in the campsite known to WebSocket.
+    /// # Remarks
+    /// This is only used when role or user permissions are modified in tents, tent categories or bonfires.
     CampsitePermissionUpdated {
         campsite_id: String,
 

@@ -18,6 +18,7 @@ use crate::{
     },
 };
 
+// TODO: Remove this without deprecation before release
 #[get("/xrpc/gg.campground.actor.getMe")]
 pub async fn get_me(
     auth: Authorization<'_>,

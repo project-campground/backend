@@ -15,6 +15,7 @@ use crate::{
     xrpc::error::{Result, XRPCError},
 };
 
+// Gets multiple Campground profiles (not Bluesky profiles)
 #[get("/xrpc/gg.campground.actor.getProfiles?<actors>")]
 pub async fn get_profiles(
     client: &State<Client>,

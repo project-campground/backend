@@ -59,6 +59,7 @@ lazy_static! {
     };
 }
 
+/// Handles any type of the message provided from the client's WebSocket or by AppView's Reactive Subject/Observer (see reactive programming).
 pub async fn on_rocket_message(
     msg: Message,
     ws_actor: &Option<String>,
@@ -74,6 +75,7 @@ pub async fn on_rocket_message(
             let data = cbor_to_struct::<SocketInAnyFrame>(bytes.clone());
 
             if data.is_err() {
+                // FIXME Used in the debug so far; proper logging is needed in the future
                 println!("Data is err: {:?}", data.err().unwrap());
 
                 return WebSocketOutput::MessagedClose(
@@ -84,12 +86,15 @@ pub async fn on_rocket_message(
 
             let data = data.unwrap();
 
-            // Make sure it is authentication frame, could be other frame
+            // Make sure the first frame is an authentication frame, because non-compliant client could give any other frame to the WS
             match data.op {
                 SocketFrameType::Data => {
                     match data.payload {
                         SocketInFramePayload::View(view) => {
+                            // FIXME: Proper DEBUG-only logging
                             println!("Change campsite: {:?}", view.campsite.clone());
+
+                            // By default, you can pass the campsite to get events from
                             *current_campsite = if view.campsite == "" {
                                 None
                             } else {
@@ -102,17 +107,20 @@ pub async fn on_rocket_message(
                                 *current_membership =
                                     get_campsite_member(campsite_id, ws_actor).ok();
 
+                                // Basically empty permissions that are going to be changed anyways (most likely)
                                 *permissions = MEMBER_PERMS_DEFAULT.clone();
                                 let roles = try_or_continue!(get_roles_from_db(campsite_id).ok());
                                 let permissions_list = try_or_continue!(
                                     fetch_all_campsite_permissions(campsite_id, ws_actor).ok()
                                 );
+
                                 let aggregated = aggregate_ws_permissions(
                                     &current_membership.clone().unwrap(),
                                     &roles,
                                     &permissions_list,
                                 )
                                 .await;
+
                                 if let Ok(new_perms) = aggregated {
                                     *permissions = new_perms.clone();
                                 };
@@ -122,6 +130,7 @@ pub async fn on_rocket_message(
                         }
                         SocketInFramePayload::ViewPermissions => {
                             println!("View permissions");
+                            // FIXME This is so far used for the lack of better method and will likely be removed in the future in favour of having client calculate it on its own.
                             // Use references somehow. I hate lack of GC
                             let response = SocketDataFrame::<SocketFramePermissionViewPayload>::new(
                                 "PermissionView".to_string(),
@@ -146,6 +155,7 @@ pub async fn on_rocket_message(
     }
 }
 
+/// When the WebSocket message is correct, this method properly handles actual events in Campground AppView or WebSocket events.
 pub async fn on_reactive_data(
     omsg: ReactiveSubjectData,
     ws_actor: &Option<String>,

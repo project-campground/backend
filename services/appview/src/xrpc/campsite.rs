@@ -17,6 +17,7 @@ pub struct CampsiteInfo<'a> {
     #[allow(dead_code)]
     pub auth: Authorization<'a>,
 }
+/// Similar to `CampsiteInfo<'a>`, but this does not fetch actual Campsite and only verifies if actor still exists in the campsite.
 pub struct CampsiteInfoBasic<'a> {
     pub actor: Actor,
     #[allow(dead_code)]
@@ -46,6 +47,7 @@ pub struct BonfireInfo<'a> {
     #[allow(dead_code)]
     pub auth: Authorization<'a>,
 }
+/// Used in permissions where it could be any campsite entity.
 pub enum OneOfInfo<'a> {
     Tent(TentInfo<'a>),
     Category(CategoryInfo<'a>),

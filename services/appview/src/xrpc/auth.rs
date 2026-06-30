@@ -120,6 +120,7 @@ pub async fn validate_jwt(
             "web" => {
                 web::query(http_client, &did).await?
             },
+            // TODO: Once Eurosky gets its own PLC, we could perhaps have unofficial method for Eurosky's PLCs?
             _ => return Err(AuthError::InvalidDIDMethod(did).into()),
         };
         did_document = Some(document);

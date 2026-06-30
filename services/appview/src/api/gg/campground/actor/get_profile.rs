@@ -14,6 +14,8 @@ use crate::{
     xrpc::error::{Result, XRPCError},
 };
 
+// Gets Campground profile record, not Bluesky's profile. This means that you can have totally separate Bluesky and Campground profiles.
+// FIXME Shall this be changed? Perhaps make it an optional record that could overwrite existing Bluesky profile, but fallback to Bluesky profile if record does not exist?
 #[get("/xrpc/gg.campground.actor.getProfile?<actor>")]
 pub async fn get_profile(
     client: &State<Client>,
