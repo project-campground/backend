@@ -1,52 +1,40 @@
-version: "3.8"
+version: '3.8'
 services:
-  # plc:
-  #   build:
-  #     context: https://github.com/did-method-plc/did-method-plc.git
-  #     dockerfile: packages/server/Dockerfile
-  #   network_mode: host
-  #   environment:
-  #     - DATABASE_URL="postgres://example:example@localhost/plc_dev"
-  #     - DEBUG_MODE=1
-  #     - LOG_ENABLED="true"
-  #     - LOG_LEVEL=debug
-  #     - LOG_DESTINATION=1
-  #     - PORT=7000
-  pds:
-    build:
-        context: ../
-        dockerfile: ./pds/Dockerfile
-    container_name: pds
-    image: ghcr.io/bluesky-social/pds:0.4.208
-    network_mode: host
-    restart: unless-stopped
-    volumes:
-      - type: bind
-        source: /pds
-        target: /pds
-    env_file:
-      - ./pds/pds.env
-    ports:
-      - 2583:2583
-  # bigsky: # https://github.com/bluesky-social/indigo/blob/main/cmd/bigsky/README.md
-  #   image: "ghcr.io/bluesky-social/indigo:bigsky-fd66f93ce1412a3678a1dd3e6d53320b725978a6"
-  #   container_name: bigsky
-  #   network_mode: host
-  #   restart: always
-  #   volumes:
-  #     - ./bigsky:/data
-  # jetstream: # https://github.com/bluesky-social/jetstream/blob/main/README.md
-  #   image: ghcr.io/bluesky-social/jetstream:sha256-80538e9b438594d4da1f5dcfaddad2183a79553d684215293fc1811c01d8a09e
-  #   build:
-  #     context: .
-  #     dockerfile: ./jetstream/Dockerfile
-  #   restart: always
-  #   container_name: jetstream
-  #   network_mode: host
-  #   volumes:
-  #     - ./jetstream:/data
-  #   environment:
-  #     - JETSTREAM_DATA_DIR=/data
-  #     - JETSTREAM_LIVENESS_TTL=15s
+    pds:
+        build:
+            context: ../
+            dockerfile: ./pds/Dockerfile
+        container_name: pds
+        image: ghcr.io/bluesky-social/pds:0.4.208
+        network_mode: host
+        restart: unless-stopped
+        volumes:
+            - type: bind
+              source: /pds
+              target: /pds
+        env_file:
+            - ./pds/pds.env
+        ports:
+            - 2583:2583
+    # bigsky: # https://github.com/bluesky-social/indigo/blob/main/cmd/bigsky/README.md
+    #   image: "ghcr.io/bluesky-social/indigo:bigsky-fd66f93ce1412a3678a1dd3e6d53320b725978a6"
+    #   container_name: bigsky
+    #   network_mode: host
+    #   restart: always
+    #   volumes:
+    #     - ./bigsky:/data
+    # jetstream: # https://github.com/bluesky-social/jetstream/blob/main/README.md
+    #   image: ghcr.io/bluesky-social/jetstream:sha256-80538e9b438594d4da1f5dcfaddad2183a79553d684215293fc1811c01d8a09e
+    #   build:
+    #     context: .
+    #     dockerfile: ./jetstream/Dockerfile
+    #   restart: always
+    #   container_name: jetstream
+    #   network_mode: host
+    #   volumes:
+    #     - ./jetstream:/data
+    #   environment:
+    #     - JETSTREAM_DATA_DIR=/data
+    #     - JETSTREAM_LIVENESS_TTL=15s
 volumes:
-  pds:
+    pds:
