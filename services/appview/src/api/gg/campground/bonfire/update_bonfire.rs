@@ -118,8 +118,8 @@ pub async fn update_bonfire<'a>(
         &bonfire,
         false,
         "BonfireUpdated",
-        bonfire_view_basic(bonfire),
+        bonfire_view_basic(&bonfire),
     );
 
-    return Ok(Json(bonfire_view_basic(bonfire)));
+    return Ok(Json(bonfire_view_basic(&bonfire)));
 }

@@ -1,6 +1,6 @@
 use appview_schema::schema::appview;
 use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
-use diesel::{ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl, dsl::array_remove};
+use diesel::{ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
 use crate::{database::establish_connection, helpers::api::handle_select_first_error, helpers::ws::event_next_campsite_global, realtime::data::ReactiveSubject, xrpc::{
@@ -33,7 +33,7 @@ pub async fn delete_campsite(auth: CampsiteInfo<'_>, event_subject: &State<React
         .set(
             appview::actor::campsites
             .eq(
-                array_remove(appview::actor::campsites, campsite_id)
+                diesel::dsl::array_remove(appview::actor::campsites, campsite_id)
             )
         )
         .execute(&mut conn)
