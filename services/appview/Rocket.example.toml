@@ -4,6 +4,11 @@ port = 3984
 [default.core]
 port = 3984
 # hostname = "example.com"
+### Do the following to generate the verification_key:
+### cd ./cmd/backend_manager
+### cargo run
+### Enter prompts
+### And then type 2
 verification_key = "hex-encoded secp256k1 private key here"
 frontend = "https://localhost:5173"
 did = "did:web:localhost%3A3984"
