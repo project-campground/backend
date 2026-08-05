@@ -6,7 +6,6 @@ members = [
     "./libs/discovery-schema",
     "./libs/common",
     "./services/appview",
-    "./cmd/appview_consumer",
     "./cmd/backend_manager",
 ]
 resolver = "2"
