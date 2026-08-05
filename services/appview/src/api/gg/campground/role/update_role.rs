@@ -82,7 +82,7 @@ pub async fn update_role(
         .find(|x| x.id == role_id_uuid)
         .ok_or(XRPCError::NotFound)?;
 
-    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &roles, permissions)?;
+    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &roles, permissions.as_ref())?;
 
     ensure_no_higher_role(
         auth.member.user_id == auth.campsite.owner,
@@ -140,7 +140,7 @@ fn ensure_user_has_manage_role_permission(
     campsite: &Campsite,
     member: &CampsiteMember,
     roles: &Vec<CampsiteRole>,
-    given_permissions: &Option<PermissionsDictionary>,
+    given_permissions: Option<&PermissionsDictionary>,
 ) -> Result<(), XRPCError> {
     if campsite.owner == member.user_id {
         return Ok(());

@@ -45,7 +45,7 @@ pub async fn get_member_ban(
 
     Ok(Json(member_ban_view(
         &member_ban.0,
-        &member_ban.1,
+        member_ban.1.as_ref(),
         &member_ban.2,
     )))
 }

@@ -131,17 +131,17 @@ pub async fn create_message<'a>(
         message_view_basic(
             &auth.tent,
             first_message,
-            &Some(actor.clone()),
-            &Some(profile.clone()),
-            &Some(auth.member.clone()),
+            Some(&actor),
+            Some(&profile),
+            Some(&auth.member),
         ),
     );
 
     return Ok(Json(message_view_basic(
         &auth.tent,
         first_message,
-        &Some(actor),
-        &Some(profile),
-        &Some(auth.member),
+        Some(&actor),
+        Some(&profile),
+        Some(&auth.member),
     )));
 }

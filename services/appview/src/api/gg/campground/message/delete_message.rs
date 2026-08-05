@@ -99,13 +99,13 @@ pub async fn delete_message(
         message_view_basic(
             &auth.tent,
             &msg.0,
-            &msg.1.clone(),
-            &msg.2.clone(),
-            &msg.3.clone(),
+            msg.1.as_ref(),
+            msg.2.as_ref(),
+            msg.3.as_ref(),
         ),
     );
 
     return Ok(Json(message_view_basic(
-        &auth.tent, &msg.0, &msg.1, &msg.2, &msg.3,
+        &auth.tent, &msg.0, msg.1.as_ref(), msg.2.as_ref(), msg.3.as_ref(),
     )));
 }

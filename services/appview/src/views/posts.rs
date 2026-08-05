@@ -37,7 +37,7 @@ pub fn profile_post_view_parented(
     actor: &Actor,
     profile: &Profile,
     profile_post: &ProfilePost,
-    parent: &Option<ProfilePostViewBasic>,
+    parent: Option<&ProfilePostViewBasic>,
 ) -> ProfilePostViewParented {
     return ProfilePostViewParented {
         cid: profile_post.cid.clone(),
@@ -52,7 +52,7 @@ pub fn profile_post_view_parented(
             Some(datetime) => parse_datetime(DateTime::from_str(&datetime).ok()),
             None => None,
         },
-        parent: parent.clone(),
+        parent: parent.cloned(),
     };
 }
 
@@ -61,7 +61,7 @@ pub fn profile_post_view_detailed(
     profile: &Profile,
     profile_post: &ProfilePost,
     replies: Vec<ProfilePostViewBasic>,
-    parent: &Option<ProfilePostViewBasic>,
+    parent: Option<&ProfilePostViewBasic>,
 ) -> ProfilePostViewDetailed {
     return ProfilePostViewDetailed {
         cid: profile_post.cid.clone(),
@@ -76,6 +76,6 @@ pub fn profile_post_view_detailed(
             Some(datetime) => parse_datetime(DateTime::from_str(&datetime).ok()),
             None => None,
         },
-        parent: parent.clone(),
+        parent: parent.cloned(),
     };
 }

@@ -51,17 +51,16 @@ pub fn member_view_detailed(
 const DEFAULT_NO_ROLES: Vec<Uuid> = vec![];
 
 pub fn member_view_author(
-    campsite_member: &Option<CampsiteMember>,
+    campsite_member: Option<&CampsiteMember>,
     profile_view: ProfileViewBasic,
 ) -> MemberViewAuthor {
     return MemberViewAuthor {
         is_member: campsite_member.is_some(),
         user: profile_view,
         nickname: campsite_member
-            .clone()
             .map(|member| member.nickname.clone())
             .flatten(),
-        roles: campsite_member.clone().map_or(DEFAULT_NO_ROLES, |member| {
+        roles: campsite_member.map_or(DEFAULT_NO_ROLES, |member| {
             member
                 .roles
                 .iter()
@@ -73,9 +72,9 @@ pub fn member_view_author(
 
 pub fn created_by_view(
     created_by: &String,
-    actor: &Option<Actor>,
-    profile: &Option<Profile>,
-    member: &Option<CampsiteMember>,
+    actor: Option<&Actor>,
+    profile: Option<&Profile>,
+    member: Option<&CampsiteMember>,
 ) -> MemberViewAuthor {
     let profile_view = match actor {
         None => profile_view_basic_deleted_actor(created_by.clone()),
@@ -90,7 +89,7 @@ pub fn created_by_view(
 
 pub fn member_ban_view(
     ban: &CampsiteBan,
-    profile: &Option<Profile>,
+    profile: Option<&Profile>,
     actor: &Actor,
 ) -> MemberBanView {
     return MemberBanView {

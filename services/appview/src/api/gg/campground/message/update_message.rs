@@ -122,9 +122,9 @@ pub async fn update_message(
         message_view_basic(
             &auth.tent,
             updated_message,
-            &Some(actor.clone()),
-            &Some(profile.clone()),
-            &Some(auth.member.clone()),
+            Some(&actor),
+            Some(&profile),
+            Some(&auth.member),
         ),
     );
 
@@ -132,8 +132,8 @@ pub async fn update_message(
     return Ok(Json(message_view_basic(
         &auth.tent,
         updated_message,
-        &Some(actor),
-        &Some(profile),
-        &Some(auth.member),
+        Some(&actor),
+        Some(&profile),
+        Some(&auth.member),
     )));
 }

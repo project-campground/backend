@@ -147,6 +147,6 @@ pub async fn get_post(
         &author_record,
         &main_post,
         mapped_replies,
-        &parent,
+        parent.as_ref(),
     )));
 }

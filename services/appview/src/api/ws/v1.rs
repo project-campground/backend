@@ -72,7 +72,7 @@ pub async fn subscribe<'a>(ws: ws::WebSocket, client: &'a State<Client>, did_doc
 
             let omsg = omsg.unwrap();
 
-            match on_reactive_data(omsg, &actor_did, &mut actor_campsites, &mut current_campsite, &mut current_membership, &mut permissions).await {
+            match on_reactive_data(omsg, actor_did.as_ref(), &mut actor_campsites, &mut current_campsite, &mut current_membership, &mut permissions).await {
                 WebSocketOutput::Ignore => {
                 },
                 WebSocketOutput::BinaryData(data) => {

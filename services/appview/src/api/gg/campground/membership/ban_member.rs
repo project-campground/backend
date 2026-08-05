@@ -31,22 +31,22 @@ use crate::{
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde")]
-pub struct CreateBanBody {
-    reason: Option<String>,
+pub struct CreateBanBody<'a> {
+    reason: Option<&'a str>,
 }
 
 #[post(
     "/xrpc/gg.campground.membership.banMember?<campsite_id>&<actor>",
     data = "<body>"
 )]
-pub async fn ban_member(
+pub async fn ban_member<'a>(
     auth: CampsiteInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     client: &State<Client>,
     did_document_storage: &State<LruDidDocumentStorage>,
     campsite_id: &str,
     actor: &str,
-    body: Json<CreateBanBody>,
+    body: Json<CreateBanBody<'a>>,
 ) -> Result<Json<MemberBanView>> {
     if actor == auth.actor.did {
         return Err(XRPCError::Forbidden(
@@ -96,8 +96,8 @@ pub async fn ban_member(
             &auth.actor,
             &auth.campsite,
             target_actor,
-            &inner_body.reason,
-            &None,
+            inner_body.reason,
+            None,
         );
     }
 
@@ -125,18 +125,18 @@ pub async fn ban_member(
         &auth.actor,
         &auth.campsite,
         target_actor,
-        &inner_body.reason,
-        &Some(target.0.clone()),
+        inner_body.reason,
+        Some(&target.0),
     )
 }
 
-fn add_ban(
+fn add_ban<'a>(
     event_subject: &State<ReactiveSubject>,
     executor: &Actor,
     campsite: &Campsite,
     actor: &Actor,
-    reason: &Option<String>,
-    profile: &Option<Profile>,
+    reason: Option<&'a str>,
+    profile: Option<&Profile>,
 ) -> Result<Json<MemberBanView>, XRPCError> {
     let mut conn = establish_connection().unwrap();
 
@@ -145,7 +145,7 @@ fn add_ban(
         .values(CampsiteBan {
             user_id: actor.did.clone(),
             campsite_id: campsite.id.clone(),
-            reason: reason.clone(),
+            reason: reason.map(str::to_string),
             created_at: current_date,
             created_by: executor.did.clone(),
             updated_at: current_date,

@@ -119,9 +119,9 @@ pub async fn get_messages(
             let replies_view = replies
                 .iter()
                 .filter(|y| x.0.replying_to.contains(&Some(y.0.id)))
-                .map(|y| message_view_basic(&auth.tent, &y.0, &y.1, &y.2, &y.3))
+                .map(|y| message_view_basic(&auth.tent, &y.0, y.1.as_ref(), y.2.as_ref(), y.3.as_ref()))
                 .collect::<Vec<MessageViewBasic>>();
-            message_view_with_replies(&auth.tent, &x.0, replies_view, &x.1, &x.2, &x.3)
+            message_view_with_replies(&auth.tent, &x.0, replies_view, x.1.as_ref(), x.2.as_ref(), x.3.as_ref())
         })
         .collect::<Vec<MessageViewWithReplies>>();
 

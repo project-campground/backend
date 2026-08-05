@@ -11,9 +11,9 @@ use crate::views::{members::created_by_view, util::serialize_datetime};
 pub fn message_view_basic(
     tent: &Tent,
     message: &TentMessage,
-    actor: &Option<Actor>,
-    profile: &Option<Profile>,
-    member: &Option<CampsiteMember>,
+    actor: Option<&Actor>,
+    profile: Option<&Profile>,
+    member: Option<&CampsiteMember>,
 ) -> MessageViewBasic {
     return MessageViewBasic {
         id: message.id,
@@ -58,9 +58,9 @@ pub fn message_view_with_replies(
     tent: &Tent,
     message: &TentMessage,
     replies: Vec<MessageViewBasic>,
-    actor: &Option<Actor>,
-    profile: &Option<Profile>,
-    member: &Option<CampsiteMember>,
+    actor: Option<&Actor>,
+    profile: Option<&Profile>,
+    member: Option<&CampsiteMember>,
 ) -> MessageViewWithReplies {
     return MessageViewWithReplies {
         id: message.id,

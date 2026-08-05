@@ -69,8 +69,8 @@ pub async fn delete_member_ban(
         &auth.campsite.id,
         GeneralPermissionConsts::BAN_MEMBERS,
         "MemberBanDeleted",
-        member_ban_view(&member_ban, &profile, &target_actor),
+        member_ban_view(&member_ban, profile.as_ref(), &target_actor),
     );
 
-    Ok(Json(member_ban_view(&member_ban, &profile, &target_actor)))
+    Ok(Json(member_ban_view(&member_ban, profile.as_ref(), &target_actor)))
 }

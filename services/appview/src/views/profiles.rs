@@ -14,7 +14,7 @@ use rsky_lexicon::com::atproto::repo::Blob;
 
 use crate::views::util::parse_datetime;
 
-pub fn profile_view_basic_or_empty(actor: &Actor, profile: &Option<SchemaProfile>) -> ProfileViewBasicOrEmpty {
+pub fn profile_view_basic_or_empty(actor: &Actor, profile: Option<&SchemaProfile>) -> ProfileViewBasicOrEmpty {
     match profile {
         Some(profile) => ProfileViewBasicOrEmpty::Basic(ProfileViewBasic {
             did: actor.did.clone(),

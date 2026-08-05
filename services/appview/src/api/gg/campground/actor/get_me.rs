@@ -48,6 +48,6 @@ pub async fn get_me(
 
     return Ok(Json(GetMeOutput {
         campsites,
-        profile: profile_view_basic_or_empty(&actor, &db_profile),
+        profile: profile_view_basic_or_empty(&actor, db_profile.as_ref()),
     }));
 }

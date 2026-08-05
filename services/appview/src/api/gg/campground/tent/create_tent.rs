@@ -180,9 +180,9 @@ pub async fn create_tent(
         message_view_basic(
             &first_tent,
             &first_message,
-            &Some(auth.actor),
-            &Some(profile),
-            &Some(auth.member),
+            Some(&auth.actor),
+            Some(&profile),
+            Some(&auth.member),
         ),
     );
 

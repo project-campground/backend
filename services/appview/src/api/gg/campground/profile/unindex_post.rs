@@ -63,6 +63,6 @@ pub async fn unindex_post(
     return Ok(Json(profile_post_view_basic(
         &actor,
         &profile_record(db_profile),
-        &main_post.clone(),
+        &main_post,
     )));
 }

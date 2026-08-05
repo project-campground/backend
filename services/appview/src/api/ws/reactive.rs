@@ -62,7 +62,7 @@ lazy_static! {
 /// Handles any type of the message provided from the client's WebSocket or by AppView's Reactive Subject/Observer (see reactive programming).
 pub async fn on_rocket_message(
     msg: Message,
-    ws_actor: &Option<String>,
+    ws_actor: Option<&String>,
     _actor_campsites: &mut Vec<Option<String>>,
     current_campsite: &mut Option<String>,
     current_membership: &mut Option<CampsiteMember>,
@@ -158,7 +158,7 @@ pub async fn on_rocket_message(
 /// When the WebSocket message is correct, this method properly handles actual events in Campground AppView or WebSocket events.
 pub async fn on_reactive_data(
     omsg: ReactiveSubjectData,
-    ws_actor: &Option<String>,
+    ws_actor: Option<&String>,
     actor_campsites: &mut Vec<Option<String>>,
     current_campsite: &mut Option<String>,
     current_membership: &mut Option<CampsiteMember>,
@@ -290,7 +290,7 @@ pub async fn on_reactive_data(
         } => {
             if current_campsite.clone().map_or(true, |current_campsite| current_campsite != campsite_id)
                 // Is user that has the permission applied
-                || ws_actor.clone().map_or(true, |ws_actor| user_id.map_or(false, |user_id| user_id != ws_actor))
+                || ws_actor.clone().map_or(true, |ws_actor| user_id.map_or(false, |user_id| user_id != ws_actor.clone()))
                 // Has the role that has the permission applied
                 || current_membership.clone().map_or(true, |current_membership| role_id.map_or(false, |role_id| !current_membership.roles.contains(&Some(role_id))))
             {
@@ -375,7 +375,7 @@ pub async fn on_reactive_data(
 
             // Permission check to not have non-mod members see events from mod-only bonfire
             let bonfire_permissions = PermissionState::from_content_optional(
-                &permissions.bonfires.get(&bonfire_id),
+                permissions.bonfires.get(&bonfire_id),
                 ContentPermissionConsts::VIEW_CONTENT,
             )
             .map_inherit(|| {
@@ -413,12 +413,12 @@ pub async fn on_reactive_data(
 
             // Permission check to not have non-mod members see events from mod-only bonfire
             let category_permissions = PermissionState::from_content_optional(
-                &permissions.categories.get(&category_id),
+                permissions.categories.get(&category_id),
                 ContentPermissionConsts::VIEW_CONTENT,
             )
             .map_inherit(|| {
                 PermissionState::from_content_optional(
-                    &permissions.bonfires.get(&bonfire_id),
+                    permissions.bonfires.get(&bonfire_id),
                     ContentPermissionConsts::VIEW_CONTENT,
                 )
                 .map_inherit(|| {
@@ -457,19 +457,19 @@ pub async fn on_reactive_data(
 
             // Permission check to not have non-mod members see events from mod-only bonfire
             let tent_permissions = PermissionState::from_content_optional(
-                &permissions.tents.get(&tent_id),
+                permissions.tents.get(&tent_id),
                 ContentPermissionConsts::VIEW_CONTENT,
             )
             .map_inherit(|| {
                 PermissionState::from_content_optional(
-                    &category_id
+                    category_id
                         .map(|x| permissions.categories.get(&x))
                         .flatten(),
                     ContentPermissionConsts::VIEW_CONTENT,
                 )
                 .map_inherit(|| {
                     PermissionState::from_content_optional(
-                        &permissions.bonfires.get(&bonfire_id),
+                        permissions.bonfires.get(&bonfire_id),
                         ContentPermissionConsts::VIEW_CONTENT,
                     )
                     .map_inherit(|| {
@@ -511,7 +511,7 @@ pub async fn on_reactive_data(
         } => {
             if ws_actor
                 .clone()
-                .map_or(true, |ws_actor| to_actor.clone() != ws_actor)
+                .map_or(true, |ws_actor| to_actor.clone() != ws_actor.clone())
             {
                 return WebSocketOutput::Ignore;
             }
@@ -528,7 +528,7 @@ pub async fn on_reactive_data(
         } => {
             if ws_actor
                 .clone()
-                .map_or(true, |ws_actor| to_actor.clone() != ws_actor)
+                .map_or(true, |ws_actor| to_actor.clone() != ws_actor.clone())
             {
                 return WebSocketOutput::Ignore;
             } else if current_campsite.clone().map_or(true, |current_campsite| {
@@ -555,7 +555,7 @@ pub async fn on_reactive_data(
         ReactiveSubjectData::Personal { to_actor, binary } => {
             if ws_actor
                 .clone()
-                .map_or(true, |ws_actor| to_actor.clone() != ws_actor)
+                .map_or(true, |ws_actor| to_actor.clone() != ws_actor.clone())
             {
                 return WebSocketOutput::Ignore;
             }

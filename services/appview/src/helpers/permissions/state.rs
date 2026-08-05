@@ -28,7 +28,7 @@ impl PermissionState {
     pub fn from_role_general(permissions: &PermissionsDictionary, flag: u64) -> PermissionState {
         if permissions.general & flag == flag { PermissionState::Allowed } else { PermissionState::Denied }
     }
-    pub fn from_content_optional(permission: &Option<&PermissionsStateDictionary>, flag: u64) -> PermissionState {
+    pub fn from_content_optional(permission: Option<&PermissionsStateDictionary>, flag: u64) -> PermissionState {
         permission.map_or(PermissionState::Inherit, |x| PermissionState::from_content(x, flag))
     }
     pub fn from_content(permission: &PermissionsStateDictionary, flag: u64) -> PermissionState {
@@ -50,7 +50,7 @@ impl PermissionState {
             )
     }
     #[allow(dead_code)]
-    pub fn from_general_optional(permission: &Option<&PermissionsStateDictionary>, flag: u64) -> PermissionState {
+    pub fn from_general_optional(permission: Option<&PermissionsStateDictionary>, flag: u64) -> PermissionState {
         permission.map_or(PermissionState::Inherit, |x| PermissionState::from_general(x, flag))
     }
     pub fn from_general(permission: &PermissionsStateDictionary, flag: u64) -> PermissionState {

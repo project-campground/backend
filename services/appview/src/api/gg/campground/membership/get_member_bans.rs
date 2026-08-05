@@ -50,7 +50,7 @@ pub async fn get_member_bans(
         .load::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
-        .map(|x| member_ban_view(&x.0, &x.1, &x.2))
+        .map(|x| member_ban_view(&x.0, x.1.as_ref(), &x.2))
         .collect();
 
     Ok(Json(GetMemberBansOutput { member_bans }))

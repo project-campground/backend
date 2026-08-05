@@ -118,7 +118,7 @@ async fn get_posts_no_replies(
 
     let mapped_posts = post_authors::populate_profile_posts_with_authors(posts, &profiles)
         .iter()
-        .map(|x| profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, &None))
+        .map(|x| profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, None))
         .collect();
 
     return Ok(Json(GetProfilePostsOutput {
@@ -208,10 +208,10 @@ async fn get_posts_with_replies(
         .map(|x| {
             // If there is no parent, no point
             let found_parent = if x.2.parent_uri.is_none() {
-                &None
+                None
             } else {
                 let parent_uri = x.2.parent_uri.clone().unwrap();
-                &parents.iter().find(|y| y.uri == parent_uri).cloned()
+                parents.iter().find(|y| y.uri == parent_uri)
             };
 
             profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, found_parent)

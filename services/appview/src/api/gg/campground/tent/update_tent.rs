@@ -36,18 +36,18 @@ use crate::{
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
-pub struct UpdateTentBody {
-    name: Option<String>,
-    description: Option<String>,
+pub struct UpdateTentBody<'a> {
+    name: Option<&'a str>,
+    description: Option<&'a str>,
     view_type: Option<i16>,
 }
 
 #[post("/xrpc/gg.campground.tent.updateTent?<tent_id>", data = "<body>")]
-pub async fn update_tent(
+pub async fn update_tent<'a>(
     auth: TentInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     tent_id: &str,
-    body: Json<UpdateTentBody>,
+    body: Json<UpdateTentBody<'a>>,
 ) -> Result<Json<TentViewBasic>> {
     let inner_body = &body.into_inner();
     if inner_body.name.is_none()
@@ -102,11 +102,11 @@ pub async fn update_tent(
         .filter(appview::tent::id.eq(auth.tent.id.clone()))
         .set((
             // All the new settings
-            appview::tent::name.eq(inner_body.name.clone().unwrap_or(auth.tent.name.clone())),
+            appview::tent::name.eq(inner_body.name.clone().unwrap_or(&auth.tent.name)),
             appview::tent::description.eq(inner_body
                 .description
                 .clone()
-                .unwrap_or(auth.tent.description.clone())),
+                .unwrap_or(&auth.tent.description)),
             appview::tent::viewtype.eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
             // Mandatory
             appview::tent::updatedat.eq(current_date),
@@ -126,18 +126,14 @@ pub async fn update_tent(
     );
 
     // Add rename message
-    if inner_body
-        .name
-        .clone()
-        .map_or(false, |x| x != auth.tent.name)
-    {
+    if let Some(new_tent_name) = inner_body.name && new_tent_name != auth.tent.name {
         create_tent_name_update_message(
             &auth.campsite,
             &auth.tent,
             auth.member,
             event_subject,
             updated_tent,
-            &inner_body.name,
+            new_tent_name,
             current_date,
             actor,
             profile,
@@ -154,7 +150,7 @@ async fn create_tent_name_update_message(
     auth_member: CampsiteMember,
     event_subject: &State<ReactiveSubject>,
     updated_tent: &Tent,
-    new_name: &Option<String>,
+    new_name: &str,
     current_date: NaiveDateTime,
     actor: Actor,
     profile: Profile,
@@ -173,7 +169,7 @@ async fn create_tent_name_update_message(
                 serde_json::value::to_value(ContentComponent::System(
                     SystemMessage::TentNameUpdated {
                         previous_name: auth_tent.name.clone(),
-                        new_name: new_name.clone().unwrap(),
+                        new_name: new_name.to_string(),
                     },
                 ))
                 .ok(),
@@ -194,9 +190,9 @@ async fn create_tent_name_update_message(
         message_view_basic(
             &updated_tent,
             &update_message,
-            &Some(actor),
-            &Some(profile),
-            &Some(auth_member),
+            Some(&actor),
+            Some(&profile),
+            Some(&auth_member),
         ),
     );
 
