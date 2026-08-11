@@ -9,7 +9,7 @@ use crate::{
         profile_posts::{self, delete_post_record_from_db},
         profiles,
     },
-    views::{posts::profile_post_view_basic, profiles::profile_record},
+    views::posts::profile_post_view_basic,
     xrpc::{
         auth::Authorization,
         error::{Result, XRPCError},
@@ -45,8 +45,8 @@ pub async fn unindex_post(
     )
     .await
     .map_err(|_| XRPCError::NotFound)?;
-    let (_, db_profile) =
-        profiles::get_existing_profile(auth.client, auth.did_document_storage, actor.did.as_str())
+    let (actor, db_profile) =
+        profiles::get_profile_from_actor(auth.client, auth.did_document_storage, actor)
             .await
             .map_err(|_| XRPCError::NotFound)?;
 
@@ -62,7 +62,7 @@ pub async fn unindex_post(
 
     return Ok(Json(profile_post_view_basic(
         &actor,
-        &profile_record(db_profile),
+        db_profile.as_ref(),
         &main_post,
     )));
 }

@@ -80,6 +80,7 @@ pub async fn ban_member<'a>(
         .await
         .map_err(|_| XRPCError::NotFound)?;
 
+    // FIXME handle actors without profiles better. Don't assume campsite members have profiles
     let targets = profile::table
         .filter(profile::creator.eq(&target_actor.did))
         .left_join(
@@ -114,7 +115,7 @@ pub async fn ban_member<'a>(
             event_subject,
             &auth.campsite.id,
             &member,
-            &target.0,
+            Some(&target.0),
             &target_actor,
             actor,
         )?;

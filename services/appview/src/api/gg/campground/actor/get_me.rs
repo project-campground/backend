@@ -6,12 +6,9 @@ use reqwest::Client;
 use rocket::{State, serde::json::Json};
 
 use crate::{
-    database::{establish_connection, profiles},
+    database::{actors, establish_connection},
     helpers::api::handle_all_db_errors,
-    views::{
-        campsites::campsite_view_basic,
-        profiles::profile_view_basic_or_empty,
-    },
+    views::campsites::campsite_view_basic,
     xrpc::{
         auth::Authorization,
         error::{Result, XRPCError},
@@ -26,10 +23,9 @@ pub async fn get_me(
     did_document_storage: &State<LruDidDocumentStorage>,
 ) -> Result<Json<GetMeOutput>> {
     let mut conn = establish_connection().unwrap();
-    let (actor, db_profile) =
-        profiles::get_profile(client, did_document_storage, auth.actor_did.as_str())
-            .await
-            .map_err(|_| XRPCError::Unauthorized)?;
+    let actor = actors::get_actor(client, did_document_storage, auth.actor_did.as_str())
+        .await
+        .map_err(|_| XRPCError::Unauthorized)?;
 
     let campsite_ids_filtered: Vec<String> =
         actor.campsites.iter().filter_map(|x| x.clone()).collect();
@@ -46,8 +42,5 @@ pub async fn get_me(
             .collect::<Vec<CampsiteViewBasic>>()
     };
 
-    return Ok(Json(GetMeOutput {
-        campsites,
-        profile: profile_view_basic_or_empty(&actor, db_profile.as_ref()),
-    }));
+    return Ok(Json(GetMeOutput { campsites }));
 }

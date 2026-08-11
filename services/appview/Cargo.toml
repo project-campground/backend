@@ -38,6 +38,8 @@ askama = "0.12.1"
 hex = "0.4.3"
 uuid = { version = "1.19.0", features = ["v7", "serde"] }
 tokio-stream = "0.1.18"
+futures = "0.3.33"
+atproto-client = "0.14.5"
 
 [dev-dependencies]
 # actix-rt = "2.10.0"

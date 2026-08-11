@@ -6,7 +6,6 @@ pub mod appview {
             did -> Varchar,
             handle -> Nullable<Varchar>,
             indexedat -> Varchar,
-            homeserver -> Varchar,
             campsites -> Array<Nullable<Text>>,
         }
     }

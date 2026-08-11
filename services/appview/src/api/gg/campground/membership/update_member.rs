@@ -49,23 +49,18 @@ pub async fn update_member(
         0
     ));
 
-    let (member, profile, actor) = crate::schema::appview::campsite_member::table
+    let (member, actor, profile) = crate::schema::appview::campsite_member::table
         .filter(
             crate::schema::appview::campsite_member::campsiteid
                 .eq(campsite_id)
                 .and(crate::schema::appview::campsite_member::userid.eq(actor)),
         )
-        .inner_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
         )
-        .select((
-            campsite_member::all_columns,
-            profile::all_columns,
-            crate::schema::appview::actor::all_columns,
-        ))
-        .first::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let updated_members = diesel::update(campsite_member::table)
@@ -85,7 +80,7 @@ pub async fn update_member(
 
     return Ok(Json(member_view_detailed(
         &updated_member,
-        &profile,
+        profile.as_ref(),
         &actor,
     )));
 }

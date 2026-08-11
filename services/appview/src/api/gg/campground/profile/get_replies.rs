@@ -12,7 +12,7 @@ use rocket::{State, serde::json::Json};
 use crate::{
     database::profiles,
     util::post_authors,
-    views::{posts::profile_post_view_basic, profiles::profile_record},
+    views::posts::profile_post_view_basic,
     xrpc::{
         auth::OptionalAuthorization,
         error::{Result, XRPCError},
@@ -74,7 +74,7 @@ pub async fn get_replies(
     let mapped_posts: Vec<ProfilePostViewBasic> =
         post_authors::populate_profile_posts_with_authors(posts, &profiles)
             .iter()
-            .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
+            .map(|x| profile_post_view_basic(&x.0, x.1.as_ref(), &x.2))
             .collect();
 
     return Ok(Json(GetProfilePostRepliesOutput {

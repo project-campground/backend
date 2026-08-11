@@ -36,20 +36,15 @@ pub async fn get_members_any(
         .filter(crate::schema::appview::campsite_member::campsiteid.eq(campsite_id))
         .limit(limit)
         .offset(offset)
-        .inner_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
         )
-        .select((
-            campsite_member::all_columns,
-            profile::all_columns,
-            crate::schema::appview::actor::all_columns,
-        ))
-        .load::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .load::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .expect("Error loading members")
         .iter()
-        .map(|a| member_view_basic(&a.0, &a.1, &a.2))
+        .map(|a| member_view_basic(&a.0, a.2.as_ref(), &a.1))
         .collect::<Vec<MemberViewBasic>>();
 
     return Ok(Json(GetMembersOutput::<MemberViewBasic> { members }));
@@ -79,20 +74,15 @@ pub async fn get_members_given(
                 .eq(campsite_id)
                 .and(crate::schema::appview::campsite_member::userid.eq_any(actors)),
         )
-        .inner_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
         )
-        .select((
-            campsite_member::all_columns,
-            profile::all_columns,
-            crate::schema::appview::actor::all_columns,
-        ))
-        .load::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .load::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
-        .map(|a| member_view_basic(&a.0, &a.1, &a.2))
+        .map(|a| member_view_basic(&a.0, a.2.as_ref(), &a.1))
         .collect::<Vec<MemberViewBasic>>();
 
     return Ok(Json(GetMembersOutput::<MemberViewBasic> { members }));

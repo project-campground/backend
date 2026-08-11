@@ -43,14 +43,14 @@ pub async fn delete_invite(
         XRPCError::BadRequest("Invalid 'invite_id' format. Expected UUID".to_string())
     })?;
 
-    let invite = campsite_invite::table
+    let invite = &campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
-        .inner_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_invite::createdby)),
         )
-        .first::<(CampsiteInvite, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
+        .first::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     if invite.0.campsite_id != campsite_id {
@@ -67,10 +67,12 @@ pub async fn delete_invite(
         &auth.campsite.id,
         GeneralPermissionConsts::MANAGE_INVITES,
         "InviteDeleted",
-        campsite_invite_view_campsite(&invite.0, &invite.1, &invite.2),
+        campsite_invite_view_campsite(&invite.0, invite.2.as_ref(), &invite.1),
     );
 
     return Ok(Json(campsite_invite_view_campsite(
-        &invite.0, &invite.1, &invite.2,
+        &invite.0,
+        invite.2.as_ref(),
+        &invite.1,
     )));
 }

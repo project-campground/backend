@@ -11,7 +11,7 @@ use rocket::State;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_existing_profile},
+    database::{establish_connection, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -67,17 +67,12 @@ pub async fn remove_member(
                 .eq(campsite_id)
                 .and(campsite_member::userid.eq(&auth.actor.did)),
         )
-        .inner_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
         )
-        .select((
-            campsite_member::all_columns,
-            profile::all_columns,
-            crate::schema::appview::actor::all_columns,
-        ))
-        .first::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     ensure_user_isnt_higher(
@@ -91,8 +86,8 @@ pub async fn remove_member(
         event_subject,
         campsite_id,
         &target.0,
+        target.2.as_ref(),
         &target.1,
-        &target.2,
         actor,
     )
 }
@@ -105,11 +100,11 @@ pub async fn remove_self(
     did_document_storage: &State<LruDidDocumentStorage>,
     campsite_id: &str,
 ) -> Result<()> {
-    let (actor, profile) = get_existing_profile(client, did_document_storage, &auth.actor.did)
+    let (actor, profile) = get_profile_from_actor(client, did_document_storage, auth.actor)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 
-    if auth.campsite.owner == auth.actor.did {
+    if auth.campsite.owner == actor.did {
         return Err(XRPCError::Forbidden(
             "Owner cannot leave the server without deleting it".to_string(),
         ));
@@ -119,9 +114,9 @@ pub async fn remove_self(
         event_subject,
         campsite_id,
         &auth.member,
-        &profile,
+        profile.as_ref(),
         &actor,
-        &auth.actor.did,
+        &actor.did,
     )
 }
 
@@ -129,7 +124,7 @@ pub fn remove_campsite_member(
     event_subject: &State<ReactiveSubject>,
     campsite_id: &str,
     target_member: &CampsiteMember,
-    target_profile: &Profile,
+    target_profile: Option<&Profile>,
     target_actor: &Actor,
     actor: &str,
 ) -> Result<()> {
@@ -160,7 +155,7 @@ pub fn remove_campsite_member(
         &target_member.campsite_id,
         0,
         "MemberRemoved",
-        member_view_basic(&target_member, &target_profile, &target_actor),
+        member_view_basic(target_member, target_profile, target_actor),
     );
     event_next(
         event_subject,

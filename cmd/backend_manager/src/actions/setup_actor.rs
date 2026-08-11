@@ -58,12 +58,6 @@ pub struct PdsRecord<T> {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct HomeServerRecord {
-    did: String,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "camelCase")]
 pub struct ProfileRecord {
     display_name: String,
     tagline: Option<String>,
@@ -122,17 +116,6 @@ pub async fn setup_actor(client: &HTTP_CLIENT, database_url: &str, pds_port: u16
     println!("PDS Account: {:?}", pds_account);
     let CreateAccountResponseBody { access_jwt, did } = &pds_account;
 
-    let mut home_server_port = String::new();
-    read_stdin(&mut stdin, &mut home_server_port, "back-end localhost port (so home server could be set as the appview, likely 3984 from Rocket.toml in /services/appview)")?;
-    let home_server_port: u16 = home_server_port
-        .parse()
-        .map_err(|x| format!("Error while parsing the port: {}", x))?;
-
-    let home_server_did = &format!("did:web:localhost%3A{}", home_server_port);
-    put_record_in_pds(client, &pds_localhost_xrpc, "gg.campground.homeServer", did, access_jwt, HomeServerRecord {
-        did: home_server_did.clone(),
-    }).await?;
-    
     let mut display_name = String::new();
     read_stdin(&mut stdin, &mut display_name, "display name for the profile")?;
     
@@ -172,7 +155,6 @@ pub async fn setup_actor(client: &HTTP_CLIENT, database_url: &str, pds_port: u16
             Actor {
                 did: did.clone(),
                 handle: Some(format!("at://{}", &handle)),
-                home_server: home_server_did.clone(),
                 indexed_at: account_created_at.clone(),
                 campsites: vec![],
             }

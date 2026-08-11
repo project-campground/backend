@@ -6,20 +6,17 @@ use campground_lexicon::gg::campground::{
 use uuid::Uuid;
 
 use crate::views::{
-    profiles::{
-        profile_view_basic_deleted_actor, profile_view_basic_deleted_profile,
-        profile_view_basic_from_db, profile_view_detailed_from_db,
-    },
+    profiles::{profile_view_basic, profile_view_basic_deleted_actor, profile_view_detailed},
     util::serialize_datetime,
 };
 
 pub fn member_view_basic(
     campsite_member: &CampsiteMember,
-    profile: &Profile,
+    profile: Option<&Profile>,
     actor: &Actor,
 ) -> MemberViewBasic {
     return MemberViewBasic {
-        user: profile_view_basic_from_db(actor, profile),
+        user: profile_view_basic(actor, profile),
         nickname: campsite_member.nickname.clone(),
         roles: campsite_member
             .roles
@@ -31,13 +28,13 @@ pub fn member_view_basic(
 
 pub fn member_view_detailed(
     campsite_member: &CampsiteMember,
-    profile: &Profile,
+    profile: Option<&Profile>,
     actor: &Actor,
 ) -> MemberViewDetailed {
     return MemberViewDetailed {
         campsite_id: campsite_member.campsite_id.clone(),
         used_invite_id: campsite_member.used_invite_id.clone(),
-        user: profile_view_detailed_from_db(actor, profile),
+        user: profile_view_detailed(actor, profile),
         nickname: campsite_member.nickname.clone(),
         roles: campsite_member
             .roles
@@ -78,10 +75,7 @@ pub fn created_by_view(
 ) -> MemberViewAuthor {
     let profile_view = match actor {
         None => profile_view_basic_deleted_actor(created_by.clone()),
-        Some(x) => match profile {
-            None => profile_view_basic_deleted_profile(x),
-            Some(y) => profile_view_basic_from_db(x, y),
-        },
+        Some(actor) => profile_view_basic(actor, profile),
     };
 
     member_view_author(member, profile_view)
@@ -93,10 +87,7 @@ pub fn member_ban_view(
     actor: &Actor,
 ) -> MemberBanView {
     return MemberBanView {
-        user: match profile {
-            Some(profile) => profile_view_basic_from_db(actor, profile),
-            None => profile_view_basic_deleted_profile(actor),
-        },
+        user: profile_view_basic(actor, profile),
         user_id: ban.user_id.clone(),
         campsite_id: ban.campsite_id.clone(),
         reason: ban.reason.clone(),

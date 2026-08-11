@@ -10,7 +10,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_existing_profile_from_actor},
+    database::{establish_connection, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
         permissions::{ContentPermissionConsts, has_leveled_perms_or_owner},
@@ -50,7 +50,7 @@ pub async fn update_message(
     }
 
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = get_existing_profile_from_actor(client, did_document_storage, auth.actor.clone())
+    let (actor, profile) = get_profile_from_actor(client, did_document_storage, auth.actor)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 
@@ -77,7 +77,7 @@ pub async fn update_message(
 
     let content = body.content.clone();
 
-    if msg.created_by != auth.actor.did {
+    if msg.created_by != actor.did {
         return Err(XRPCError::Forbidden(
             "Cannot update message not created by the user".to_string(),
         ));
@@ -123,7 +123,7 @@ pub async fn update_message(
             &auth.tent,
             updated_message,
             Some(&actor),
-            Some(&profile),
+            profile.as_ref(),
             Some(&auth.member),
         ),
     );
@@ -133,7 +133,7 @@ pub async fn update_message(
         &auth.tent,
         updated_message,
         Some(&actor),
-        Some(&profile),
+        profile.as_ref(),
         Some(&auth.member),
     )));
 }

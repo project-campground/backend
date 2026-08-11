@@ -27,18 +27,17 @@ pub async fn get_member(
                 .eq(campsite_id)
                 .and(crate::schema::appview::campsite_member::userid.eq(actor)),
         )
-        .inner_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
         )
-        .select((
-            campsite_member::all_columns,
-            profile::all_columns,
-            crate::schema::appview::actor::all_columns,
-        ))
-        .first::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    return Ok(Json(member_view_detailed(&member.0, &member.1, &member.2)));
+    return Ok(Json(member_view_detailed(
+        &member.0,
+        member.2.as_ref(),
+        &member.1,
+    )));
 }

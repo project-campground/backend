@@ -31,8 +31,6 @@ pub mod appview {
     pub struct Actor {
         pub did: String,
         pub handle: Option<String>,
-        #[diesel(column_name = homeserver)]
-        pub home_server: String,
         #[diesel(column_name = indexedat)]
         pub indexed_at: String,
         #[diesel(column_name = campsites)]

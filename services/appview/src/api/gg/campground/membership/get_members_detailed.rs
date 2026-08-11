@@ -42,20 +42,15 @@ pub async fn get_members_detailed(
         .filter(crate::schema::appview::campsite_member::campsiteid.eq(campsite_id))
         .limit(limit)
         .offset(offset)
-        .inner_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
         )
-        .select((
-            campsite_member::all_columns,
-            profile::all_columns,
-            crate::schema::appview::actor::all_columns,
-        ))
-        .load::<(CampsiteMember, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .load::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(|a| member_view_detailed(&a.0, &a.1, &a.2))
+        .map(|a| member_view_detailed(&a.0, a.2.as_ref(), &a.1))
         .collect::<Vec<MemberViewDetailed>>();
 
     return Ok(Json(GetMembersOutput::<MemberViewDetailed> { members }));

@@ -8,10 +8,14 @@ pub fn handle_select_first_error(error: Error) -> XRPCError {
         _ => {
             println!("Err: {:?}", error);
             return XRPCError::InternalServerError;
-        },
+        }
     }
 }
 pub fn handle_all_db_errors(error: Error) -> XRPCError {
     println!("Err: {:?}", error);
+    XRPCError::InternalServerError
+}
+pub fn handle_unknown_errors<T: std::fmt::Display>(error: T) -> XRPCError {
+    println!("Err: {}", error);
     XRPCError::InternalServerError
 }

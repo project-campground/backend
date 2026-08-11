@@ -2,19 +2,18 @@
 
 use std::str::FromStr;
 
-use appview_schema::models::appview::{Actor, ProfilePost};
-use campground_lexicon::gg::campground::actor::Profile;
+use appview_schema::models::appview::{Actor, Profile, ProfilePost};
 use campground_lexicon::gg::campground::profile::{
     ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented,
 };
 use chrono::DateTime;
 
-use crate::views::util::parse_datetime;
 use crate::views::profiles::profile_view_basic;
+use crate::views::util::parse_datetime;
 
 pub fn profile_post_view_basic(
     actor: &Actor,
-    profile: &Profile,
+    profile: Option<&Profile>,
     profile_post: &ProfilePost,
 ) -> ProfilePostViewBasic {
     return ProfilePostViewBasic {
@@ -35,7 +34,7 @@ pub fn profile_post_view_basic(
 
 pub fn profile_post_view_parented(
     actor: &Actor,
-    profile: &Profile,
+    profile: Option<&Profile>,
     profile_post: &ProfilePost,
     parent: Option<&ProfilePostViewBasic>,
 ) -> ProfilePostViewParented {
@@ -58,7 +57,7 @@ pub fn profile_post_view_parented(
 
 pub fn profile_post_view_detailed(
     actor: &Actor,
-    profile: &Profile,
+    profile: Option<&Profile>,
     profile_post: &ProfilePost,
     replies: Vec<ProfilePostViewBasic>,
     parent: Option<&ProfilePostViewBasic>,

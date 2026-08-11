@@ -14,7 +14,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_existing_profile_from_actor},
+    database::{establish_connection, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -24,10 +24,7 @@ use crate::{
         ws::{event_next_campsite, event_next_tent},
     },
     realtime::data::ReactiveSubject,
-    views::{
-        messages::message_view_basic,
-        tents::tent_view_basic,
-    },
+    views::{messages::message_view_basic, tents::tent_view_basic},
     xrpc::{
         campsite::TentInfo,
         error::{Result, XRPCError},
@@ -90,7 +87,7 @@ pub async fn update_tent<'a>(
     ));
 
     let (actor, profile) =
-        get_existing_profile_from_actor(auth.auth.client, auth.auth.did_document_storage, auth.actor)
+        get_profile_from_actor(auth.auth.client, auth.auth.did_document_storage, auth.actor)
             .await
             .map_err(|_| XRPCError::Unauthorized)?;
 
@@ -126,7 +123,9 @@ pub async fn update_tent<'a>(
     );
 
     // Add rename message
-    if let Some(new_tent_name) = inner_body.name && new_tent_name != auth.tent.name {
+    if let Some(new_tent_name) = inner_body.name
+        && new_tent_name != auth.tent.name
+    {
         create_tent_name_update_message(
             &auth.campsite,
             &auth.tent,
@@ -153,7 +152,7 @@ async fn create_tent_name_update_message(
     new_name: &str,
     current_date: NaiveDateTime,
     actor: Actor,
-    profile: Profile,
+    profile: Option<Profile>,
 ) -> Result<()> {
     let mut conn = establish_connection().unwrap();
 
@@ -191,7 +190,7 @@ async fn create_tent_name_update_message(
             &updated_tent,
             &update_message,
             Some(&actor),
-            Some(&profile),
+            profile.as_ref(),
             Some(&auth_member),
         ),
     );

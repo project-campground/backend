@@ -1,10 +1,10 @@
+use crate::gg::campground::activity::Activity;
 use crate::gg::campground::{campsite::CampsiteViewBasic, socials::SocialConnection};
+use chrono::{DateTime, Utc};
 use rsky_lexicon::com::atproto::{
     label::{Label, SelfLabels},
     repo::Blob,
 };
-use chrono::{DateTime, Utc};
-use crate::gg::campground::activity::Activity;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -46,13 +46,6 @@ pub struct Profile {
 pub enum ProfileLabels {
     #[serde(rename = "com.atproto.label.defs#selfLabels")]
     SelfLabels(SelfLabels),
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProfileViewEmpty {
-    pub did: String,
-    pub handle: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -110,21 +103,13 @@ pub struct ProfileViewDetailed {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetProfilesOutput {
-    pub profiles: Vec<ProfileViewDetailed>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum ProfileViewBasicOrEmpty {
-    Basic(ProfileViewBasic),
-    Empty(ProfileViewEmpty)
+    pub profiles: Vec<ProfileViewBasic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetMeOutput {
     pub campsites: Vec<CampsiteViewBasic>,
-    pub profile: ProfileViewBasicOrEmpty,
 }
 
 /// Metadata about the requesting account's relationship with the subject account.

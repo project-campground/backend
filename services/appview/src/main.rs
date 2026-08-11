@@ -42,15 +42,15 @@
 use std::num::NonZero;
 use std::sync::Arc;
 
+use anyhow::Result;
 use atproto_identity::resolve::create_resolver;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use hickory_resolver::TokioResolver;
 use lazy_static::lazy_static;
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::shield::{Shield, NoSniff};
-use rocket::{Request, Response};
 use rocket::http::{Header, Status};
-use anyhow::Result;
+use rocket::shield::{NoSniff, Shield};
+use rocket::{Request, Response};
 use rxrust::{ObservableFactory, Shared};
 use xrpc::error::XRPCError;
 
@@ -59,7 +59,8 @@ use lettre as _;
 use mailgun_rs as _;
 use ws as _;
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 // #[macro_use] extern crate serde;
 
 pub static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"));
@@ -85,7 +86,7 @@ async fn default_catcher(status: Status, _request: &Request<'_>) -> XRPCError {
         429 => XRPCError::TooManyRequests,
         501 => XRPCError::NotImplemented,
         500 => XRPCError::InternalServerError,
-        _ => XRPCError::InternalServerError
+        _ => XRPCError::InternalServerError,
     }
 }
 
@@ -143,14 +144,15 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-mod xrpc;
-mod realtime;
+mod api;
+mod config;
 mod database;
 mod helpers;
+mod identity;
+mod realtime;
 mod util;
 mod views;
-mod config;
-mod api;
+mod xrpc;
 pub use appview_schema::schema;
 
 use crate::realtime::data::ReactiveSubject;

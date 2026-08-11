@@ -3,14 +3,13 @@ use campground_lexicon::gg::campground::invite::{
     CampsiteInviteViewCampsite, CampsiteInviteViewGlobal,
 };
 
-use crate::{
-    views::util::serialize_datetime,
-    views::{campsites::campsite_view_basic, profiles::profile_view_basic_from_db},
+use crate::views::{
+    campsites::campsite_view_basic, profiles::profile_view_basic, util::serialize_datetime,
 };
 
 pub fn campsite_invite_view_campsite(
     campsite_invite: &CampsiteInvite,
-    profile: &Profile,
+    profile: Option<&Profile>,
     actor: &Actor,
 ) -> CampsiteInviteViewCampsite {
     return CampsiteInviteViewCampsite {
@@ -19,14 +18,14 @@ pub fn campsite_invite_view_campsite(
         allowed_amount: campsite_invite.allowed_amount.clone(),
         used: campsite_invite.used,
         created_at: serialize_datetime(campsite_invite.created_at),
-        created_by: profile_view_basic_from_db(actor, profile),
+        created_by: profile_view_basic(actor, profile),
     };
 }
 
 pub fn campsite_invite_view_global(
     campsite_invite: &CampsiteInvite,
     campsite: &Campsite,
-    profile: &Profile,
+    profile: Option<&Profile>,
     actor: &Actor,
 ) -> CampsiteInviteViewGlobal {
     return CampsiteInviteViewGlobal {
@@ -36,6 +35,6 @@ pub fn campsite_invite_view_global(
         allowed_amount: campsite_invite.allowed_amount.clone(),
         used: campsite_invite.used,
         created_at: serialize_datetime(campsite_invite.created_at),
-        created_by: profile_view_basic_from_db(actor, profile),
+        created_by: profile_view_basic(actor, profile),
     };
 }

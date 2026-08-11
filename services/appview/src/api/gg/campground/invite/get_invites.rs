@@ -51,15 +51,15 @@ pub async fn get_invites(
         .order_by(campsite_invite::createdat.desc())
         .limit(limit)
         .offset(offset)
-        .inner_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
         .inner_join(
             crate::schema::appview::actor::table
                 .on(crate::schema::appview::actor::did.eq(campsite_invite::createdby)),
         )
-        .load::<(CampsiteInvite, Profile, Actor)>(&mut conn)
+        .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
+        .load::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
-        .map(|x| campsite_invite_view_campsite(&x.0, &x.1, &x.2))
+        .map(|x| campsite_invite_view_campsite(&x.0, x.2.as_ref(), &x.1))
         .collect::<Vec<CampsiteInviteViewCampsite>>();
 
     return Ok(Json(GetCampsiteInvitesOutput { invites }));

@@ -13,7 +13,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_existing_profile},
+    database::{establish_connection, profiles::get_profile},
     helpers::{api::handle_all_db_errors, ws::event_next},
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
     util::params::{OptionValidity, ensure_valid_set_uri},
@@ -95,9 +95,7 @@ pub async fn create_campsite(
         .map(|x| x.to_string());
 
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = &get_existing_profile(client, did_document_storage, &auth.actor_did)
-        .await
-        .map_err(|_| XRPCError::Unauthorized)?;
+    let (actor, profile) = &get_profile(client, did_document_storage, &auth.actor_did).await?;
 
     let existing_campsite_count = crate::schema::appview::campsite::table
         .filter(crate::schema::appview::campsite::owner.eq(&actor.did))
@@ -229,7 +227,7 @@ pub async fn create_campsite(
         campsite,
         vec![bonfire_view_basic(home_bonfire)],
         vec![role_view_basic(default_role)],
-        member_view_basic(owner_member, profile, actor),
+        member_view_basic(owner_member, profile.as_ref(), actor),
     );
 
     event_next(

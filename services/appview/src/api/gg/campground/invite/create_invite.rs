@@ -9,7 +9,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_existing_profile_from_actor},
+    database::{establish_connection, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -64,7 +64,7 @@ pub async fn create_invite(
     ));
 
     let mut conn = establish_connection().unwrap();
-    let (actor, profile) = get_existing_profile_from_actor(client, did_document_storage, auth.actor.clone())
+    let (actor, profile) = &get_profile_from_actor(client, did_document_storage, auth.actor)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
 
@@ -74,7 +74,7 @@ pub async fn create_invite(
             campsite_id: campsite_id.to_string(),
             allowed_amount: inner_body.allowed_amount,
             expires_at: inner_body.expires_at,
-            created_by: auth.actor.did,
+            created_by: actor.did.clone(),
             created_at: current_date,
             used: 0,
         })
@@ -86,10 +86,12 @@ pub async fn create_invite(
         &auth.campsite.id,
         GeneralPermissionConsts::MANAGE_INVITES,
         "InviteCreated",
-        campsite_invite_view_campsite(invite, &profile, &actor),
+        campsite_invite_view_campsite(invite, profile.as_ref(), &actor),
     );
 
     return Ok(Json(campsite_invite_view_campsite(
-        invite, &profile, &actor,
+        invite,
+        profile.as_ref(),
+        &actor,
     )));
 }

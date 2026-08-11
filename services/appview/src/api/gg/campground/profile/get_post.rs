@@ -12,7 +12,6 @@ use rocket::{State, serde::json::Json};
 use crate::database::establish_connection;
 use crate::util::post_authors;
 use crate::views::posts::{profile_post_view_basic, profile_post_view_detailed};
-use crate::views::profiles::profile_record;
 use crate::{
     database::profile_posts,
     database::profiles,
@@ -110,7 +109,7 @@ pub async fn get_post(
     let mapped_replies =
         post_authors::populate_profile_posts_with_authors(replies.clone(), &profiles)
             .iter()
-            .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
+            .map(|x| profile_post_view_basic(&x.0, x.1.as_ref(), &x.2))
             .collect();
 
     // If it can't be found anyway,
@@ -127,24 +126,18 @@ pub async fn get_post(
         None => return Err(XRPCError::InternalServerError),
     };
 
-    let author_record = profile_record(author.1.clone());
-
     let parent = if parent_found_author.is_some() {
-        let parent_author_unwrapped = parent_found_author.unwrap();
-        parent_post.clone().map(|x| {
-            profile_post_view_basic(
-                &parent_author_unwrapped.0,
-                &profile_record(parent_author_unwrapped.1.clone()),
-                &x,
-            )
-        })
+        let (parent_actor, parent_profile) = parent_found_author.unwrap();
+        parent_post
+            .clone()
+            .map(|x| profile_post_view_basic(&parent_actor, parent_profile.as_ref(), &x))
     } else {
         None
     };
 
     return Ok(Json(profile_post_view_detailed(
         &author.0,
-        &author_record,
+        author.1.as_ref(),
         &main_post,
         mapped_replies,
         parent.as_ref(),

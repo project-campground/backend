@@ -14,10 +14,7 @@ use crate::{
     helpers::api::handle_all_db_errors,
     schema::appview::profile_post,
     util::post_authors,
-    views::{
-        posts::{profile_post_view_basic, profile_post_view_parented},
-        profiles::profile_record,
-    },
+    views::posts::{profile_post_view_basic, profile_post_view_parented},
     xrpc::{
         auth::OptionalAuthorization,
         error::{Result, XRPCError},
@@ -118,7 +115,7 @@ async fn get_posts_no_replies(
 
     let mapped_posts = post_authors::populate_profile_posts_with_authors(posts, &profiles)
         .iter()
-        .map(|x| profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, None))
+        .map(|x| profile_post_view_parented(&x.0, x.1.as_ref(), &x.2, None))
         .collect();
 
     return Ok(Json(GetProfilePostsOutput {
@@ -199,7 +196,7 @@ async fn get_posts_with_replies(
     );
     let parents = populated_parents
         .iter()
-        .map(|x| profile_post_view_basic(&x.0, &profile_record(x.1.clone()), &x.2))
+        .map(|x| profile_post_view_basic(&x.0, x.1.as_ref(), &x.2))
         .collect::<Vec<ProfilePostViewBasic>>();
 
     // now with parents as well
@@ -214,7 +211,7 @@ async fn get_posts_with_replies(
                 parents.iter().find(|y| y.uri == parent_uri)
             };
 
-            profile_post_view_parented(&x.0, &profile_record(x.1.clone()), &x.2, found_parent)
+            profile_post_view_parented(&x.0, x.1.as_ref(), &x.2, found_parent)
         })
         .collect();
 
