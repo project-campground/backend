@@ -10,7 +10,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor},
+    database::{establish_connection, messages::system_message, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -136,23 +136,15 @@ pub async fn create_tent(
     let first_tent = tents.first().unwrap();
 
     let first_message = &diesel::insert_into(crate::schema::appview::tent_message::table)
-        .values(TentMessage {
-            id: Uuid::new_v4(),
-            campsite_id: campsite_id.to_string(),
-            tent_id: first_tent.id.clone(),
-            content: "".to_string(),
-            r#type: 1,
-            replying_to: vec![],
-            components: vec![
-                serde_json::value::to_value(ContentComponent::System(SystemMessage::TentCreated {
-                    tent_name: inner_body.name.clone(),
-                }))
-                .ok(),
-            ],
-            created_by: auth.actor.did.clone(),
-            created_at: current_date,
-            updated_at: None,
-        })
+        .values(system_message(
+            campsite_id,
+            &first_tent.id,
+            &auth.actor.did,
+            current_date,
+            ContentComponent::System(SystemMessage::TentCreated {
+                tent_name: inner_body.name.clone(),
+            }),
+        ))
         .load::<TentMessage>(&mut conn)
         .map_err(handle_select_first_error)?;
     let first_message = first_message.first().unwrap();

@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+
 use appview_schema::{
     models::appview::{Actor, Campsite, CampsiteMember, Profile, Tent, TentMessage},
     schema::appview,
@@ -11,10 +12,9 @@ use chrono::{NaiveDateTime, Utc};
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
-use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor},
+    database::{establish_connection, messages::system_message, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
         api::handle_select_first_error,
@@ -157,26 +157,16 @@ async fn create_tent_name_update_message(
     let mut conn = establish_connection().unwrap();
 
     let update_message = &diesel::insert_into(crate::schema::appview::tent_message::table)
-        .values(TentMessage {
-            id: Uuid::new_v4(),
-            campsite_id: auth_tent.campsite_id.clone(),
-            tent_id: updated_tent.id.clone(),
-            content: "".to_string(),
-            r#type: 1,
-            replying_to: vec![],
-            components: vec![
-                serde_json::value::to_value(ContentComponent::System(
-                    SystemMessage::TentNameUpdated {
-                        previous_name: auth_tent.name.clone(),
-                        new_name: new_name.to_string(),
-                    },
-                ))
-                .ok(),
-            ],
-            created_by: actor.did.clone(),
-            created_at: current_date,
-            updated_at: None,
-        })
+        .values(system_message(
+            &auth_tent.campsite_id,
+            &updated_tent.id,
+            &actor.did,
+            current_date,
+            ContentComponent::System(SystemMessage::TentNameUpdated {
+                previous_name: auth_tent.name.clone(),
+                new_name: new_name.to_string(),
+            }),
+        ))
         .load::<TentMessage>(&mut conn)
         .map_err(handle_select_first_error)?;
 

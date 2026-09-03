@@ -1,8 +1,11 @@
 use std::sync::{Mutex, OnceLock};
 
-use anyhow::Result;
 use crate::config::DATABASE_CONFIG;
-use diesel::{pg::PgConnection, r2d2::{Pool, ConnectionManager, PooledConnection}};
+use anyhow::Result;
+use diesel::{
+    pg::PgConnection,
+    r2d2::{ConnectionManager, Pool, PooledConnection},
+};
 use lazy_static::lazy_static;
 
 pub type DbPool = Pool<ConnectionManager<PgConnection>>;
@@ -19,14 +22,15 @@ pub fn establish_connection() -> Result<DbConnection> {
             Pool::builder()
                 .max_size(DATABASE_CONFIG.pool_size.clone())
                 .build(manager)
-                .expect("Failed to create connection pool")
-            )
+                .expect("Failed to create connection pool"),
+        )
     });
     Ok(pool.lock().unwrap().get()?)
 }
 
 pub mod actors;
 pub mod campsites;
-pub mod profiles;
 pub mod profile_posts;
+pub mod profiles;
 pub use appview_schema::models;
+pub mod messages;

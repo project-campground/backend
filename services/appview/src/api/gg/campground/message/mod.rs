@@ -7,7 +7,7 @@ pub fn routes() -> Vec<rocket::Route> {
     ]
 }
 
-mod get_messages;
 mod create_message;
-mod update_message;
 mod delete_message;
+mod get_messages;
+mod update_message;

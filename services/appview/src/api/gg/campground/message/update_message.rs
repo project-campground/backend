@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 use appview_schema::{models::appview::TentMessage, schema::appview::tent_message};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::message::MessageViewBasic;
+use campground_lexicon::gg::campground::message::{MessageType, MessageViewBasic};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use reqwest::Client;
@@ -80,6 +80,10 @@ pub async fn update_message(
     if msg.created_by != actor.did {
         return Err(XRPCError::Forbidden(
             "Cannot update message not created by the user".to_string(),
+        ));
+    } else if msg.r#type == MessageType::System as i16 {
+        return Err(XRPCError::Forbidden(
+            "Cannot update system messages".to_string(),
         ));
     } else if content == msg.content {
         return Err(XRPCError::BadRequest(

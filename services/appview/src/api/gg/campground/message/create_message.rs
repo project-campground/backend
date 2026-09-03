@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
 use appview_schema::{models::appview::TentMessage, schema::appview::tent_message};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::message::MessageViewBasic;
+use campground_lexicon::gg::campground::message::{MessageType, MessageViewBasic};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use reqwest::Client;
@@ -106,7 +106,7 @@ pub async fn create_message<'a>(
         .values(TentMessage {
             id: Uuid::new_v4(),
             campsite_id: auth.tent.campsite_id.clone(),
-            r#type: 0,
+            r#type: MessageType::Default as i16,
             components: vec![],
             tent_id: auth.tent.id.clone(),
             content: body.content.clone(),
