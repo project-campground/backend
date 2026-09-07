@@ -157,19 +157,15 @@ pub async fn create_tent(
     .await
     .map_err(|_| XRPCError::InternalServerError)?;
 
-    event_next_tent(
-        event_subject,
-        &first_tent,
-        false,
-        "TentCreated",
-        tent_view_basic(&first_tent),
-    );
+    let tent_view = tent_view_basic(&first_tent);
+
+    event_next_tent(event_subject, &first_tent, false, "TentCreated", &tent_view);
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
         0,
         "MessageCreated",
-        message_view_basic(
+        &message_view_basic(
             &first_tent,
             &first_message,
             Some(&actor),
@@ -177,8 +173,6 @@ pub async fn create_tent(
             Some(&auth.member),
         ),
     );
-
-    let tent_view = tent_view_basic(&first_tent);
 
     return Ok(Json(tent_view));
 }

@@ -125,12 +125,14 @@ pub async fn update_campsite(
         .get_result::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
+    let campsite_view = campsite_view_basic(&campsite);
+
     event_next_campsite_global(
         event_subject,
         &auth.campsite.id,
         "CampsiteUpdated",
-        campsite_view_basic(&campsite),
+        &campsite_view,
     );
 
-    return Ok(Json(campsite_view_basic(&campsite)));
+    return Ok(Json(campsite_view));
 }

@@ -12,7 +12,8 @@ use crate::{
         api::handle_select_first_error,
         permissions::{
             ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
-        }, ws::event_next_category,
+        },
+        ws::event_next_category,
     },
     realtime::data::ReactiveSubject,
     views::tents::tent_category_view,
@@ -94,13 +95,14 @@ pub async fn update_category(
 
     let updated_category = updated_category.first().unwrap();
 
+    let view = tent_category_view(updated_category);
     event_next_category(
         event_subject,
         &updated_category,
         false,
         "CategoryMoved",
-        tent_category_view(updated_category),
+        &view,
     );
 
-    return Ok(Json(tent_category_view(updated_category)));
+    return Ok(Json(view));
 }

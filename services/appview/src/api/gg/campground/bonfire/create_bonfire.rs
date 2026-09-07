@@ -111,13 +111,8 @@ pub async fn create_bonfire(
         .get_result::<Bonfire>(&mut conn)
         .expect("Error inserting bonfire");
 
-    event_next_bonfire(
-        event_subject,
-        &bonfire,
-        false,
-        "BonfireCreated",
-        bonfire_view_basic(bonfire),
-    );
+    let view = bonfire_view_basic(bonfire);
+    event_next_bonfire(event_subject, &bonfire, false, "BonfireCreated", &view);
 
-    return Ok(Json(bonfire_view_basic(bonfire)));
+    return Ok(Json(view));
 }

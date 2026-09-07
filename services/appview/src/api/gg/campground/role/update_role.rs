@@ -82,7 +82,12 @@ pub async fn update_role(
         .find(|x| x.id == role_id_uuid)
         .ok_or(XRPCError::NotFound)?;
 
-    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &roles, permissions.as_ref())?;
+    ensure_user_has_manage_role_permission(
+        &auth.campsite,
+        &auth.member,
+        &roles,
+        permissions.as_ref(),
+    )?;
 
     ensure_no_higher_role(
         auth.member.user_id == auth.campsite.owner,
@@ -110,8 +115,7 @@ pub async fn update_role(
             campsite_role::motion.eq(motion
                 .clone()
                 .map_or(role.motion, |motion| from_role_motion(motion))),
-            campsite_role::displayseparately
-                .eq(raised.unwrap_or(role.display_separately)),
+            campsite_role::displayseparately.eq(raised.unwrap_or(role.display_separately)),
             campsite_role::mentionable.eq(pingable.unwrap_or(role.mentionable)),
             campsite_role::contentpermissions.eq(permissions
                 .as_ref()
@@ -125,15 +129,11 @@ pub async fn update_role(
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(
-        event_subject,
-        &auth.campsite.id,
-        0,
-        "RoleUpdated",
-        role_view_basic(updated_role),
-    );
+    let view = role_view_basic(updated_role);
 
-    return Ok(Json(role_view_basic(updated_role)));
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleUpdated", &view);
+
+    return Ok(Json(view));
 }
 
 fn ensure_user_has_manage_role_permission(

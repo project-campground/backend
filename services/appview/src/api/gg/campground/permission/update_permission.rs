@@ -120,7 +120,7 @@ pub fn create_or_modify_permission<
     user_id: Option<String>,
     permissions: &PermissionsStateDictionary,
     predicate: &Predicate,
-) -> Result<CampsitePermission, XRPCError>
+) -> Result<PermissionViewDetailed, XRPCError>
 where
     Predicate: Clone,
     Predicate: NonAggregate,
@@ -147,10 +147,12 @@ where
         update_or_delete_role_permission(permissions, existing.first().unwrap().clone(), predicate)
     })?;
 
+    let permission_view = permission_view_detailed(&permission);
+
     event_next(
         event_subject,
         "PermissionUpdated",
-        permission_view_detailed(&permission),
+        &permission_view,
         |binary| ReactiveSubjectData::CampsitePermissionUpdated {
             campsite_id: permission.campsite_id.clone(),
             bonfire_id: permission.bonfire_id.clone(),
@@ -161,7 +163,7 @@ where
             binary,
         },
     );
-    Ok(permission)
+    Ok(permission_view)
 }
 
 fn insert_permission_if_not_empty(

@@ -51,13 +51,8 @@ pub async fn delete_bonfire(
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_bonfire(
-        event_subject,
-        &auth.bonfire,
-        true,
-        "BonfireDeleted",
-        bonfire_view_basic(&auth.bonfire),
-    );
+    let view = bonfire_view_basic(&auth.bonfire);
+    event_next_bonfire(event_subject, &auth.bonfire, true, "BonfireDeleted", &view);
 
-    return Ok(Json(bonfire_view_basic(&auth.bonfire)));
+    return Ok(Json(view));
 }

@@ -129,14 +129,12 @@ pub async fn on_rocket_message(
                             WebSocketOutput::Ignore
                         }
                         SocketInFramePayload::ViewPermissions => {
-                            println!("View permissions");
-                            // FIXME This is so far used for the lack of better method and will likely be removed in the future in favour of having client calculate it on its own.
-                            // Use references somehow. I hate lack of GC
+                            let payload = SocketFramePermissionViewPayload {
+                                permissions: permissions.clone(),
+                            };
                             let response = SocketDataFrame::<SocketFramePermissionViewPayload>::new(
                                 "PermissionView".to_string(),
-                                SocketFramePermissionViewPayload {
-                                    permissions: permissions.clone(),
-                                },
+                                &payload,
                             );
                             let binary = response.binary();
 

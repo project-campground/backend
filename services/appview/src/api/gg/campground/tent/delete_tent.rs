@@ -48,13 +48,8 @@ pub async fn delete_tent(
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
 
-    event_next_tent(
-        event_subject,
-        &auth.tent,
-        true,
-        "TentDeleted",
-        tent_view_basic(&auth.tent),
-    );
+    let view = tent_view_basic(&auth.tent);
+    event_next_tent(event_subject, &auth.tent, true, "TentDeleted", &view);
 
-    return Ok(Json(tent_view_basic(&auth.tent)));
+    return Ok(Json(view));
 }

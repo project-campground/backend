@@ -155,12 +155,12 @@ pub fn remove_campsite_member(
         &target_member.campsite_id,
         0,
         "MemberRemoved",
-        member_view_basic(target_member, target_profile, target_actor),
+        &member_view_basic(target_member, target_profile, target_actor),
     );
     event_next(
         event_subject,
         "CampsiteLeft",
-        CampsiteLeftOutput {
+        &CampsiteLeftOutput {
             id: campsite_id.to_string(),
         },
         |binary| ReactiveSubjectData::CampsiteRemoved {

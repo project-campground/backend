@@ -81,15 +81,10 @@ pub async fn move_bonfire(
 
     let bonfire = bonfire.first().unwrap();
 
-    event_next_bonfire(
-        event_subject,
-        &bonfire,
-        false,
-        "BonfireMoved",
-        bonfire_view_basic(bonfire),
-    );
+    let view = bonfire_view_basic(bonfire);
+    event_next_bonfire(event_subject, &bonfire, false, "BonfireMoved", &view);
 
-    return Ok(Json(bonfire_view_basic(bonfire)));
+    return Ok(Json(view));
 }
 
 fn make_room_for_bonfire(campsite_id: &str, position: i32) -> Result<(), XRPCError> {

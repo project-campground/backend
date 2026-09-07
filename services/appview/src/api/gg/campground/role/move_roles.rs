@@ -138,7 +138,7 @@ pub async fn move_roles(
         &auth.campsite.id,
         0,
         "RolesMoved",
-        RolesMovedOutput {
+        &RolesMovedOutput {
             roles_by_position: roles_by_position.clone(),
         },
     );

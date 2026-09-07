@@ -125,25 +125,19 @@ pub async fn use_invite(
         })
         .load::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
-    let member = member.first().unwrap();
 
-    event_next_campsite(
-        event_subject,
-        &campsite.id,
-        0,
-        "MemberJoined",
-        member_view_basic(member, profile.as_ref(), actor),
-    );
-    event_next(
-        event_subject,
-        "CampsiteJoined",
-        campsite_view_basic(&campsite),
-        |binary| ReactiveSubjectData::CampsiteAdded {
+    let member = member.first().unwrap();
+    let member_view = member_view_basic(member, profile.as_ref(), actor);
+    let campsite_view = campsite_view_basic(&campsite);
+
+    event_next_campsite(event_subject, &campsite.id, 0, "MemberJoined", &member_view);
+    event_next(event_subject, "CampsiteJoined", &campsite_view, |binary| {
+        ReactiveSubjectData::CampsiteAdded {
             campsite_id: campsite.id.clone(),
             to_actor: actor.did.clone(),
             binary,
-        },
-    );
+        }
+    });
 
-    return Ok(Json(campsite_view_basic(&campsite)));
+    return Ok(Json(campsite_view));
 }

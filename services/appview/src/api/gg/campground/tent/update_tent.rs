@@ -114,13 +114,8 @@ pub async fn update_tent<'a>(
 
     let updated_tent = updated_tents.first().unwrap();
 
-    event_next_tent(
-        event_subject,
-        &updated_tent,
-        false,
-        "TentUpdated",
-        tent_view_basic(&updated_tent),
-    );
+    let view = tent_view_basic(&updated_tent);
+    event_next_tent(event_subject, &updated_tent, false, "TentUpdated", &view);
 
     // Add rename message
     if let Some(new_tent_name) = inner_body.name
@@ -140,7 +135,7 @@ pub async fn update_tent<'a>(
         .await?;
     }
 
-    return Ok(Json(tent_view_basic(updated_tent)));
+    return Ok(Json(view));
 }
 
 async fn create_tent_name_update_message(
@@ -176,7 +171,7 @@ async fn create_tent_name_update_message(
         &auth_campsite.id,
         0,
         "MessageCreated",
-        message_view_basic(
+        &message_view_basic(
             &updated_tent,
             &update_message,
             Some(&actor),

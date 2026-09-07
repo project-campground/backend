@@ -111,15 +111,10 @@ pub async fn create_role(
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(
-        event_subject,
-        &auth.campsite.id,
-        0,
-        "RoleCreated",
-        role_view_basic(role),
-    );
+    let view = role_view_basic(role);
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleCreated", &view);
 
-    return Ok(Json(role_view_basic(role)));
+    return Ok(Json(view));
 }
 
 fn ensure_user_has_manage_role_permission(

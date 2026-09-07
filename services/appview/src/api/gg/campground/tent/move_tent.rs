@@ -141,15 +141,10 @@ pub async fn move_tent(
 
     let updated_tent = updated_tent.first().unwrap();
 
-    event_next_tent(
-        event_subject,
-        &auth.tent,
-        false,
-        "TentMoved",
-        tent_view_basic(updated_tent),
-    );
+    let view = tent_view_basic(updated_tent);
+    event_next_tent(event_subject, &auth.tent, false, "TentMoved", &view);
 
-    return Ok(Json(tent_view_basic(updated_tent)));
+    return Ok(Json(view));
 }
 
 fn make_room_for_tent(

@@ -113,13 +113,9 @@ pub async fn update_bonfire<'a>(
 
     let bonfire = bonfire.first().unwrap();
 
-    event_next_bonfire(
-        event_subject,
-        &bonfire,
-        false,
-        "BonfireUpdated",
-        bonfire_view_basic(&bonfire),
-    );
+    let view = bonfire_view_basic(&bonfire);
 
-    return Ok(Json(bonfire_view_basic(&bonfire)));
+    event_next_bonfire(event_subject, &bonfire, false, "BonfireUpdated", &view);
+
+    return Ok(Json(view));
 }

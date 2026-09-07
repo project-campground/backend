@@ -64,13 +64,15 @@ pub async fn delete_member_ban(
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
+    let view = member_ban_view(&member_ban, profile.as_ref(), &target_actor);
+
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
         GeneralPermissionConsts::BAN_MEMBERS,
         "MemberBanDeleted",
-        member_ban_view(&member_ban, profile.as_ref(), &target_actor),
+        &view,
     );
 
-    Ok(Json(member_ban_view(&member_ban, profile.as_ref(), &target_actor)))
+    Ok(Json(view))
 }

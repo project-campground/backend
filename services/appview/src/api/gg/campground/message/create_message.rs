@@ -123,25 +123,15 @@ pub async fn create_message<'a>(
 
     let first_message = messages.first().unwrap();
 
-    event_next_tent(
-        event_subject,
-        &auth.tent,
-        false,
-        "MessageCreated",
-        message_view_basic(
-            &auth.tent,
-            first_message,
-            Some(&actor),
-            profile.as_ref(),
-            Some(&auth.member),
-        ),
-    );
-
-    return Ok(Json(message_view_basic(
+    let message = message_view_basic(
         &auth.tent,
         first_message,
         Some(&actor),
         profile.as_ref(),
         Some(&auth.member),
-    )));
+    );
+
+    event_next_tent(event_subject, &auth.tent, false, "MessageCreated", &message);
+
+    return Ok(Json(message));
 }

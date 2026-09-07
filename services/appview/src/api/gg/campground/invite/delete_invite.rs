@@ -62,17 +62,15 @@ pub async fn delete_invite(
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
 
+    let view = campsite_invite_view_campsite(&invite.0, invite.2.as_ref(), &invite.1);
+
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
         GeneralPermissionConsts::MANAGE_INVITES,
         "InviteDeleted",
-        campsite_invite_view_campsite(&invite.0, invite.2.as_ref(), &invite.1),
+        &view,
     );
 
-    return Ok(Json(campsite_invite_view_campsite(
-        &invite.0,
-        invite.2.as_ref(),
-        &invite.1,
-    )));
+    return Ok(Json(view));
 }

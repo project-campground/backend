@@ -10,7 +10,11 @@ use uuid::Uuid;
 use crate::{
     database::establish_connection,
     expect_permission,
-    helpers::{api::handle_select_first_error, permissions::{GeneralPermissionConsts, has_role_perms_or_owner}, ws::event_next_campsite},
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        ws::event_next_campsite,
+    },
     realtime::data::ReactiveSubject,
     views::roles::{CampsiteRoleFlag, ensure_no_higher_role, role_view_basic},
     xrpc::{
@@ -74,13 +78,8 @@ pub async fn delete_role(
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    event_next_campsite(
-        event_subject,
-        &auth.campsite.id,
-        0,
-        "RoleDeleted",
-        role_view_basic(given_role),
-    );
+    let view = role_view_basic(given_role);
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleDeleted", &view);
 
-    return Ok(Json(role_view_basic(given_role)));
+    return Ok(Json(view));
 }

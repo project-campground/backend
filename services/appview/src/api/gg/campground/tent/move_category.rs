@@ -116,15 +116,16 @@ pub async fn move_category(
 
     let updated_category = updated_category.first().unwrap();
 
+    let view = tent_category_view(updated_category);
     event_next_category(
         event_subject,
         &updated_category,
         false,
         "CategoryMoved",
-        tent_category_view(updated_category),
+        &view,
     );
 
-    return Ok(Json(tent_category_view(updated_category)));
+    return Ok(Json(view));
 }
 
 fn make_room_for_category(bonfire_id: &str, position: i32) -> Result<(), XRPCError> {

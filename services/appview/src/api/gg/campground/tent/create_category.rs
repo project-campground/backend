@@ -95,13 +95,9 @@ pub async fn create_category(
         .get_result::<TentCategory>(&mut conn)
         .expect("Error inserting bonfire");
 
-    event_next_category(
-        event_subject,
-        &category,
-        false,
-        "CategoryCreated",
-        tent_category_view(&category),
-    );
+    let view = tent_category_view(&category);
 
-    return Ok(Json(tent_category_view(category)));
+    event_next_category(event_subject, &category, false, "CategoryCreated", &view);
+
+    return Ok(Json(view));
 }

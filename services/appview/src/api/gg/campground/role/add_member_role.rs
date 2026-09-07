@@ -104,15 +104,13 @@ pub async fn add_member_role(
         .map(|x| x.user_id.clone())
         .collect::<Vec<String>>();
     let role_view = role_view_basic(given_role);
+    let output = ModifyMemberRolesOutput {
+        role: role_view.clone(),
+        members: member_ids.clone(),
+    };
 
-    event_next(
-        event_subject,
-        "MemberRolesAdded",
-        ModifyMemberRolesOutput {
-            role: role_view.clone(),
-            members: member_ids.clone(),
-        },
-        |payload| ReactiveSubjectData::MemberRolesModified {
+    event_next(event_subject, "MemberRolesAdded", &output, |payload| {
+        ReactiveSubjectData::MemberRolesModified {
             campsite_id: campsite_id.to_string(),
             actors: member_ids.clone(),
             role_id: given_role.id,
@@ -120,11 +118,8 @@ pub async fn add_member_role(
                 && given_role.content_permissions == 0,
             removed: false,
             binary: payload,
-        },
-    );
+        }
+    });
 
-    return Ok(Json(ModifyMemberRolesOutput {
-        role: role_view,
-        members: member_ids,
-    }));
+    return Ok(Json(output));
 }

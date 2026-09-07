@@ -81,17 +81,15 @@ pub async fn create_invite(
         .get_result::<CampsiteInvite>(&mut conn)
         .map_err(handle_select_first_error)?;
 
+    let campsite_invite_view = campsite_invite_view_campsite(invite, profile.as_ref(), &actor);
+
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
         GeneralPermissionConsts::MANAGE_INVITES,
         "InviteCreated",
-        campsite_invite_view_campsite(invite, profile.as_ref(), &actor),
+        &campsite_invite_view,
     );
 
-    return Ok(Json(campsite_invite_view_campsite(
-        invite,
-        profile.as_ref(),
-        &actor,
-    )));
+    return Ok(Json(campsite_invite_view));
 }

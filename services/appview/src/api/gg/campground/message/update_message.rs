@@ -117,27 +117,16 @@ pub async fn update_message(
         .expect("Error updating message");
 
     let updated_message = updated_messages.first().unwrap();
-
-    event_next_tent(
-        event_subject,
-        &auth.tent,
-        false,
-        "MessageUpdated",
-        message_view_basic(
-            &auth.tent,
-            updated_message,
-            Some(&actor),
-            profile.as_ref(),
-            Some(&auth.member),
-        ),
-    );
-
-    // New tent message, since it has been updated and is not given by SQL
-    return Ok(Json(message_view_basic(
+    let view = message_view_basic(
         &auth.tent,
         updated_message,
         Some(&actor),
         profile.as_ref(),
         Some(&auth.member),
-    )));
+    );
+
+    event_next_tent(event_subject, &auth.tent, false, "MessageUpdated", &view);
+
+    // New tent message, since it has been updated and is not given by SQL
+    return Ok(Json(view));
 }

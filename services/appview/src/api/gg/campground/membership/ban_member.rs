@@ -156,14 +156,15 @@ fn add_ban<'a>(
         .map_err(handle_select_first_error)?;
 
     let ban = ban.first().unwrap();
+    let view = member_ban_view(ban, profile, actor);
 
     event_next_campsite(
         event_subject,
         &campsite.id,
         GeneralPermissionConsts::BAN_MEMBERS,
         "MemberBanCreated",
-        member_ban_view(ban, profile, actor),
+        &view,
     );
 
-    Ok(Json(member_ban_view(ban, profile, actor)))
+    Ok(Json(view))
 }

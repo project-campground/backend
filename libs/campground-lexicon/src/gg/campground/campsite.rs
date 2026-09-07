@@ -1,4 +1,7 @@
-use crate::gg::campground::{bonfire::BonfireViewBasic, membership::MemberViewBasic, role::RoleViewBasic, tent::TentViewBasic};
+use crate::gg::campground::{
+    bonfire::BonfireViewBasic, membership::MemberViewBasic, role::RoleViewBasic,
+    tent::TentViewBasic,
+};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

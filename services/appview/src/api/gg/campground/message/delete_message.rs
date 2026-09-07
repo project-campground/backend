@@ -91,21 +91,15 @@ pub async fn delete_message(
         .execute(&mut conn)
         .expect("Error deleting message");
 
-    event_next_tent(
-        event_subject,
+    let message = message_view_basic(
         &auth.tent,
-        false,
-        "MessageDeleted",
-        message_view_basic(
-            &auth.tent,
-            &msg.0,
-            msg.1.as_ref(),
-            msg.2.as_ref(),
-            msg.3.as_ref(),
-        ),
+        &msg.0,
+        msg.1.as_ref(),
+        msg.2.as_ref(),
+        msg.3.as_ref(),
     );
 
-    return Ok(Json(message_view_basic(
-        &auth.tent, &msg.0, msg.1.as_ref(), msg.2.as_ref(), msg.3.as_ref(),
-    )));
+    event_next_tent(event_subject, &auth.tent, false, "MessageDeleted", &message);
+
+    return Ok(Json(message));
 }

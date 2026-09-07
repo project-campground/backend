@@ -56,13 +56,14 @@ pub async fn delete_category(
         .execute(&mut conn)
         .map_err(|_| XRPCError::InternalServerError)?;
 
+    let view = tent_category_view(&auth.category);
     event_next_category(
         event_subject,
         &auth.category,
         true,
         "CategoryDeleted",
-        tent_category_view(&auth.category),
+        &view,
     );
 
-    return Ok(Json(tent_category_view(&auth.category)));
+    return Ok(Json(view));
 }

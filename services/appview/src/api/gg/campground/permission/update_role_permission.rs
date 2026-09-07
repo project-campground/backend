@@ -17,10 +17,7 @@ use crate::{
         permissions::{GeneralPermissionConsts, has_full_leveled_perms_from_roles},
     },
     realtime::data::ReactiveSubject,
-    views::{
-        permissions::permission_view_detailed,
-        roles::ensure_no_higher_role,
-    },
+    views::roles::ensure_no_higher_role,
     xrpc::{
         campsite::{BonfireInfo, CategoryInfo, TentInfo},
         error::{Result, XRPCError},
@@ -77,7 +74,7 @@ pub async fn update_tent_role_permission(
         auth.member.roles.clone(),
     )?;
 
-    let permission = &create_or_modify_permission(
+    let permission = create_or_modify_permission(
         event_subject,
         &auth.actor.did,
         &auth.tent.campsite_id,
@@ -92,7 +89,7 @@ pub async fn update_tent_role_permission(
             .and(campsite_permission::tentid.eq(auth.tent.id)),
     )?;
 
-    Ok(Json(permission_view_detailed(permission)))
+    Ok(Json(permission))
 }
 
 pub async fn update_category_role_permission(
@@ -145,7 +142,7 @@ pub async fn update_category_role_permission(
         auth.member.roles.clone(),
     )?;
 
-    let permission = &create_or_modify_permission(
+    let permission = create_or_modify_permission(
         event_subject,
         &auth.actor.did,
         &auth.category.campsite_id,
@@ -160,7 +157,7 @@ pub async fn update_category_role_permission(
             .and(campsite_permission::categoryid.eq(auth.category.id)),
     )?;
 
-    Ok(Json(permission_view_detailed(permission)))
+    Ok(Json(permission))
 }
 
 pub async fn update_bonfire_role_permission(
@@ -213,7 +210,7 @@ pub async fn update_bonfire_role_permission(
         auth.member.roles.clone(),
     )?;
 
-    let permission = &create_or_modify_permission(
+    let permission = create_or_modify_permission(
         event_subject,
         &auth.actor.did,
         &auth.bonfire.campsite_id,
@@ -228,5 +225,5 @@ pub async fn update_bonfire_role_permission(
             .and(campsite_permission::bonfireid.eq(&auth.bonfire.id)),
     )?;
 
-    Ok(Json(permission_view_detailed(permission)))
+    Ok(Json(permission))
 }
