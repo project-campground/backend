@@ -141,7 +141,7 @@ pub async fn get_profiles(
 
     let mut newly_indexed_profiles: Vec<(Actor, Option<Profile>)> =
         futures::future::try_join_all(existing_actors_without_profiles.iter().map(
-            async |(actor, doc)| {
+            async |(actor, doc)| -> Result<(Actor, Option<Profile>), XRPCError> {
                 let (actor, indexed_profile) = index_profile(client, doc, actor.clone()).await?;
 
                 // Since the profile can still be none
