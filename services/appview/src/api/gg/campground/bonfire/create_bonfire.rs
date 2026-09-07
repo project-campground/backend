@@ -1,7 +1,7 @@
 use appview_schema::models::appview::Bonfire;
 use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
 use chrono::Utc;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use rsky_common::tid::Ticker;
 use serde::Deserialize;
@@ -76,42 +76,47 @@ pub async fn create_bonfire(
 
     let mut conn = establish_connection().unwrap();
 
-    let existing_bonfire_count = crate::schema::appview::bonfire::table
-        .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
-        .count()
-        .first::<i64>(&mut conn)
-        .map_err(handle_all_db_errors)?;
+    let bonfire = conn.transaction(|conn| {
+        let existing_bonfire_count = crate::schema::appview::bonfire::table
+            .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
+            .count()
+            .first::<i64>(conn)
+            .map_err(handle_all_db_errors)?;
 
-    if existing_bonfire_count >= 20 {
-        return Err(XRPCError::Forbidden(
-            "Cannot create more than 20 bonfires in a campsite".to_string(),
-        ));
-    }
+        if existing_bonfire_count >= 20 {
+            return Err(XRPCError::Forbidden(
+                "Cannot create more than 20 bonfires in a campsite".to_string(),
+            ));
+        }
 
-    let current_date = Utc::now().naive_utc();
+        let current_date = Utc::now().naive_utc();
 
-    let mut ticker = Ticker::new();
-    let bonfire_id = ticker.next(None);
+        let mut ticker = Ticker::new();
+        let bonfire_id = ticker.next(None);
 
-    let bonfire = &diesel::insert_into(crate::schema::appview::bonfire::table)
-        .values(Bonfire {
-            id: bonfire_id.to_string(),
-            campsite_id: campsite_id.to_string(),
-            name: name.clone(),
-            description: description.clone(),
-            avatar_uri: avatar_uri.clone(),
-            banner_uri: banner_uri.clone(),
-            home: false,
-            priority: *position,
-            created_by: auth.actor.did.clone(),
-            created_at: current_date,
-            updated_by: auth.actor.did,
-            updated_at: current_date,
-        })
-        .get_result::<Bonfire>(&mut conn)
-        .expect("Error inserting bonfire");
+        let bonfire = diesel::insert_into(crate::schema::appview::bonfire::table)
+            .values(Bonfire {
+                id: bonfire_id.to_string(),
+                campsite_id: campsite_id.to_string(),
+                name: name.clone(),
+                description: description.clone(),
+                avatar_uri: avatar_uri.clone(),
+                banner_uri: banner_uri.clone(),
+                home: false,
+                priority: *position,
+                created_by: auth.actor.did.clone(),
+                created_at: current_date,
+                updated_by: auth.actor.did,
+                updated_at: current_date,
+            })
+            .get_result::<Bonfire>(conn)
+            .map_err(handle_all_db_errors)?;
 
-    let view = bonfire_view_basic(bonfire);
+        Ok(bonfire)
+    })?;
+
+    let view = bonfire_view_basic(&bonfire);
+
     event_next_bonfire(event_subject, &bonfire, false, "BonfireCreated", &view);
 
     return Ok(Json(view));

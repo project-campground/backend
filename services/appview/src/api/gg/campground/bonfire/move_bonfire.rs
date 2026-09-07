@@ -4,16 +4,17 @@ use appview_schema::{models::appview::Bonfire, schema::appview};
 use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
 use chrono::Utc;
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not, sql_types::BigInt,
+    BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, QueryResult, RunQueryDsl,
+    dsl::not, sql_types::BigInt,
 };
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
 use crate::{
-    database::establish_connection,
+    database::{DbConnection, establish_connection},
     expect_permission,
     helpers::{
-        api::handle_select_first_error,
+        api::handle_all_db_errors,
         permissions::{
             ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
         },
@@ -21,10 +22,7 @@ use crate::{
     },
     realtime::data::ReactiveSubject,
     views::bonfires::bonfire_view_basic,
-    xrpc::{
-        campsite::BonfireInfo,
-        error::{Result, XRPCError},
-    },
+    xrpc::{campsite::BonfireInfo, error::Result},
 };
 
 #[derive(Deserialize)]
@@ -49,8 +47,6 @@ pub async fn move_bonfire(
         return Ok(Json(bonfire_view_basic(&auth.bonfire)));
     }
 
-    let mut conn = establish_connection().unwrap();
-
     expect_permission!(has_leveled_perms_or_owner(
         &auth.campsite,
         &bonfire_id,
@@ -61,35 +57,44 @@ pub async fn move_bonfire(
         ContentPermissionConsts::VIEW_CONTENT
     ));
 
-    make_room_for_bonfire(&auth.bonfire.campsite_id, *position)?;
+    let mut conn = establish_connection().unwrap();
 
-    let current_date = Utc::now().naive_utc();
+    let bonfires = conn
+        .transaction(|conn| {
+            make_room_for_bonfire(conn, &auth.bonfire.campsite_id, *position)?;
 
-    let bonfire = diesel::update(appview::bonfire::table)
-        .filter(
-            appview::bonfire::campsiteid
-                .eq(&auth.bonfire.campsite_id)
-                .and(appview::bonfire::id.eq(bonfire_id)),
-        )
-        .set((
-            appview::bonfire::priority.eq(position),
-            appview::bonfire::updatedby.eq(&auth.actor.did),
-            appview::bonfire::updatedat.eq(current_date),
-        ))
-        .load::<Bonfire>(&mut conn)
-        .map_err(handle_select_first_error)?;
+            let current_date = Utc::now().naive_utc();
 
-    let bonfire = bonfire.first().unwrap();
+            let bonfires = diesel::update(appview::bonfire::table)
+                .filter(
+                    appview::bonfire::campsiteid
+                        .eq(&auth.bonfire.campsite_id)
+                        .and(appview::bonfire::id.eq(bonfire_id)),
+                )
+                .set((
+                    appview::bonfire::priority.eq(position),
+                    appview::bonfire::updatedby.eq(&auth.actor.did),
+                    appview::bonfire::updatedat.eq(current_date),
+                ))
+                .load::<Bonfire>(conn)?;
 
+            QueryResult::Ok(bonfires)
+        })
+        .map_err(handle_all_db_errors)?;
+
+    let bonfire = bonfires.first().unwrap();
     let view = bonfire_view_basic(bonfire);
-    event_next_bonfire(event_subject, &bonfire, false, "BonfireMoved", &view);
+
+    event_next_bonfire(event_subject, bonfire, false, "BonfireMoved", &view);
 
     return Ok(Json(view));
 }
 
-fn make_room_for_bonfire(campsite_id: &str, position: i32) -> Result<(), XRPCError> {
-    let mut conn = establish_connection().unwrap();
-
+fn make_room_for_bonfire(
+    conn: &mut DbConnection,
+    campsite_id: &str,
+    position: i32,
+) -> Result<(), diesel::result::Error> {
     let bonfire_exists_there = appview::bonfire::table
         .filter(
             appview::bonfire::campsiteid
@@ -97,8 +102,7 @@ fn make_room_for_bonfire(campsite_id: &str, position: i32) -> Result<(), XRPCErr
                 .and(appview::bonfire::priority.eq(position)),
         )
         .count()
-        .first::<i64>(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .first::<i64>(conn)?;
 
     if bonfire_exists_there < 1 {
         return Ok(());
@@ -118,8 +122,7 @@ fn make_room_for_bonfire(campsite_id: &str, position: i32) -> Result<(), XRPCErr
                     .gt(i32::MAX as i64))),
         )
         .set((appview::bonfire::priority.eq(appview::bonfire::priority + 1),))
-        .load::<Bonfire>(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .load::<Bonfire>(conn)?;
 
     Ok(())
 }

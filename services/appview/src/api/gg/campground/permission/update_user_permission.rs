@@ -107,6 +107,7 @@ pub async fn update_category_user_permission(
         ));
     }
 
+    // Whether the campsite member exists
     campsite_member::table
         .filter(
             campsite_member::userid

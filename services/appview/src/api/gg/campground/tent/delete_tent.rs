@@ -1,13 +1,14 @@
 #![allow(unused_variables)]
-use appview_schema::schema::appview::{campsite_permission, tent};
+use appview_schema::schema::appview::{campsite_permission, tent, tent_message};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
-use diesel::{ExpressionMethods, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
 use crate::{
     database::establish_connection,
     expect_permission,
     helpers::{
+        api::handle_all_db_errors,
         permissions::{
             ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
         },
@@ -15,10 +16,7 @@ use crate::{
     },
     realtime::data::ReactiveSubject,
     views::tents::tent_view_basic,
-    xrpc::{
-        campsite::TentInfo,
-        error::{Result, XRPCError},
-    },
+    xrpc::{campsite::TentInfo, error::Result},
 };
 
 #[post("/xrpc/gg.campground.tent.deleteTent?<tent_id>")]
@@ -39,14 +37,18 @@ pub async fn delete_tent(
 
     let mut conn = establish_connection().unwrap();
 
-    diesel::delete(tent::table)
-        .filter(tent::id.eq(auth.tent.id))
-        .execute(&mut conn)
-        .map_err(|_| XRPCError::InternalServerError)?;
-    diesel::delete(campsite_permission::table)
-        .filter(campsite_permission::tentid.eq(auth.tent.id))
-        .execute(&mut conn)
-        .map_err(|_| XRPCError::InternalServerError)?;
+    conn.transaction(|conn| {
+        diesel::delete(tent::table)
+            .filter(tent::id.eq(auth.tent.id))
+            .execute(conn)?;
+        diesel::delete(campsite_permission::table)
+            .filter(campsite_permission::tentid.eq(auth.tent.id))
+            .execute(conn)?;
+        diesel::delete(tent_message::table)
+            .filter(tent_message::id.eq(auth.tent.id))
+            .execute(conn)
+    })
+    .map_err(handle_all_db_errors)?;
 
     let view = tent_view_basic(&auth.tent);
     event_next_tent(event_subject, &auth.tent, true, "TentDeleted", &view);

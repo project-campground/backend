@@ -1,12 +1,11 @@
 use appview_schema::schema::appview;
 use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
-use diesel::{ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
 use crate::{
     database::establish_connection,
-    helpers::api::handle_select_first_error,
-    helpers::ws::event_next_campsite_global,
+    helpers::{api::handle_all_db_errors, ws::event_next_campsite_global},
     realtime::data::ReactiveSubject,
     xrpc::{
         campsite::CampsiteInfo,
@@ -28,19 +27,20 @@ pub async fn delete_campsite(
 
     let mut conn = establish_connection().unwrap();
 
-    diesel::delete(appview::campsite::table)
-        .filter(appview::campsite::id.eq(campsite_id))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+    conn.transaction(|conn| {
+        diesel::delete(appview::campsite::table)
+            .filter(appview::campsite::id.eq(campsite_id))
+            .execute(conn)?;
 
-    diesel::update(appview::actor::table)
-        .filter(appview::actor::campsites.contains(vec![campsite_id]))
-        .set(appview::actor::campsites.eq(diesel::dsl::array_remove(
-            appview::actor::campsites,
-            campsite_id,
-        )))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+        diesel::update(appview::actor::table)
+            .filter(appview::actor::campsites.contains(vec![campsite_id]))
+            .set(appview::actor::campsites.eq(diesel::dsl::array_remove(
+                appview::actor::campsites,
+                campsite_id,
+            )))
+            .execute(conn)
+    })
+    .map_err(handle_all_db_errors)?;
 
     event_next_campsite_global(
         event_subject,

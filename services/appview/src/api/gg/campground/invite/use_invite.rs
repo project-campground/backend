@@ -7,8 +7,8 @@ use appview_schema::{
 use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use chrono::Utc;
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, PgArrayExpressionMethods, QueryDsl,
-    RunQueryDsl,
+    BoolExpressionMethods, Connection, ExpressionMethods, JoinOnDsl, PgArrayExpressionMethods,
+    QueryDsl, RunQueryDsl,
 };
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
@@ -16,7 +16,7 @@ use uuid::Uuid;
 use crate::{
     database::{establish_connection, profiles::get_profile},
     helpers::{
-        api::handle_select_first_error,
+        api::{handle_all_db_errors, handle_select_first_error},
         ws::{event_next, event_next_campsite},
     },
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
@@ -93,40 +93,43 @@ pub async fn use_invite(
         .map(|x| Some(x.id))
         .collect::<Vec<Option<Uuid>>>();
 
-    diesel::update(campsite::table)
-        .filter(campsite::id.eq(invite.campsite_id.clone()))
-        .set(campsite::memberdids.eq(campsite::memberdids.concat(vec![auth.actor_did.clone()])))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+    let members = conn
+        .transaction(|conn| {
+            diesel::update(campsite::table)
+                .filter(campsite::id.eq(invite.campsite_id.clone()))
+                .set(
+                    campsite::memberdids
+                        .eq(campsite::memberdids.concat(vec![auth.actor_did.clone()])),
+                )
+                .execute(conn)?;
 
-    diesel::update(campsite_invite::table)
-        .filter(campsite_invite::id.eq(&invite.id))
-        .set(campsite_invite::used.eq(invite.used + 1))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+            diesel::update(campsite_invite::table)
+                .filter(campsite_invite::id.eq(&invite.id))
+                .set(campsite_invite::used.eq(invite.used + 1))
+                .execute(conn)?;
 
-    diesel::update(appview::actor::table)
-        .filter(appview::actor::did.eq(auth.actor_did.clone()))
-        .set(
-            appview::actor::campsites
-                .eq(appview::actor::campsites.concat(vec![invite.campsite_id.clone()])),
-        )
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+            diesel::update(appview::actor::table)
+                .filter(appview::actor::did.eq(auth.actor_did.clone()))
+                .set(
+                    appview::actor::campsites
+                        .eq(appview::actor::campsites.concat(vec![invite.campsite_id.clone()])),
+                )
+                .execute(conn)?;
 
-    let member = diesel::insert_into(campsite_member::table)
-        .values(CampsiteMember {
-            user_id: auth.actor_did,
-            campsite_id: invite.campsite_id,
-            joined_at: current_date,
-            used_invite_id: Some(uuid),
-            nickname: None,
-            roles: auto_roles,
+            diesel::insert_into(campsite_member::table)
+                .values(CampsiteMember {
+                    user_id: auth.actor_did,
+                    campsite_id: invite.campsite_id,
+                    joined_at: current_date,
+                    used_invite_id: Some(uuid),
+                    nickname: None,
+                    roles: auto_roles,
+                })
+                .load::<CampsiteMember>(conn)
         })
-        .load::<CampsiteMember>(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .map_err(handle_all_db_errors)?;
 
-    let member = member.first().unwrap();
+    let member = members.first().unwrap();
     let member_view = member_view_basic(member, profile.as_ref(), actor);
     let campsite_view = campsite_view_basic(&campsite);
 

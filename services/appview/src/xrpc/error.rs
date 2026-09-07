@@ -21,7 +21,19 @@ pub enum XRPCError {
     NotImplemented,
     #[error(transparent)]
     #[allow(dead_code)]
-    Other(anyhow::Error)
+    Other(anyhow::Error),
+}
+
+impl From<diesel::result::Error> for XRPCError {
+    fn from(value: diesel::result::Error) -> Self {
+        match value {
+            diesel::result::Error::NotFound => XRPCError::NotFound,
+            _ => {
+                println!("Unknown DB error: {}", value);
+                XRPCError::InternalServerError
+            }
+        }
+    }
 }
 
 impl<'r> Responder<'r, 'static> for XRPCError {
@@ -37,7 +49,7 @@ impl<'r> Responder<'r, 'static> for XRPCError {
             Self::NotImplemented => rocket::http::Status::NotImplemented,
             Self::Other(_) => rocket::http::Status::BadRequest,
         };
-        
+
         let body = ErrorBody {
             error: status.reason().unwrap_or(&status.to_string()).to_string(),
             message: match self {
@@ -47,7 +59,7 @@ impl<'r> Responder<'r, 'static> for XRPCError {
             },
         };
         let body = serde_json::to_string(&body).unwrap().into_bytes();
-        
+
         rocket::Response::build()
             .status(status)
             .header(rocket::http::ContentType::JSON)

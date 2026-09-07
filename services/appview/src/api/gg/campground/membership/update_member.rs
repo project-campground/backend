@@ -49,7 +49,7 @@ pub async fn update_member(
         0
     ));
 
-    let (member, actor, profile) = crate::schema::appview::campsite_member::table
+    let (member, actor_db, profile) = crate::schema::appview::campsite_member::table
         .filter(
             crate::schema::appview::campsite_member::campsiteid
                 .eq(campsite_id)
@@ -81,6 +81,6 @@ pub async fn update_member(
     return Ok(Json(member_view_detailed(
         &updated_member,
         profile.as_ref(),
-        &actor,
+        &actor_db,
     )));
 }

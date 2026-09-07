@@ -1,6 +1,6 @@
 use appview_schema::schema::appview::{campsite_permission, tent, tent_category};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
-use diesel::{ExpressionMethods, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
@@ -8,6 +8,7 @@ use crate::{
     database::establish_connection,
     expect_permission,
     helpers::{
+        api::handle_all_db_errors,
         permissions::{
             ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
         },
@@ -15,10 +16,7 @@ use crate::{
     },
     realtime::data::ReactiveSubject,
     views::tents::tent_category_view,
-    xrpc::{
-        campsite::CategoryInfo,
-        error::{Result, XRPCError},
-    },
+    xrpc::{campsite::CategoryInfo, error::Result},
 };
 
 #[allow(unused_variables)]
@@ -40,21 +38,19 @@ pub async fn delete_category(
 
     let mut conn = establish_connection().unwrap();
 
-    diesel::delete(tent_category::table)
-        .filter(tent_category::id.eq(auth.category.id))
-        .execute(&mut conn)
-        .map_err(|_| XRPCError::InternalServerError)?;
-    diesel::delete(campsite_permission::table)
-        .filter(campsite_permission::categoryid.eq(auth.category.id))
-        .execute(&mut conn)
-        .map_err(|_| XRPCError::InternalServerError)?;
-
-    // To make it easier to delete sections of tents
-    diesel::update(tent::table)
-        .filter(tent::categoryid.eq(auth.category.id))
-        .set(tent::categoryid.eq::<Option<Uuid>>(None))
-        .execute(&mut conn)
-        .map_err(|_| XRPCError::InternalServerError)?;
+    conn.transaction(|conn| {
+        diesel::delete(tent_category::table)
+            .filter(tent_category::id.eq(auth.category.id))
+            .execute(conn)?;
+        diesel::delete(campsite_permission::table)
+            .filter(campsite_permission::categoryid.eq(auth.category.id))
+            .execute(conn)?;
+        diesel::update(tent::table)
+            .filter(tent::categoryid.eq(auth.category.id))
+            .set(tent::categoryid.eq::<Option<Uuid>>(None))
+            .execute(conn)
+    })
+    .map_err(handle_all_db_errors)?;
 
     let view = tent_category_view(&auth.category);
     event_next_category(

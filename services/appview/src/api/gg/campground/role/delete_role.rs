@@ -1,9 +1,9 @@
 use appview_schema::{
-    models::appview::CampsiteRole,
-    schema::appview::{campsite_permission, campsite_role},
+    models::appview::{CampsiteMember, CampsiteRole},
+    schema::appview::{campsite_member, campsite_permission, campsite_role},
 };
 use campground_lexicon::gg::campground::role::RoleViewBasic;
-use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{Connection, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
 
@@ -11,7 +11,7 @@ use crate::{
     database::establish_connection,
     expect_permission,
     helpers::{
-        api::handle_select_first_error,
+        api::{handle_all_db_errors, handle_select_first_error},
         permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
         ws::event_next_campsite,
     },
@@ -69,14 +69,22 @@ pub async fn delete_role(
         0
     ));
 
-    diesel::delete(campsite_role::table)
-        .filter(campsite_role::id.eq(given_role.id))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
-    diesel::delete(campsite_permission::table)
-        .filter(campsite_permission::roleid.eq(given_role.id))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+    conn.transaction(|conn| {
+        diesel::delete(campsite_role::table)
+            .filter(campsite_role::id.eq(given_role.id))
+            .execute(conn)?;
+        diesel::delete(campsite_permission::table)
+            .filter(campsite_permission::roleid.eq(given_role.id))
+            .execute(conn)?;
+        diesel::update(campsite_member::table)
+            .filter(campsite_member::roles.contains(vec![given_role.id]))
+            .set(campsite_member::roles.eq(diesel::dsl::array_remove(
+                campsite_member::roles,
+                given_role.id,
+            )))
+            .load::<CampsiteMember>(conn)
+    })
+    .map_err(handle_all_db_errors)?;
 
     let view = role_view_basic(given_role);
     event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleDeleted", &view);

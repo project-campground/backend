@@ -177,6 +177,7 @@ pub async fn create_campsite(
                 .get_result::<CampsiteMember>(conn)?;
 
             // To make sure the user sees the new campsite they created
+            // FIXME Do not used already fetched actor campsite list and instead use PSQL append for concurrency
             let mut new_campsite_list = actor.campsites.clone();
             new_campsite_list.push(Some(campsite.id.clone()));
 

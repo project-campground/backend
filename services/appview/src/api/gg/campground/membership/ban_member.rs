@@ -5,7 +5,9 @@ use appview_schema::{
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::membership::MemberBanView;
 use chrono::Utc;
-use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, Connection, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
+};
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
@@ -17,7 +19,7 @@ use crate::{
     database::{actors::get_actor, establish_connection},
     expect_permission,
     helpers::{
-        api::handle_select_first_error,
+        api::{handle_all_db_errors, handle_select_first_error},
         permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
         ws::event_next_campsite,
     },
@@ -111,14 +113,19 @@ pub async fn ban_member<'a>(
             &member.roles,
             auth.member.roles.clone(),
         )?;
-        remove_campsite_member(
-            event_subject,
-            &auth.campsite.id,
-            &member,
-            Some(&target.0),
-            &target_actor,
-            actor,
-        )?;
+
+        conn.transaction(|conn| {
+            remove_campsite_member(
+                conn,
+                event_subject,
+                &auth.campsite.id,
+                &member,
+                Some(&target.0),
+                &target_actor,
+                actor,
+            )
+        })
+        .map_err(handle_all_db_errors)?;
     }
 
     add_ban(

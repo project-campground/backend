@@ -22,7 +22,8 @@ pub async fn get_campsite(
 ) -> Result<Json<CampsiteViewDetailed>> {
     let mut conn = establish_connection().unwrap();
 
-    let campsite = &crate::schema::appview::campsite::table
+    // Outdated-ish data doesn't matter that much here
+    let campsite = crate::schema::appview::campsite::table
         .filter(crate::schema::appview::campsite::id.eq(campsite_id))
         .first::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -40,9 +41,10 @@ pub async fn get_campsite(
         .iter()
         .map(role_view_basic)
         .collect::<Vec<RoleViewBasic>>();
+
     let (member, member_profile) = get_full_campsite_member(campsite_id, &auth.actor.did)?;
     let campsite_view = campsite_view_detailed(
-        campsite,
+        &campsite,
         bonfires,
         roles,
         member_view_basic(&member, member_profile.as_ref(), &auth.actor),

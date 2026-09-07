@@ -7,17 +7,18 @@ use appview_schema::{
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not, sql_types::BigInt,
+    BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not,
+    sql_types::BigInt,
 };
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
 use crate::{
     api::gg::campground::tent::move_tent::check_bonfire_existence,
-    database::establish_connection,
+    database::{DbConnection, establish_connection},
     expect_permission,
     helpers::{
-        api::handle_select_first_error,
+        api::handle_all_db_errors,
         permissions::{
             ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
         },
@@ -85,36 +86,40 @@ pub async fn move_category(
 
     let mut conn = establish_connection().unwrap();
 
-    if let Some(position) = position {
-        make_room_for_category(&auth.category.bonfire_id, *position)?;
-    }
+    let updated_categories = conn
+        .transaction(|conn| {
+            if let Some(position) = position {
+                make_room_for_category(conn, &auth.category.bonfire_id, *position)?;
+            }
 
-    let updated_category = diesel::update(crate::schema::appview::tent_category::table)
-        .filter(appview::tent_category::id.eq(&auth.category.id))
-        .set((
-            // All the new settings
-            appview::tent_category::priority.eq(position.unwrap_or(auth.category.priority)),
-            appview::tent_category::bonfireid.eq(&moved_bonfire),
-            // Mandatory
-            appview::tent_category::updatedat.eq(current_date),
-            appview::tent_category::updatedby.eq(&auth.actor.did),
-        ))
-        .load::<TentCategory>(&mut conn)
-        .map_err(handle_select_first_error)?;
+            let updated_categories = diesel::update(crate::schema::appview::tent_category::table)
+                .filter(appview::tent_category::id.eq(&auth.category.id))
+                .set((
+                    // All the new settings
+                    appview::tent_category::priority.eq(position.unwrap_or(auth.category.priority)),
+                    appview::tent_category::bonfireid.eq(&moved_bonfire),
+                    // Mandatory
+                    appview::tent_category::updatedat.eq(current_date),
+                    appview::tent_category::updatedby.eq(&auth.actor.did),
+                ))
+                .load::<TentCategory>(conn)?;
 
-    // If category was moved to another bonfire, then move all the tents along with it
-    if moved_bonfire != auth.category.bonfire_id {
-        diesel::update(crate::schema::appview::tent::table)
-            .filter(appview::tent::categoryid.eq(auth.category.id))
-            .set((
-                // All the new settings
-                appview::tent::bonfireid.eq(moved_bonfire),
-            ))
-            .load::<Tent>(&mut conn)
-            .map_err(handle_select_first_error)?;
-    }
+            // If category was moved to another bonfire, then move all the tents along with it
+            if moved_bonfire != auth.category.bonfire_id {
+                diesel::update(crate::schema::appview::tent::table)
+                    .filter(appview::tent::categoryid.eq(auth.category.id))
+                    .set((
+                        // All the new settings
+                        appview::tent::bonfireid.eq(moved_bonfire),
+                    ))
+                    .load::<Tent>(conn)?;
+            }
 
-    let updated_category = updated_category.first().unwrap();
+            diesel::result::QueryResult::Ok(updated_categories)
+        })
+        .map_err(handle_all_db_errors)?;
+
+    let updated_category = updated_categories.first().unwrap();
 
     let view = tent_category_view(updated_category);
     event_next_category(
@@ -128,9 +133,11 @@ pub async fn move_category(
     return Ok(Json(view));
 }
 
-fn make_room_for_category(bonfire_id: &str, position: i32) -> Result<(), XRPCError> {
-    let mut conn = establish_connection().unwrap();
-
+fn make_room_for_category(
+    conn: &mut DbConnection,
+    bonfire_id: &str,
+    position: i32,
+) -> Result<(), diesel::result::Error> {
     let exists_categories_there = tent_category::table
         .filter(
             tent_category::bonfireid
@@ -138,8 +145,7 @@ fn make_room_for_category(bonfire_id: &str, position: i32) -> Result<(), XRPCErr
                 .and(tent_category::priority.eq(position)),
         )
         .count()
-        .first::<i64>(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .first::<i64>(conn)?;
 
     // No other categories to update
     if exists_categories_there < 1 {
@@ -159,8 +165,7 @@ fn make_room_for_category(bonfire_id: &str, position: i32) -> Result<(), XRPCErr
                     .gt(i32::MAX as i64))),
         )
         .set((tent_category::priority.eq(tent_category::priority.sub(1)),))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .execute(conn)?;
 
     Ok(())
 }

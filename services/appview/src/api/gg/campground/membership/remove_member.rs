@@ -4,17 +4,17 @@ use appview_schema::{
 };
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
-use diesel::pg::expression::dsl::array_remove;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use diesel::{Connection, pg::expression::dsl::array_remove};
 use reqwest::Client;
 use rocket::State;
 use uuid::Uuid;
 
 use crate::{
-    database::{establish_connection, profiles::get_profile_from_actor},
+    database::{DbConnection, establish_connection, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
-        api::handle_select_first_error,
+        api::{handle_all_db_errors, handle_select_first_error},
         permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
         ws::{event_next, event_next_campsite},
     },
@@ -82,14 +82,20 @@ pub async fn remove_member(
         auth.member.roles.clone(),
     )?;
 
-    remove_campsite_member(
-        event_subject,
-        campsite_id,
-        &target.0,
-        target.2.as_ref(),
-        &target.1,
-        actor,
-    )
+    conn.transaction(|conn| {
+        remove_campsite_member(
+            conn,
+            event_subject,
+            campsite_id,
+            &target.0,
+            target.2.as_ref(),
+            &target.1,
+            actor,
+        )
+    })
+    .map_err(handle_all_db_errors)?;
+
+    Ok(())
 }
 
 #[post("/xrpc/gg.campground.membership.removeMember?<campsite_id>")]
@@ -110,45 +116,50 @@ pub async fn remove_self(
         ));
     }
 
-    remove_campsite_member(
-        event_subject,
-        campsite_id,
-        &auth.member,
-        profile.as_ref(),
-        &actor,
-        &actor.did,
-    )
+    let mut conn = establish_connection().unwrap();
+
+    conn.transaction(|conn| {
+        remove_campsite_member(
+            conn,
+            event_subject,
+            campsite_id,
+            &auth.member,
+            profile.as_ref(),
+            &actor,
+            &actor.did,
+        )
+    })
+    .map_err(handle_all_db_errors)?;
+
+    Ok(())
 }
 
 pub fn remove_campsite_member(
+    conn: &mut DbConnection,
     event_subject: &State<ReactiveSubject>,
     campsite_id: &str,
     target_member: &CampsiteMember,
     target_profile: Option<&Profile>,
     target_actor: &Actor,
     actor: &str,
-) -> Result<()> {
-    let mut conn = establish_connection().unwrap();
+) -> Result<(), diesel::result::Error> {
     diesel::delete(campsite_member::table)
         .filter(
             campsite_member::campsiteid
                 .eq(campsite_id)
                 .and(campsite_member::userid.eq(actor)),
         )
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .execute(conn)?;
 
     diesel::update(appview::actor::table)
         .filter(appview::actor::did.eq(actor))
         .set(appview::actor::campsites.eq(array_remove(appview::actor::campsites, campsite_id)))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .execute(conn)?;
 
     diesel::update(appview::campsite::table)
         .filter(appview::campsite::id.eq(campsite_id))
         .set(appview::campsite::memberdids.eq(array_remove(appview::campsite::memberdids, actor)))
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
+        .execute(conn)?;
 
     event_next_campsite(
         event_subject,
