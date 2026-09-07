@@ -3,8 +3,6 @@ use rsky_common::struct_to_cbor;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::helpers::ws::CampsiteMemberPermissions;
-
 #[derive(Debug, Clone, PartialEq, Deserialize_repr, Serialize_repr)]
 #[repr(i8)]
 pub enum SocketFrameType {
@@ -37,13 +35,6 @@ impl<'a, T> SocketDataFrame<'a, T> {
     pub fn new(r#type: String, payload: &'a T) -> Self {
         Self { r#type, payload }
     }
-}
-
-#[derive(Deserialize, Serialize)]
-#[serde(crate = "rocket::serde")]
-#[derive(Debug, Clone, PartialEq)]
-pub struct SocketFramePermissionViewPayload {
-    pub permissions: CampsiteMemberPermissions,
 }
 
 impl<'a, T: serde::Serialize> SocketFrameSerializer for SocketDataFrame<'a, T> {

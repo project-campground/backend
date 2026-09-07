@@ -28,10 +28,7 @@ use crate::{
     },
     realtime::{
         data::ReactiveSubjectData,
-        frames::{
-            SocketDataFrame, SocketFramePermissionViewPayload, SocketFrameSerializer,
-            SocketFrameType,
-        },
+        frames::SocketFrameType,
         messages::{SocketInAnyFrame, SocketInFramePayload},
     },
     try_or_continue,
@@ -127,22 +124,6 @@ pub async fn on_rocket_message(
                             }
 
                             WebSocketOutput::Ignore
-                        }
-                        SocketInFramePayload::ViewPermissions => {
-                            let payload = SocketFramePermissionViewPayload {
-                                permissions: permissions.clone(),
-                            };
-                            let response = SocketDataFrame::<SocketFramePermissionViewPayload>::new(
-                                "PermissionView".to_string(),
-                                &payload,
-                            );
-                            let binary = response.binary();
-
-                            if let Ok(binary) = binary {
-                                WebSocketOutput::BinaryData(binary)
-                            } else {
-                                WebSocketOutput::RocketError(binary.err().unwrap().to_string())
-                            }
                         }
                     }
                 }

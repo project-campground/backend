@@ -17,7 +17,6 @@ pub type SocketAuthFrame = SocketInFrame<Option<SocketAuthFramePayload>>;
 #[serde(tag = "t")]
 pub enum SocketInFramePayload {
     View(SocketViewFramePayload),
-    ViewPermissions,
 }
 
 pub type SocketInAnyFrame = SocketInFrame<SocketInFramePayload>;
