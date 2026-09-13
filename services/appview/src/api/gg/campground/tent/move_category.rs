@@ -1,27 +1,22 @@
-use std::ops::{Add, Sub};
+use std::ops::Add;
 
-use appview_schema::{
-    models::appview::{Tent, TentCategory},
-    schema::appview::{self, tent_category},
-};
+use appview_schema::{models::appview::TentCategory, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
 use diesel::{
-    BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not,
-    sql_types::BigInt,
+    BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl, sql_types::BigInt,
 };
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
+use uuid::Uuid;
 
 use crate::{
-    api::gg::campground::tent::move_tent::check_bonfire_existence,
+    api::gg::campground::tent::util::check_bonfire_existence,
     database::{DbConnection, establish_connection},
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
-        },
+        permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner},
         ws::event_next_category,
     },
     realtime::data::ReactiveSubject,
@@ -34,9 +29,10 @@ use crate::{
 
 #[derive(Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "camelCase")]
-pub struct MoveCategoryBody {
-    bonfire_id: Option<String>,
-    position: Option<i32>,
+#[serde(untagged)]
+pub enum MoveTentBody {
+    ToBonfire { bonfire_id: String, position: i32 },
+    ToPosition { position: i32 },
 }
 
 #[allow(unused_variables)]
@@ -45,127 +41,145 @@ pub async fn move_category(
     auth: CategoryInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     category_id: &str,
-    body: Json<MoveCategoryBody>,
+    body: Json<MoveTentBody>,
 ) -> Result<Json<TentCategoryView>> {
-    let MoveCategoryBody {
-        bonfire_id,
-        position,
-    } = &body.into_inner();
-    if bonfire_id.is_none() && position.is_none() {
-        return Err(XRPCError::BadRequest(
-            "Expected at least one property in the body".to_string(),
-        ));
-    } else if bonfire_id
-        .clone()
-        .map_or(true, |bonfire_id| auth.category.bonfire_id == bonfire_id)
-        || position.map_or(true, |position| auth.category.priority == position)
-    {
-        // Failing seems like a bad DX if there is some weird bug happening
-        return Ok(Json(tent_category_view(&auth.category)));
-    }
-
     expect_permission!(has_leveled_perms_or_owner(
         &auth.campsite,
         &auth.category.bonfire_id,
-        Some(auth.category.id.clone()),
+        Some(auth.category.id),
         None,
         &auth.member,
         GeneralPermissionConsts::MANAGE_TENTS,
-        ContentPermissionConsts::VIEW_CONTENT
+        0
     ));
 
-    let moved_bonfire = bonfire_id
-        .clone()
-        .unwrap_or(auth.category.bonfire_id.clone());
-
-    // To make sure they are not moving to category that doesn't exist
-    if moved_bonfire != auth.category.bonfire_id {
-        check_bonfire_existence(&auth.campsite, &auth.member, &moved_bonfire).await?;
+    match body.into_inner() {
+        MoveTentBody::ToBonfire {
+            bonfire_id,
+            position,
+        } => move_tent_to_bonfire(auth, event_subject, bonfire_id, position).await,
+        MoveTentBody::ToPosition { position } => {
+            move_tent_to_pos(auth, event_subject, position).await
+        }
     }
-    let current_date = Utc::now().naive_utc();
+}
+
+fn handle_moved_categories(
+    auth: &CategoryInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    result: (Vec<TentCategory>, Vec<(Uuid, i32)>),
+) -> Result<Json<TentCategoryView>, XRPCError> {
+    let category = result.0.first().unwrap();
+
+    let view = tent_category_view(category);
+    event_next_category(event_subject, &auth.category, false, "CategoryMoved", &view);
+
+    Ok(Json(view))
+}
+
+async fn move_tent_to_pos(
+    auth: CategoryInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    position: i32,
+) -> Result<Json<TentCategoryView>, XRPCError> {
+    // Maybe a client had failed checked
+    if auth.category.priority == position {
+        return Ok(Json(tent_category_view(&auth.category)));
+    }
 
     let mut conn = establish_connection().unwrap();
 
-    let updated_categories = conn
-        .transaction(|conn| {
-            if let Some(position) = position {
-                make_room_for_category(conn, &auth.category.bonfire_id, *position)?;
-            }
+    let result =
+        set_category_position_unchecked(&mut conn, &auth, &auth.category.bonfire_id, position)?;
 
-            let updated_categories = diesel::update(crate::schema::appview::tent_category::table)
-                .filter(appview::tent_category::id.eq(&auth.category.id))
+    handle_moved_categories(&auth, event_subject, result)
+}
+
+async fn move_tent_to_bonfire(
+    auth: CategoryInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    bonfire_id: String,
+    position: i32,
+) -> Result<Json<TentCategoryView>, XRPCError> {
+    // Maybe a client had failed checked
+    if bonfire_id == auth.category.bonfire_id {
+        return Ok(Json(tent_category_view(&auth.category)));
+    }
+
+    let mut conn = establish_connection().unwrap();
+
+    check_bonfire_existence(&mut conn, &auth.campsite, &auth.member, &bonfire_id)?;
+
+    let result = set_category_position_unchecked(&mut conn, &auth, &bonfire_id, position)?;
+
+    handle_moved_categories(&auth, event_subject, result)
+}
+
+fn set_category_position_unchecked(
+    conn: &mut DbConnection,
+    auth: &CategoryInfo<'_>,
+    bonfire_id: &str,
+    position: i32,
+) -> Result<(Vec<TentCategory>, Vec<(Uuid, i32)>), XRPCError> {
+    conn.transaction(|conn| {
+        let moved_categories = make_room_for_category(conn, bonfire_id, position)?;
+
+        let current_date = Utc::now().naive_utc();
+
+        Ok((
+            diesel::update(crate::schema::appview::tent_category::table)
+                .filter(appview::tent_category::id.eq(auth.category.id.clone()))
                 .set((
                     // All the new settings
-                    appview::tent_category::priority.eq(position.unwrap_or(auth.category.priority)),
-                    appview::tent_category::bonfireid.eq(&moved_bonfire),
+                    appview::tent_category::priority.eq(position),
+                    appview::tent_category::bonfireid.eq(bonfire_id),
                     // Mandatory
                     appview::tent_category::updatedat.eq(current_date),
                     appview::tent_category::updatedby.eq(&auth.actor.did),
                 ))
-                .load::<TentCategory>(conn)?;
-
-            // If category was moved to another bonfire, then move all the tents along with it
-            if moved_bonfire != auth.category.bonfire_id {
-                diesel::update(crate::schema::appview::tent::table)
-                    .filter(appview::tent::categoryid.eq(auth.category.id))
-                    .set((
-                        // All the new settings
-                        appview::tent::bonfireid.eq(moved_bonfire),
-                    ))
-                    .load::<Tent>(conn)?;
-            }
-
-            diesel::result::QueryResult::Ok(updated_categories)
-        })
-        .map_err(handle_all_db_errors)?;
-
-    let updated_category = updated_categories.first().unwrap();
-
-    let view = tent_category_view(updated_category);
-    event_next_category(
-        event_subject,
-        &updated_category,
-        false,
-        "CategoryMoved",
-        &view,
-    );
-
-    return Ok(Json(view));
+                .load::<TentCategory>(conn)?,
+            moved_categories,
+        ))
+    })
+    .map_err(handle_all_db_errors)
 }
 
+// FIXME make this generic with terrible handling of generics in diesel
 fn make_room_for_category(
     conn: &mut DbConnection,
     bonfire_id: &str,
     position: i32,
-) -> Result<(), diesel::result::Error> {
-    let exists_categories_there = tent_category::table
+) -> Result<Vec<(Uuid, i32)>, diesel::result::Error> {
+    let exists_tents_in_pos = appview::tent_category::table
         .filter(
-            tent_category::bonfireid
+            appview::tent_category::bonfireid
                 .eq(bonfire_id)
-                .and(tent_category::priority.eq(position)),
+                .and(appview::tent_category::priority.eq(position)),
         )
         .count()
         .first::<i64>(conn)?;
 
-    // No other categories to update
-    if exists_categories_there < 1 {
-        return Ok(());
+    // No other tents to update
+    if exists_tents_in_pos < 1 {
+        return Ok(vec![]);
     }
 
-    // Make other categories go above it (since client is expected to subtract 1 when putting above a category already)
+    // Make other tents go below it (since client is expected to add 1 when putting below a tent already)
     diesel::update(crate::schema::appview::tent_category::table)
         .filter(
-            tent_category::bonfireid
+            appview::tent_category::bonfireid
                 .eq(bonfire_id)
-                // Don't move all tents; it would change nothing. Instead, make a gap for that position specifically
-                .and(tent_category::priority.ge(position))
-                .and(not(tent_category::priority
-                    .cast::<BigInt>()
-                    .add(1)
-                    .gt(i32::MAX as i64))),
+                // Update only tent categories at that position and below
+                .and(appview::tent_category::priority.ge(position))
+                // Make sure it can even go down
+                .and(
+                    appview::tent_category::priority
+                        .cast::<BigInt>()
+                        .add(1)
+                        .le(i32::MAX as i64),
+                ),
         )
-        .set((tent_category::priority.eq(tent_category::priority.sub(1)),))
-        .execute(conn)?;
-
-    Ok(())
+        .set((appview::tent_category::priority.eq(appview::tent_category::priority + 1),))
+        .returning((appview::tent_category::id, appview::tent_category::priority))
+        .load::<(Uuid, i32)>(conn)
 }

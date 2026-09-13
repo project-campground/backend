@@ -1,0 +1,83 @@
+use appview_schema::models::appview::{Bonfire, Campsite, CampsiteMember, TentCategory};
+use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
+use uuid::Uuid;
+
+use crate::{
+    database::DbConnection,
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner},
+    },
+    xrpc::error::XRPCError,
+};
+
+pub fn check_bonfire_existence(
+    conn: &mut DbConnection,
+    campsite: &Campsite,
+    member: &CampsiteMember,
+    moved_bonfire_id: &str,
+) -> Result<(), XRPCError> {
+    let bonfires = &crate::schema::appview::bonfire::table
+        .filter(
+            crate::schema::appview::bonfire::id
+                .eq(moved_bonfire_id)
+                .and(crate::schema::appview::bonfire::campsiteid.eq(&campsite.id)),
+        )
+        .load::<Bonfire>(conn)
+        .map_err(handle_select_first_error)?;
+
+    if bonfires.len() == 0 {
+        return Err(XRPCError::BadRequest(
+            "Bonfire supplied in 'bonfire_id' does not exist".to_string(),
+        ));
+    }
+
+    expect_permission!(has_leveled_perms_or_owner(
+        campsite,
+        moved_bonfire_id,
+        None,
+        None,
+        member,
+        GeneralPermissionConsts::MANAGE_TENTS,
+        0,
+    ));
+
+    return Ok(());
+}
+
+pub fn check_category_existence(
+    conn: &mut DbConnection,
+    campsite: &Campsite,
+    member: &CampsiteMember,
+    category_id: Uuid,
+) -> Result<String, XRPCError> {
+    let tent_categories = &crate::schema::appview::tent_category::table
+        .filter(crate::schema::appview::tent_category::id.eq(category_id))
+        .load::<TentCategory>(conn)
+        .map_err(handle_select_first_error)?;
+
+    if tent_categories.len() == 0 {
+        return Err(XRPCError::NotFound);
+    }
+
+    let tent_category = tent_categories.first().unwrap();
+
+    // Can't move tent out of campsite
+    if tent_category.campsite_id != campsite.id {
+        return Err(XRPCError::NotFound);
+    }
+
+    // FIXME: Reduce duplicate fetching for bonfire permissions
+    expect_permission!(has_leveled_perms_or_owner(
+        campsite,
+        &tent_category.bonfire_id,
+        Some(category_id),
+        None,
+        member,
+        GeneralPermissionConsts::MANAGE_TENTS,
+        0,
+    ));
+
+    return Ok(tent_category.bonfire_id.clone());
+}

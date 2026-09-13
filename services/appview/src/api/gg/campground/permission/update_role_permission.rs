@@ -57,8 +57,7 @@ pub async fn update_tent_role_permission(
             &auth.member,
             GeneralPermissionConsts::MANAGE_ROLES,
             0,
-        )
-        .await?)
+        )?)
     {
         return Err(XRPCError::Forbidden(
             "No given permission to do that".to_string(),
@@ -125,8 +124,7 @@ pub async fn update_category_role_permission(
             &auth.member,
             GeneralPermissionConsts::MANAGE_ROLES,
             0,
-        )
-        .await?)
+        )?)
     {
         return Err(XRPCError::Forbidden(
             "No given permission to do that".to_string(),
@@ -193,8 +191,7 @@ pub async fn update_bonfire_role_permission(
             &auth.member,
             GeneralPermissionConsts::MANAGE_ROLES,
             0,
-        )
-        .await?)
+        )?)
     {
         return Err(XRPCError::Forbidden(
             "No given permission to do that".to_string(),
