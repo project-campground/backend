@@ -15,7 +15,7 @@ pub fn system_message(
         campsite_id: campsite_id.to_string(),
         tent_id: tent_id.clone(),
 
-        r#type: MessageType::Default as i16,
+        r#type: MessageType::System as i16,
 
         components: vec![serde_json::value::to_value(component).ok()],
         // Most of content the should be empty
