@@ -8,16 +8,16 @@ type: Feature
 
 ---
 
-# What is the current problem you are facing?
-<!-- A clear and concise description of what the problem is. Ex. I'm always frustrated when [...] -->
+# What is the current problem being faced?
+<!-- A clear and concise description of what the problem is. -->
 
 # Could this problem be solved by the front-end itself?
-<!-- Whether this could be implemented by clients/applications -->
+<!-- Whether this could be implemented by clients/applications and how would that look like -->
 
-# Describe the feature that would solve the problem
-<!-- A clear and concise description of what you want to happen. -->
+# The feature that would solve the problem
+<!-- A clear and concise description of how the feature would look like. -->
 
-# Describe alternatives you've considered
+# Possible alternatives
 <!-- A clear and concise description of any alternative solutions or features you've considered. Describe issues with alternative solutions that the feature helps to solve. -->
 
 # Additional context and affected projects
