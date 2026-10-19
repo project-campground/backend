@@ -1,11 +1,7 @@
-use std::ops::Add;
-
 use appview_schema::{models::appview::TentCategory, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryView;
 use chrono::Utc;
-use diesel::{
-    BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl, sql_types::BigInt,
-};
+use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -19,6 +15,7 @@ use crate::{
         permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner},
         ws::event_next_category,
     },
+    make_room_for_items,
     realtime::data::ReactiveSubject,
     views::tents::tent_category_view,
     xrpc::{
@@ -144,42 +141,23 @@ fn set_category_position_unchecked(
     .map_err(handle_all_db_errors)
 }
 
-// FIXME make this generic with terrible handling of generics in diesel
 fn make_room_for_category(
     conn: &mut DbConnection,
     bonfire_id: &str,
     position: i32,
 ) -> Result<Vec<(Uuid, i32)>, diesel::result::Error> {
-    let exists_tents_in_pos = appview::tent_category::table
-        .filter(
-            appview::tent_category::bonfireid
-                .eq(bonfire_id)
-                .and(appview::tent_category::priority.eq(position)),
-        )
-        .count()
-        .first::<i64>(conn)?;
+    use diesel::BoolExpressionMethods;
+    use diesel::QueryDsl;
+    use diesel::sql_types::BigInt;
+    use std::ops::Add;
 
-    // No other tents to update
-    if exists_tents_in_pos < 1 {
-        return Ok(vec![]);
-    }
-
-    // Make other tents go below it (since client is expected to add 1 when putting below a tent already)
-    diesel::update(crate::schema::appview::tent_category::table)
-        .filter(
-            appview::tent_category::bonfireid
-                .eq(bonfire_id)
-                // Update only tent categories at that position and below
-                .and(appview::tent_category::priority.ge(position))
-                // Make sure it can even go down
-                .and(
-                    appview::tent_category::priority
-                        .cast::<BigInt>()
-                        .add(1)
-                        .le(i32::MAX as i64),
-                ),
-        )
-        .set((appview::tent_category::priority.eq(appview::tent_category::priority + 1),))
-        .returning((appview::tent_category::id, appview::tent_category::priority))
-        .load::<(Uuid, i32)>(conn)
+    make_room_for_items!(
+        crate::schema::appview::tent_category::table,
+        crate::schema::appview::tent_category::id,
+        crate::schema::appview::tent_category::priority,
+        appview::tent_category::bonfireid
+            .eq(bonfire_id);
+        conn,
+        position
+    );
 }

@@ -81,3 +81,39 @@ pub fn check_category_existence(
 
     return Ok(tent_category.bonfire_id.clone());
 }
+
+#[macro_export]
+macro_rules! make_room_for_items {
+    ($table: path, $id_column: path, $priority_column: path, $filter: expr; $conn: expr, $position: expr) => {
+        let items_exist_in_pos = $table
+            .filter(
+                $filter
+                    .and($priority_column.eq($position)),
+            )
+            .count()
+            .first::<i64>($conn)?;
+
+        // No other items to update
+        if items_exist_in_pos < 1 {
+            return Ok(vec![]);
+        }
+
+        // Make other tents go below it (since client is expected to add 1 when putting below a tent already)
+        return diesel::update($table)
+            .filter(
+                $filter
+                    // Update only item at that position and below
+                    .and($priority_column.ge($position))
+                    // Make sure it can even go down
+                    .and(
+                        $priority_column
+                            .cast::<BigInt>()
+                            .add(1)
+                            .le(i32::MAX as i64),
+                    ),
+            )
+            .set(($priority_column.eq($priority_column + 1)))
+            .returning(($id_column, $priority_column))
+            .load::<(Uuid, i32)>($conn);
+    };
+}

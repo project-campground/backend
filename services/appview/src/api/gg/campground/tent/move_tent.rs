@@ -1,12 +1,8 @@
-use std::ops::Add;
-
 use appview_schema::{models::appview::Tent, schema::appview};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
 use chrono::Utc;
-use diesel::{
-    BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl,
-    sql_types::{BigInt, Bool},
-};
+use diesel::QueryDsl;
+use diesel::{BoolExpressionMethods, Connection, ExpressionMethods, RunQueryDsl, sql_types::Bool};
 use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
@@ -22,6 +18,7 @@ use crate::{
         },
         ws::event_next_tent,
     },
+    make_room_for_items,
     realtime::data::ReactiveSubject,
     views::tents::tent_view_basic,
     xrpc::{
@@ -215,53 +212,24 @@ fn make_room_for_tent(
     category_id: Option<Uuid>,
     position: i32,
 ) -> Result<Vec<(Uuid, i32)>, diesel::result::Error> {
-    let exists_tents_in_pos = appview::tent::table
-        .filter(
-            appview::tent::bonfireid
-                .eq(bonfire_id)
-                // Only see if there are tents in the same position AND category
-                // It doesn't affect how it appears if it's in different category
-                .and(
-                    appview::tent::categoryid
-                        .is_null()
-                        .and::<bool, Bool>(category_id == None)
-                        .or(appview::tent::categoryid.eq(category_id)),
-                )
-                .and(appview::tent::priority.eq(position)),
-        )
-        .count()
-        .first::<i64>(conn)?;
+    use diesel::sql_types::BigInt;
+    use std::ops::Add;
 
-    println!("Tents in pos({}): {}", position, exists_tents_in_pos);
-
-    // No other tents to update
-    if exists_tents_in_pos < 1 {
-        return Ok(vec![]);
-    }
-
-    // Make other tents go below it (since client is expected to add 1 when putting below a tent already)
-    diesel::update(crate::schema::appview::tent::table)
-        .filter(
-            appview::tent::bonfireid
-                .eq(bonfire_id)
-                .and(
-                    // Don't really care about tents outside the category, their position doesn't affect anything
-                    appview::tent::categoryid
-                        .is_null()
-                        .and::<bool, Bool>(category_id == None)
-                        .or(appview::tent::categoryid.eq(category_id)),
-                )
-                // Update only tents at that position and below
-                .and(appview::tent::priority.ge(position))
-                // Make sure it can even go down
-                .and(
-                    appview::tent::priority
-                        .cast::<BigInt>()
-                        .add(1)
-                        .le(i32::MAX as i64),
-                ),
-        )
-        .set((appview::tent::priority.eq(appview::tent::priority + 1),))
-        .returning((appview::tent::id, appview::tent::priority))
-        .load::<(Uuid, i32)>(conn)
+    make_room_for_items!(
+        crate::schema::appview::tent::table,
+        crate::schema::appview::tent::id,
+        crate::schema::appview::tent::priority,
+        appview::tent::bonfireid
+            .eq(bonfire_id)
+            // Only see if there are tents in the same position AND category
+            // It doesn't affect how it appears if it's in different category
+            .and(
+                appview::tent::categoryid
+                    .is_null()
+                    .and::<bool, Bool>(category_id == None)
+                    .or(appview::tent::categoryid.eq(category_id)),
+            );
+        conn,
+        position
+    );
 }

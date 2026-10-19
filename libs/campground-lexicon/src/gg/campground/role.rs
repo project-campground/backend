@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use uuid::Uuid;
 
 use crate::gg::campground::permission::PermissionsDictionary;
@@ -22,7 +20,7 @@ pub enum RoleMotion {
 pub struct RoleViewBasic {
     pub id: Uuid,
     pub campsite_id: String,
-    
+
     pub name: String,
     pub raised: bool,
     pub pingable: bool,
@@ -30,10 +28,10 @@ pub struct RoleViewBasic {
 
     pub permissions: PermissionsDictionary,
     pub position: i32,
-    
+
     pub colors: Vec<u32>,
     pub motion: RoleMotion,
-    
+
     pub created_by: String,
     pub created_at: String,
     pub updated_by: String,
@@ -44,10 +42,4 @@ pub struct RoleViewBasic {
 #[serde(rename_all = "camelCase")]
 pub struct GetRolesOutput {
     pub roles: Vec<RoleViewBasic>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RolesMovedOutput {
-    pub roles_by_position: HashMap<Uuid, i32>,
 }
