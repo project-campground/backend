@@ -104,12 +104,11 @@ pub async fn move_role(
                 ))
                 .load::<CampsiteRole>(conn)
         })
-        .map_err(handle_select_first_error)?
-        .iter()
-        .map(role_view_basic)
-        .collect::<Vec<RoleViewBasic>>();
+        .map_err(handle_select_first_error)?;
 
-    let role_view = role_view_basic(&given_role);
+    let updated_role = updated_roles.first().unwrap();
+
+    let role_view = role_view_basic(updated_role);
 
     event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleMoved", &role_view);
 
