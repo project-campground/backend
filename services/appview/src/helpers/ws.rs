@@ -2,9 +2,6 @@ use std::collections::HashMap;
 
 use appview_schema::models::appview::{Bonfire, Tent, TentCategory};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::permission::{
-    PermissionsDictionary, PermissionsStateDictionary,
-};
 use reqwest::Client;
 use rocket::State;
 use rsky_common::cbor_to_struct;
@@ -24,10 +21,10 @@ use crate::{
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct CampsiteMemberPermissions {
-    pub roles: PermissionsDictionary,
-    pub bonfires: HashMap<String, PermissionsStateDictionary>,
-    pub categories: HashMap<Uuid, PermissionsStateDictionary>,
-    pub tents: HashMap<Uuid, PermissionsStateDictionary>,
+    pub roles: u32,
+    pub bonfires: HashMap<String, u64>,
+    pub categories: HashMap<Uuid, u64>,
+    pub tents: HashMap<Uuid, u64>,
 }
 
 pub async fn get_did_from_auth(
@@ -108,7 +105,7 @@ pub fn event_next<TData, TFn>(
 pub fn event_next_campsite<T>(
     event_subject: &State<ReactiveSubject>,
     campsite_id: &String,
-    permissions_required: u64,
+    permissions_required: u32,
     data_type: &str,
     payload: &T,
 ) where

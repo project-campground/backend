@@ -11,7 +11,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{GeneralPermissionConsts, has_any_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
     },
     views::members::member_view_detailed,
     xrpc::{campsite::CampsiteInfo, error::Result},
@@ -27,14 +30,16 @@ pub async fn get_members_detailed(
     let limit = limit.unwrap_or(50);
     let offset = offset.unwrap_or(0);
 
-    expect_permission!(has_any_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::KICK_MEMBERS
-            | GeneralPermissionConsts::BAN_MEMBERS
-            | GeneralPermissionConsts::MUTE_MEMBERS
-            | GeneralPermissionConsts::GIVE_ROLES
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission.fetch_roles().has_any_permissions(
+                PermissionConsts::BAN_MEMBERS
+                    | PermissionConsts::KICK_MEMBERS
+                    | PermissionConsts::GIVE_ROLES
+                    | PermissionConsts::MUTE_MEMBERS
+            ))?
+    );
 
     let mut conn = establish_connection().unwrap();
 

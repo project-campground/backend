@@ -7,7 +7,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
     },
     xrpc::error::XRPCError,
 };
@@ -33,15 +36,18 @@ pub fn check_bonfire_existence(
         ));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        campsite,
-        moved_bonfire_id,
-        None,
-        None,
-        member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        0,
-    ));
+    expect_permission!(
+        PermissionCheck::member(&member)
+            .is_owner(&campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &campsite.id,
+                &moved_bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     return Ok(());
 }
@@ -69,15 +75,18 @@ pub fn check_category_existence(
     }
 
     // FIXME: Reduce duplicate fetching for bonfire permissions
-    expect_permission!(has_leveled_perms_or_owner(
-        campsite,
-        &tent_category.bonfire_id,
-        Some(category_id),
-        None,
-        member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        0,
-    ));
+    expect_permission!(
+        PermissionCheck::member(&member)
+            .is_owner(&campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &campsite.id,
+                &tent_category.bonfire_id,
+                Some(&category_id),
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     return Ok(tent_category.bonfire_id.clone());
 }

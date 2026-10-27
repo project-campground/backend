@@ -11,7 +11,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
     },
     views::members::member_ban_view,
     xrpc::{
@@ -34,12 +37,13 @@ pub async fn get_member_bans(
         return Err(XRPCError::BadRequest("Expected 'limit' query to be between (and including) 1 and 100, as well as 'offset' query to be positive integer or 0".to_string()));
     }
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::BAN_MEMBERS,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::BAN_MEMBERS))?
+    );
 
     let mut conn = establish_connection().unwrap();
 

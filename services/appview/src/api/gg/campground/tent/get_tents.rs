@@ -14,10 +14,7 @@ use uuid::Uuid;
 
 use crate::{
     database::establish_connection,
-    helpers::{
-        api::{handle_all_db_errors, handle_select_first_error},
-        permissions::ContentPermissionConsts,
-    },
+    helpers::api::{handle_all_db_errors, handle_select_first_error},
     util::iter::AggregatePermissions,
     views::{
         permissions::permission_view_basic,

@@ -11,7 +11,7 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{PermissionConsts, has_role_perms_or_owner},
         ws::event_next_bonfire,
     },
     realtime::data::ReactiveSubject,
@@ -63,7 +63,7 @@ pub async fn create_bonfire(
     expect_permission!(has_role_perms_or_owner(
         &auth.campsite,
         &auth.member,
-        GeneralPermissionConsts::MANAGE_BONFIRES,
+        PermissionConsts::MANAGE_BONFIRES,
         0
     ));
 

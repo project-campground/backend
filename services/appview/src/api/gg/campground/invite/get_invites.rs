@@ -13,7 +13,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
     },
     views::invites::campsite_invite_view_campsite,
     xrpc::{
@@ -38,12 +41,13 @@ pub async fn get_invites(
         ));
     }
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_INVITES,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::MANAGE_INVITES))?
+    );
 
     let mut conn = establish_connection().unwrap();
     let invites = campsite_invite::table

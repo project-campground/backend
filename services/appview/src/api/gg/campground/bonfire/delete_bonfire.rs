@@ -9,7 +9,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
+            ContentPermissionConsts, PermissionConsts, has_leveled_perms_or_owner,
         },
         ws::event_next_bonfire,
     },
@@ -38,7 +38,7 @@ pub async fn delete_bonfire(
         None,
         None,
         &auth.member,
-        GeneralPermissionConsts::MANAGE_BONFIRES,
+        PermissionConsts::MANAGE_BONFIRES,
         ContentPermissionConsts::VIEW_CONTENT
     ));
 

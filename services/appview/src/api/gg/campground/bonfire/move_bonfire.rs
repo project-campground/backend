@@ -15,9 +15,7 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
-        },
+        permissions::{ContentPermissionConsts, PermissionConsts, has_leveled_perms_or_owner},
         ws::event_next_bonfire,
     },
     realtime::data::ReactiveSubject,
@@ -53,7 +51,7 @@ pub async fn move_bonfire(
         None,
         None,
         &auth.member,
-        GeneralPermissionConsts::MANAGE_BONFIRES,
+        PermissionConsts::MANAGE_BONFIRES,
         ContentPermissionConsts::VIEW_CONTENT
     ));
 

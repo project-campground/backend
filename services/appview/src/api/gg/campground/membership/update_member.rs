@@ -12,7 +12,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
     },
     views::members::member_view_detailed,
     xrpc::{campsite::CampsiteInfo, error::Result},
@@ -37,17 +40,18 @@ pub async fn update_member(
     let mut conn = establish_connection().unwrap();
 
     let required_permission = if auth.actor.did == actor {
-        GeneralPermissionConsts::MANAGE_SELF_IDENTITY
+        PermissionConsts::MANAGE_SELF_IDENTITY
     } else {
-        GeneralPermissionConsts::MANAGE_OTHERS_IDENTITY
+        PermissionConsts::MANAGE_OTHERS_IDENTITY
     };
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        required_permission,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(required_permission))?
+    );
 
     let (member, actor_db, profile) = crate::schema::appview::campsite_member::table
         .filter(

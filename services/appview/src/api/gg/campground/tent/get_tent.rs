@@ -3,7 +3,10 @@ use rocket::serde::json::Json;
 
 use crate::{
     expect_permission,
-    helpers::permissions::{ContentPermissionConsts, has_leveled_perms_or_owner},
+    helpers::permissions::{
+        PermissionConsts,
+        check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+    },
     views::tents::tent_view_detailed,
     xrpc::{campsite::TentInfo, error::Result},
 };
@@ -11,15 +14,18 @@ use crate::{
 #[allow(unused_variables)]
 #[get("/xrpc/gg.campground.tent.getTent?<tent_id>")]
 pub async fn get_tent(auth: TentInfo<'_>, tent_id: &str) -> Result<Json<TentViewDetailed>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.tent.bonfire_id,
-        auth.tent.category_id.clone(),
-        Some(auth.tent.id),
-        &auth.member,
-        0,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.tent.bonfire_id,
+                auth.tent.category_id.as_ref(),
+                Some(&auth.tent.id)
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     return Ok(Json(tent_view_detailed(&auth.tent)));
 }

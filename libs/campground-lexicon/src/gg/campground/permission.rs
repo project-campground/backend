@@ -2,20 +2,6 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PermissionsDictionary {
-    pub general: u64,
-    pub content: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PermissionsStateDictionary {
-    pub allowed: PermissionsDictionary,
-    pub denied: PermissionsDictionary,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct PermissionViewBasic {
     pub bonfire_id: String,
     pub category_id: Option<Uuid>,
@@ -24,7 +10,7 @@ pub struct PermissionViewBasic {
     pub user_id: Option<String>,
     pub role_id: Option<Uuid>,
 
-    pub permissions: PermissionsStateDictionary,
+    pub permissions: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -40,7 +26,7 @@ pub struct PermissionViewDetailed {
     pub user_id: Option<String>,
     pub role_id: Option<Uuid>,
 
-    pub permissions: PermissionsStateDictionary,
+    pub permissions: u64,
 
     pub created_by: String,
     pub created_at: String,

@@ -16,7 +16,7 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{PermissionConsts, has_role_perms_or_owner},
         ws::event_next,
     },
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
@@ -87,7 +87,7 @@ pub async fn remove_member_role(
     expect_permission!(has_role_perms_or_owner(
         &auth.campsite,
         &auth.member,
-        GeneralPermissionConsts::GIVE_ROLES,
+        PermissionConsts::GIVE_ROLES,
         0
     ));
 

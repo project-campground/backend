@@ -13,7 +13,7 @@ use crate::{
     database::establish_connection,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_full_leveled_perms},
+        permissions::{PermissionConsts, has_full_leveled_perms},
     },
     realtime::data::ReactiveSubject,
     xrpc::{
@@ -41,7 +41,7 @@ pub async fn update_tent_user_permission(
             auth.tent.category_id.clone(),
             Some(auth.tent.id.clone()),
             &auth.member,
-            GeneralPermissionConsts::MANAGE_ROLES,
+            PermissionConsts::MANAGE_ROLES,
             0,
         )?)
     {
@@ -96,7 +96,7 @@ pub async fn update_category_user_permission(
             Some(auth.category.id.clone()),
             None,
             &auth.member,
-            GeneralPermissionConsts::MANAGE_ROLES,
+            PermissionConsts::MANAGE_ROLES,
             0,
         )?)
     {
@@ -152,7 +152,7 @@ pub async fn update_bonfire_user_permission(
             None,
             None,
             &auth.member,
-            GeneralPermissionConsts::MANAGE_ROLES,
+            PermissionConsts::MANAGE_ROLES,
             0,
         )?)
     {

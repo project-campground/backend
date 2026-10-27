@@ -13,7 +13,7 @@ use crate::{
     database::{campsites::get_roles_from_db, establish_connection},
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, aggregate_member_permissions},
+        permissions::{PermissionConsts, aggregate_member_permissions},
         ws::event_next_campsite,
     },
     realtime::data::ReactiveSubject,
@@ -130,7 +130,7 @@ fn ensure_user_has_manage_role_permission(
     let permissions = aggregate_member_permissions(&member, &roles);
 
     // The user might not even have the permission to manage roles
-    if permissions.general & GeneralPermissionConsts::MANAGE_ROLES == 0 {
+    if permissions.general & PermissionConsts::MANAGE_ROLES == 0 {
         return Err(XRPCError::Forbidden(
             "No given permission to do that".to_string(),
         ));

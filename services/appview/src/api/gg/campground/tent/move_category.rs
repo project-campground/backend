@@ -12,7 +12,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
         ws::event_next_category,
     },
     make_room_for_items,
@@ -40,15 +43,18 @@ pub async fn move_category(
     category_id: &str,
     body: Json<MoveTentBody>,
 ) -> Result<Json<TentCategoryView>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.category.bonfire_id,
-        Some(auth.category.id),
-        None,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.category.bonfire_id,
+                Some(&auth.category.id),
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     match body.into_inner() {
         MoveTentBody::ToBonfire {

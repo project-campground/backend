@@ -15,7 +15,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::{handle_all_db_errors, handle_select_first_error},
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::{event_next, event_next_campsite},
     },
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
@@ -46,12 +49,13 @@ pub async fn remove_member(
         .await;
     }
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::KICK_MEMBERS,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::KICK_MEMBERS))?
+    );
 
     let mut conn = establish_connection().unwrap();
 

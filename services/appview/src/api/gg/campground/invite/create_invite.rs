@@ -13,7 +13,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next_campsite,
     },
     realtime::data::ReactiveSubject,
@@ -56,12 +59,13 @@ pub async fn create_invite(
         ));
     }
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::CREATE_INVITES,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::CREATE_INVITES))?
+    );
 
     let mut conn = establish_connection().unwrap();
     let (actor, profile) = &get_profile_from_actor(client, did_document_storage, auth.actor)
@@ -86,7 +90,7 @@ pub async fn create_invite(
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
-        GeneralPermissionConsts::MANAGE_INVITES,
+        PermissionConsts::MANAGE_INVITES,
         "InviteCreated",
         &campsite_invite_view,
     );

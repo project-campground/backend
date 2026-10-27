@@ -13,7 +13,10 @@ use crate::{
     database::{establish_connection, profiles::get_profile_from_actor},
     expect_permission,
     helpers::{
-        permissions::{ContentPermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
         ws::event_next_tent,
     },
     realtime::data::ReactiveSubject,
@@ -91,15 +94,18 @@ pub async fn update_message(
         ));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.tent.bonfire_id,
-        auth.tent.category_id.clone(),
-        Some(auth.tent.id),
-        &auth.member,
-        0,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.tent.bonfire_id,
+                auth.tent.category_id.as_ref(),
+                Some(&auth.tent.id)
+            )
+            .has_permissions(PermissionConsts::CREATE_CONTENT))?
+    );
 
     let updated_at = Utc::now().naive_utc();
 

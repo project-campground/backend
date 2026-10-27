@@ -9,12 +9,7 @@ use uuid::Uuid;
 use crate::{
     database::establish_connection,
     expect_permission,
-    helpers::{
-        api::handle_all_db_errors,
-        permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
-        },
-    },
+    helpers::{api::handle_all_db_errors, permissions::PermissionConsts},
     views::permissions::permission_view_detailed,
     xrpc::{
         campsite::{BonfireInfo, CategoryInfo, OneOfInfo, TentInfo},
@@ -59,7 +54,7 @@ pub async fn get_tent_permissions(
         auth.tent.category_id.clone(),
         Some(auth.tent.id.clone()),
         &auth.member,
-        GeneralPermissionConsts::MANAGE_ROLES,
+        PermissionConsts::MANAGE_ROLES,
         ContentPermissionConsts::VIEW_CONTENT
     ));
 
@@ -93,7 +88,7 @@ pub async fn get_category_permissions(
         Some(auth.category.id.clone()),
         None,
         &auth.member,
-        GeneralPermissionConsts::MANAGE_ROLES,
+        PermissionConsts::MANAGE_ROLES,
         ContentPermissionConsts::VIEW_CONTENT
     ));
 
@@ -127,7 +122,7 @@ pub async fn get_bonfire_permissions(
         None,
         None,
         &auth.member,
-        GeneralPermissionConsts::MANAGE_ROLES,
+        PermissionConsts::MANAGE_ROLES,
         ContentPermissionConsts::VIEW_CONTENT
     ));
 

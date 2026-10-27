@@ -15,7 +15,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{ContentPermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
     },
     views::messages::{message_view_basic, message_view_with_replies},
     xrpc::{
@@ -39,15 +42,18 @@ pub async fn get_messages(
             "Expected limit query to be between and including 1 and 100".to_string(),
         ));
     }
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.tent.bonfire_id,
-        auth.tent.category_id.clone(),
-        Some(auth.tent.id),
-        &auth.member,
-        0,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.tent.bonfire_id,
+                auth.tent.category_id.as_ref(),
+                Some(&auth.tent.id)
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT))?
+    );
 
     let mut conn = establish_connection().unwrap();
 
@@ -119,9 +125,18 @@ pub async fn get_messages(
             let replies_view = replies
                 .iter()
                 .filter(|y| x.0.replying_to.contains(&Some(y.0.id)))
-                .map(|y| message_view_basic(&auth.tent, &y.0, y.1.as_ref(), y.2.as_ref(), y.3.as_ref()))
+                .map(|y| {
+                    message_view_basic(&auth.tent, &y.0, y.1.as_ref(), y.2.as_ref(), y.3.as_ref())
+                })
                 .collect::<Vec<MessageViewBasic>>();
-            message_view_with_replies(&auth.tent, &x.0, replies_view, x.1.as_ref(), x.2.as_ref(), x.3.as_ref())
+            message_view_with_replies(
+                &auth.tent,
+                &x.0,
+                replies_view,
+                x.1.as_ref(),
+                x.2.as_ref(),
+                x.3.as_ref(),
+            )
         })
         .collect::<Vec<MessageViewWithReplies>>();
 

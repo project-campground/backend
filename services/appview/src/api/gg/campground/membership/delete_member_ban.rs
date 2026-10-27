@@ -11,7 +11,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next_campsite,
     },
     realtime::data::ReactiveSubject,
@@ -35,12 +38,13 @@ pub async fn delete_member_ban(
         ));
     }
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::BAN_MEMBERS,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::CREATE_INVITES))?
+    );
 
     let mut conn = establish_connection().unwrap();
 
@@ -69,7 +73,7 @@ pub async fn delete_member_ban(
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
-        GeneralPermissionConsts::BAN_MEMBERS,
+        PermissionConsts::BAN_MEMBERS,
         "MemberBanDeleted",
         &view,
     );

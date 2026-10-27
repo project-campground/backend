@@ -4,7 +4,6 @@ use appview_schema::{
     models::appview::{CampsiteMember, CampsitePermission, CampsiteRole},
     schema::appview::campsite_permission,
 };
-use campground_lexicon::gg::campground::permission::PermissionsStateDictionary;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use multimap::MultiMap;
 use uuid::Uuid;
@@ -13,7 +12,7 @@ use crate::{
     database::{campsites::get_roles_from_db, establish_connection},
     helpers::api::handle_all_db_errors,
     helpers::ws::CampsiteMemberPermissions,
-    util::iter::{AggregatePermissions, aggregate_permissions_double_ref},
+    util::iter::AggregatePermissions,
     xrpc::error::XRPCError,
 };
 
@@ -26,7 +25,7 @@ use crate::{
 /// This could be a config file, where either memory is prioritized or CPU usage is prioritized. But perhaps CPU usage through-out the time needs to be prioritized,
 /// and thus, permission entries/instances from the database are stored in the memory (collectively, through-out all users).
 /// That would mean that permissions are quickly re-aggregated in a specific target (tent, tent category or bonfire, or the whole campsite if roles are modified) and not always fetching it from the database when changes are made.
-/// 
+///
 /// That is likely something to be tested on prod, unfortunately.
 pub async fn update_ws_permissions<'a>(
     campsite_id: &str,
@@ -99,7 +98,7 @@ pub async fn update_ws_permissions<'a>(
 /// Fetches and aggregates the permissions actor has through-out the campsite, including what permissions they have for tents, tent categories and bonfires.
 /// # Remarks
 /// See `update_ws_permissions` method's `Design Question` section, as it may also apply to saving potential CPU usage, but probably increasing memory usage.
-/// 
+///
 /// The Design Question only pertains to optimizing the method, rather than consuming it, so if you need to use this method, you can use it without hesitation.
 pub async fn aggregate_ws_permissions<'a>(
     member: &CampsiteMember,

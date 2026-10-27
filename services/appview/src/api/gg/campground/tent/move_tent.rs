@@ -7,17 +7,14 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 use uuid::Uuid;
 
+use crate::helpers::permissions::check::{
+    PermissionCheck, PermissionCheckTestable, scoped_permission,
+};
 use crate::{
     api::gg::campground::tent::util::{check_bonfire_existence, check_category_existence},
     database::{DbConnection, establish_connection},
     expect_permission,
-    helpers::{
-        api::handle_all_db_errors,
-        permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
-        },
-        ws::event_next_tent,
-    },
+    helpers::{api::handle_all_db_errors, permissions::PermissionConsts, ws::event_next_tent},
     make_room_for_items,
     realtime::data::ReactiveSubject,
     views::tents::tent_view_basic,
@@ -54,15 +51,18 @@ pub async fn move_tent(
     tent_id: &str,
     body: Json<MoveTentBody>,
 ) -> Result<Json<TentViewBasic>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.tent.bonfire_id,
-        auth.tent.category_id.clone(),
-        Some(auth.tent.id),
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.tent.bonfire_id,
+                auth.tent.category_id.as_ref(),
+                Some(&auth.tent.id)
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     match body.into_inner() {
         MoveTentBody::ToBonfire {

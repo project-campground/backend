@@ -1,10 +1,5 @@
 use appview_schema::models::appview::CampsitePermission;
-use campground_lexicon::gg::campground::
-    permission::{
-        PermissionViewBasic, PermissionViewDetailed, PermissionsDictionary,
-        PermissionsStateDictionary,
-    }
-;
+use campground_lexicon::gg::campground::permission::{PermissionViewBasic, PermissionViewDetailed};
 
 use crate::views::util::serialize_datetime;
 
@@ -17,16 +12,7 @@ pub fn permission_view_basic(permission: &CampsitePermission) -> PermissionViewB
         user_id: permission.user_id.clone(),
         role_id: permission.role_id.clone(),
 
-        permissions: PermissionsStateDictionary {
-            allowed: PermissionsDictionary {
-                general: permission.allowed_general_permissions as u64,
-                content: permission.allowed_content_permissions as u64,
-            },
-            denied: PermissionsDictionary {
-                general: permission.denied_general_permissions as u64,
-                content: permission.denied_content_permissions as u64,
-            },
-        },
+        permissions: permission.permissions as u64,
     };
 }
 
@@ -42,16 +28,7 @@ pub fn permission_view_detailed(permission: &CampsitePermission) -> PermissionVi
         user_id: permission.user_id.clone(),
         role_id: permission.role_id.clone(),
 
-        permissions: PermissionsStateDictionary {
-            allowed: PermissionsDictionary {
-                general: permission.allowed_general_permissions as u64,
-                content: permission.allowed_content_permissions as u64,
-            },
-            denied: PermissionsDictionary {
-                general: permission.denied_general_permissions as u64,
-                content: permission.denied_content_permissions as u64,
-            },
-        },
+        permissions: permission.permissions as u64,
 
         created_by: permission.created_by.clone(),
         created_at: serialize_datetime(permission.created_at),

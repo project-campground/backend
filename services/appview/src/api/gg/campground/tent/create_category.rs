@@ -12,7 +12,8 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_category,
     },
@@ -67,15 +68,18 @@ pub async fn create_category(
         ));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.bonfire.id,
-        None,
-        None,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     let current_date = Utc::now().naive_utc();
 

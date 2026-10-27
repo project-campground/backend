@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 use crate::{
     database::{establish_connection, profiles::get_profile},
-    helpers::{api::handle_all_db_errors, ws::event_next},
+    helpers::{api::handle_all_db_errors, permissions::PermissionConsts, ws::event_next},
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
     util::params::{OptionValidity, ensure_valid_set_uri},
     views::{
@@ -154,8 +154,8 @@ pub async fn create_campsite(
                     mentionable: false,
                     colors: vec![],
                     motion: 0,
-                    general_permissions: 0b00,
-                    content_permissions: 0b11,
+                    permissions: (PermissionConsts::VIEW_CONTENT | PermissionConsts::CREATE_CONTENT)
+                        as i32,
                     priority: 0,
                     created_by: actor.did.clone(),
                     created_at: current_date,

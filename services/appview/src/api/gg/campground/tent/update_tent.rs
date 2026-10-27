@@ -19,7 +19,8 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::{event_next_campsite, event_next_tent},
     },
@@ -75,16 +76,18 @@ pub async fn update_tent<'a>(
             "Expected 'view_type' property to be 0".to_string(),
         ));
     }
-
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.tent.bonfire_id,
-        auth.tent.category_id.clone(),
-        Some(auth.tent.id),
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.tent.bonfire_id,
+                auth.tent.category_id.as_ref(),
+                Some(&auth.tent.id)
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+    );
 
     let (actor, profile) =
         get_profile_from_actor(auth.auth.client, auth.auth.did_document_storage, auth.actor)

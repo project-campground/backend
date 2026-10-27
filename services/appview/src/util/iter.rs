@@ -1,76 +1,39 @@
 use appview_schema::models::appview::{CampsitePermission, CampsiteRole};
-use campground_lexicon::gg::campground::permission::{PermissionsDictionary, PermissionsStateDictionary};
+use uuid::Uuid;
+
+pub trait HasPermissionOverrides {
+    fn get_permissions(&self) -> u64;
+}
 
 pub trait AggregatePermissions<T> {
     fn aggregate_permissions(&self) -> T;
 }
 
-impl<'a, T> AggregatePermissions<PermissionsDictionary> for T
-    where T: Iterator<Item = &'a CampsiteRole> + Clone
+impl<'a, T> AggregatePermissions<u32> for T
+where
+    T: Iterator<Item = &'a CampsiteRole> + Clone,
 {
-    fn aggregate_permissions(&self) -> PermissionsDictionary {
-        let tuple = &mut (0i64, 0i64);
-        let (general_perm, content_perm) = self
-            .clone()
-            .fold(tuple, |perm, role| {
-                perm.0 |= role.general_permissions;
-                perm.1 |= role.content_permissions;
-                perm
-            });
-
-        PermissionsDictionary { general: general_perm.clone() as u64, content: content_perm.clone() as u64 }
+    fn aggregate_permissions(&self) -> u32 {
+        self.clone().fold(0u32, |a, b| a | b.permissions as u32)
     }
 }
-impl<'a, T> AggregatePermissions<PermissionsStateDictionary> for T
-    where T: Iterator<Item = &'a CampsitePermission> + Clone
+impl<'a, TIter, TItem> AggregatePermissions<u64> for TIter
+where
+    TIter: Iterator<Item = &'a TItem> + Clone,
+    TItem: HasPermissionOverrides + 'a,
 {
-    fn aggregate_permissions(&self) -> PermissionsStateDictionary {
-        // (campsite(allowed, disallowed), tent(allowed, disallowed))
-        let aggregated_perms = &mut ((0u64, 0u64), (0u64, 0u64));
-        self
-        .clone()
-        .for_each(|perm| {
-            flip_perms(&mut aggregated_perms.0, perm.allowed_general_permissions, perm.denied_general_permissions);
-            flip_perms(&mut aggregated_perms.1, perm.allowed_content_permissions, perm.denied_content_permissions);
-        });
-        
-        PermissionsStateDictionary {
-            allowed: PermissionsDictionary {
-                general: aggregated_perms.0.0,
-                content: aggregated_perms.1.0,
-            },
-            denied: PermissionsDictionary {
-                general: aggregated_perms.0.1,
-                content: aggregated_perms.1.1,
-            }
-        }
+    fn aggregate_permissions(&self) -> u64 {
+        // Because denied is 0b10, allowed is 0b11 and denied is 0b00, one can safely just fold by applying |
+        self.clone().fold(0u64, |a, b| a | b.get_permissions())
     }
 }
-
-pub fn aggregate_permissions_double_ref<'a, T>(permissions: T) -> PermissionsStateDictionary
-    where T: Iterator<Item = &'a &'a CampsitePermission> + Clone
-{
-        // (campsite(allowed, disallowed), tent(allowed, disallowed))
-    let aggregated_perms = &mut ((0u64, 0u64), (0u64, 0u64));
-    permissions
-        .clone()
-        .for_each(|perm| {
-            flip_perms(&mut aggregated_perms.0, perm.allowed_general_permissions, perm.denied_general_permissions);
-            flip_perms(&mut aggregated_perms.1, perm.allowed_content_permissions, perm.denied_content_permissions);
-        });
-
-    PermissionsStateDictionary {
-        allowed: PermissionsDictionary {
-            general: aggregated_perms.0.0,
-            content: aggregated_perms.1.0,
-        },
-        denied: PermissionsDictionary {
-            general: aggregated_perms.0.1,
-            content: aggregated_perms.1.1,
-        }
+impl HasPermissionOverrides for CampsitePermission {
+    fn get_permissions(&self) -> u64 {
+        self.permissions as u64
     }
 }
-fn flip_perms(tuple: &mut (u64, u64), allowed: i64, disallowed: i64) {
-    tuple.0 |= allowed as u64;
-    tuple.1 |= disallowed as u64;
+impl HasPermissionOverrides for (Option<Uuid>, Option<Uuid>, i64) {
+    fn get_permissions(&self) -> u64 {
+        self.2 as u64
+    }
 }

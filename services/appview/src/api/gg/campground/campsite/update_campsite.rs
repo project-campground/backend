@@ -10,7 +10,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next_campsite_global,
     },
     realtime::data::ReactiveSubject,
@@ -92,12 +95,13 @@ pub async fn update_campsite(
     let banner_uri =
         &ensure_valid_modified_uri(banner_uri).map_err(|x| XRPCError::BadRequest(x.to_string()))?;
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_CAMPSITE,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::MANAGE_CAMPSITE))?
+    );
 
     let mut conn = establish_connection().unwrap();
 

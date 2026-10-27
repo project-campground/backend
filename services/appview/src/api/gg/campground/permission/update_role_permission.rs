@@ -14,7 +14,7 @@ use crate::{
     database::establish_connection,
     helpers::{
         api::handle_select_first_error,
-        permissions::{GeneralPermissionConsts, has_full_leveled_perms_from_roles},
+        permissions::{PermissionConsts, has_full_leveled_perms_from_roles},
     },
     realtime::data::ReactiveSubject,
     views::roles::ensure_no_higher_role,
@@ -55,7 +55,7 @@ pub async fn update_tent_role_permission(
             Some(auth.tent.id.clone()),
             &all_roles,
             &auth.member,
-            GeneralPermissionConsts::MANAGE_ROLES,
+            PermissionConsts::MANAGE_ROLES,
             0,
         )?)
     {
@@ -122,7 +122,7 @@ pub async fn update_category_role_permission(
             None,
             &all_roles,
             &auth.member,
-            GeneralPermissionConsts::MANAGE_ROLES,
+            PermissionConsts::MANAGE_ROLES,
             0,
         )?)
     {
@@ -189,7 +189,7 @@ pub async fn update_bonfire_role_permission(
             None,
             &all_roles,
             &auth.member,
-            GeneralPermissionConsts::MANAGE_ROLES,
+            PermissionConsts::MANAGE_ROLES,
             0,
         )?)
     {
