@@ -10,7 +10,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{ContentPermissionConsts, PermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
         ws::event_next_bonfire,
     },
     realtime::data::ReactiveSubject,
@@ -76,15 +79,18 @@ pub async fn update_bonfire<'a>(
 
     let mut conn = establish_connection().unwrap();
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &bonfire_id,
-        None,
-        None,
-        &auth.member,
-        PermissionConsts::MANAGE_BONFIRES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_BONFIRES))?
+    );
 
     let current_date = Utc::now().naive_utc();
 

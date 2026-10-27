@@ -15,7 +15,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{ContentPermissionConsts, PermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
         ws::event_next_bonfire,
     },
     realtime::data::ReactiveSubject,
@@ -45,15 +48,18 @@ pub async fn move_bonfire(
         return Ok(Json(bonfire_view_basic(&auth.bonfire)));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &bonfire_id,
-        None,
-        None,
-        &auth.member,
-        PermissionConsts::MANAGE_BONFIRES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_BONFIRES))?
+    );
 
     let mut conn = establish_connection().unwrap();
 

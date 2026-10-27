@@ -9,7 +9,8 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            ContentPermissionConsts, PermissionConsts, has_leveled_perms_or_owner,
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_bonfire,
     },
@@ -32,15 +33,18 @@ pub async fn delete_bonfire(
         ));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &bonfire_id,
-        None,
-        None,
-        &auth.member,
-        PermissionConsts::MANAGE_BONFIRES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_BONFIRES))?
+    );
 
     diesel::delete(appview::bonfire::table)
         .filter(

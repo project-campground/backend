@@ -11,7 +11,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{PermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next_bonfire,
     },
     realtime::data::ReactiveSubject,
@@ -60,12 +63,13 @@ pub async fn create_bonfire(
         ));
     }
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        PermissionConsts::MANAGE_BONFIRES,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission.fetch_roles().has_permissions(
+                PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS
+            ))?
+    );
 
     let avatar_uri = &ensure_valid_set_uri(avatar_uri)
         .map_err(|x| XRPCError::BadRequest(x.to_string()))?
