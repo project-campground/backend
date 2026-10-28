@@ -7,10 +7,10 @@ use crate::database::DbConnection;
 pub fn fetch_role_priorities(
     conn: &mut DbConnection,
     campsite_id: &str,
-    executor_roles: Vec<Uuid>,
-    target_roles: Vec<Uuid>,
+    executor_roles: &Vec<Uuid>,
+    target_roles: &Vec<Uuid>,
 ) -> Result<Vec<(Uuid, i32)>, diesel::result::Error> {
-    campsite_role::table
+    let mut roles = campsite_role::table
         .filter(
             campsite_role::campsiteid.eq(campsite_id).and(
                 campsite_role::id
@@ -19,5 +19,8 @@ pub fn fetch_role_priorities(
             ),
         )
         .select((campsite_role::id, campsite_role::priority))
-        .load::<(Uuid, i32)>(conn)
+        .load::<(Uuid, i32)>(conn)?;
+    roles.sort_by(|a, b| a.cmp(b));
+
+    Ok(roles)
 }

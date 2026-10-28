@@ -68,25 +68,32 @@ pub enum OneOfInfo<'a> {
     Bonfire(BonfireInfo<'a>),
 }
 impl<'a> OneOfInfo<'a> {
-    pub fn get_actor_did(&self) -> String {
+    pub fn actor_did(&self) -> String {
         match self {
             OneOfInfo::Bonfire(auth) => auth.actor.did.clone(),
             OneOfInfo::Category(auth) => auth.actor.did.clone(),
             OneOfInfo::Tent(auth) => auth.actor.did.clone(),
         }
     }
-    pub fn get_campsite_id(&self) -> String {
+    pub fn campsite(&self) -> String {
         match self {
             OneOfInfo::Bonfire(auth) => auth.campsite.id.clone(),
             OneOfInfo::Category(auth) => auth.campsite.id.clone(),
             OneOfInfo::Tent(auth) => auth.campsite.id.clone(),
         }
     }
-    pub fn get_bonfire_id(&self) -> String {
+    pub fn bonfire_id(&self) -> String {
         match self {
             OneOfInfo::Bonfire(auth) => auth.bonfire.id.clone(),
             OneOfInfo::Category(auth) => auth.category.bonfire_id.clone(),
             OneOfInfo::Tent(auth) => auth.tent.bonfire_id.clone(),
+        }
+    }
+    pub fn member_roles(&self) -> Vec<Option<Uuid>> {
+        match self {
+            OneOfInfo::Bonfire(auth) => auth.member.roles.clone(),
+            OneOfInfo::Category(auth) => auth.member.roles.clone(),
+            OneOfInfo::Tent(auth) => auth.member.roles.clone(),
         }
     }
 }

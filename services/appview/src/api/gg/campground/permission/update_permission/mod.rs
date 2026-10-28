@@ -10,6 +10,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    api::gg::campground::permission::update_permission::database::fetch_role_priorities,
     database::{DbConnection, campsites::get_campsite_member, establish_connection},
     helpers::{
         api::handle_all_db_errors, permissions::state::INVALID_PERMISSION_FLAG_MASK, ws::event_next,
@@ -61,33 +62,43 @@ pub async fn update_permission(
         (Some(role_id), None) => {
             let target_roles = vec![role_id];
 
-            return update_permission_in_database(
-                event_subject,
-                auth,
-                &query.category_id,
-                &query.tent_id,
-                Some(&role_id),
-                None,
-                permissions,
-            );
+            let mut conn = establish_connection().unwrap();
+            conn.transaction(move |conn| {
+                update_permission_in_database(
+                    conn,
+                    event_subject,
+                    auth,
+                    target_roles,
+                    &query.category_id,
+                    &query.tent_id,
+                    Some(&role_id),
+                    None,
+                    permissions,
+                )
+            })
         }
         (None, Some(actor)) => {
-            let target_actor = get_campsite_member(&auth.get_campsite_id(), &actor)?;
+            let target_actor = get_campsite_member(&auth.campsite(), &actor)?;
             let target_roles = target_actor
                 .roles
                 .iter()
                 .filter_map(|&x| x)
                 .collect::<Vec<Uuid>>();
 
-            return update_permission_in_database(
-                event_subject,
-                auth,
-                &query.category_id,
-                &query.tent_id,
-                None,
-                Some(&actor),
-                permissions,
-            );
+            let mut conn = establish_connection().unwrap();
+            conn.transaction(move |conn| {
+                update_permission_in_database(
+                    conn,
+                    event_subject,
+                    auth,
+                    target_roles,
+                    &query.category_id,
+                    &query.tent_id,
+                    None,
+                    Some(&actor),
+                    permissions,
+                )
+            })
         }
         _ => Err(XRPCError::BadRequest(
             "Expected only 'role_id' or 'actor' query parameters, not none or both.".to_string(),
@@ -103,19 +114,46 @@ pub fn has_invalid_flag(permission: &u64) -> bool {
     (only_last_flag_digit & first_digit_as_inverted_last) != 0u64
 }
 
+pub fn get_priority_from_role_list(role_priorities: &Vec<(Uuid, i32)>, roles: Vec<Uuid>) -> i32 {
+    role_priorities
+        .iter()
+        .filter(|x| roles.contains(&x.0))
+        .map(|x| x.1)
+        .min()
+        .unwrap()
+}
+
 pub fn update_permission_in_database<'a>(
+    conn: &mut DbConnection,
     event_subject: &State<ReactiveSubject>,
     auth: OneOfInfo<'a>,
+    target_roles: Vec<Uuid>,
     category_id: &Option<Uuid>,
     tent_id: &Option<Uuid>,
     role_id: Option<&Uuid>,
     user_id: Option<&String>,
     permissions: u64,
 ) -> Result<Json<PermissionViewBasic>, XRPCError> {
-    let mut conn = establish_connection().unwrap();
-    let bonfire_id = &auth.get_bonfire_id();
-    let campsite_id = &auth.get_campsite_id();
-    let executor = &auth.get_actor_did();
+    let executor_roles = auth
+        .member_roles()
+        .iter()
+        .filter_map(|x| x.clone())
+        .collect::<Vec<_>>();
+    let priorities = fetch_role_priorities(conn, &auth.campsite(), &executor_roles, &target_roles)?;
+    let target_priorities = get_priority_from_role_list(&priorities, target_roles);
+    let executor_priorities = get_priority_from_role_list(&priorities, executor_roles);
+
+    // Smaller priority, the higher in the role list
+    if executor_priorities > target_priorities {
+        return Err(XRPCError::Forbidden(
+            "Cannot update permissions of higher role or of member who has higher roles"
+                .to_string(),
+        ));
+    }
+
+    let bonfire_id = &auth.bonfire_id();
+    let campsite_id = &auth.campsite();
+    let executor = &auth.actor_did();
 
     let modified_permissions = conn
         .transaction(move |conn| {
