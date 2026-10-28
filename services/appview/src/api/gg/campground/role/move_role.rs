@@ -14,12 +14,15 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{PermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next_campsite,
     },
     make_room_for_items,
     realtime::data::ReactiveSubject,
-    views::roles::role_view_basic,
+    views::roles::{ensure_no_higher_role, role_view_basic},
     xrpc::{
         campsite::CampsiteInfo,
         error::{Result, XRPCError},
@@ -61,12 +64,20 @@ pub async fn move_role(
     }
     let given_role = given_role.unwrap();
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        PermissionConsts::MANAGE_ROLES,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::MANAGE_ROLES))?
+    );
+
+    ensure_no_higher_role(
+        auth.member.user_id == auth.campsite.owner,
+        &mut roles.clone(),
+        given_role.priority,
+        auth.member.roles.clone(),
+    )?;
 
     let actor_max_priority = roles
         .iter()

@@ -1,11 +1,5 @@
-use appview_schema::{
-    models::appview::{Campsite, CampsiteMember, CampsiteRole},
-    schema::appview::campsite_role,
-};
-use campground_lexicon::gg::campground::{
-    permission::PermissionsDictionary,
-    role::{RoleMotion, RoleViewBasic},
-};
+use appview_schema::{models::appview::CampsiteRole, schema::appview::campsite_role};
+use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -13,12 +7,9 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    api::gg::campground::role::create_role::ensure_user_has_manage_role_permission,
     database::{campsites::get_roles_from_db, establish_connection},
-    helpers::{
-        api::handle_select_first_error,
-        permissions::{PermissionConsts, aggregate_member_permissions},
-        ws::event_next_campsite,
-    },
+    helpers::{api::handle_select_first_error, ws::event_next_campsite},
     realtime::data::ReactiveSubject,
     views::roles::{ensure_no_higher_role, from_role_motion, role_view_basic},
     xrpc::{
@@ -35,7 +26,7 @@ pub struct UpdateRoleBody {
     colors: Option<Vec<u32>>,
     raised: Option<bool>,
     pingable: Option<bool>,
-    permissions: Option<PermissionsDictionary>,
+    permissions: u32,
 }
 
 #[allow(unused_variables)]
@@ -68,8 +59,6 @@ pub async fn update_role(
         ));
     }
 
-    println!("Motion: {:?}", motion);
-
     let mut conn = establish_connection().unwrap();
 
     // Can be given invalid UUID; Be descriptive
@@ -82,12 +71,7 @@ pub async fn update_role(
         .find(|x| x.id == role_id_uuid)
         .ok_or(XRPCError::NotFound)?;
 
-    ensure_user_has_manage_role_permission(
-        &auth.campsite,
-        &auth.member,
-        &roles,
-        permissions.as_ref(),
-    )?;
+    ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &roles, permissions)?;
 
     ensure_no_higher_role(
         auth.member.user_id == auth.campsite.owner,
@@ -117,14 +101,7 @@ pub async fn update_role(
                 .map_or(role.motion, |motion| from_role_motion(motion))),
             campsite_role::displayseparately.eq(raised.unwrap_or(role.display_separately)),
             campsite_role::mentionable.eq(pingable.unwrap_or(role.mentionable)),
-            campsite_role::contentpermissions.eq(permissions
-                .as_ref()
-                .map(|x| x.content as i64)
-                .unwrap_or(role.content_permissions as i64)),
-            campsite_role::generalpermissions.eq(permissions
-                .as_ref()
-                .map(|x| x.general as i64)
-                .unwrap_or(role.general_permissions as i64)),
+            campsite_role::permissions.eq(*permissions as i32),
         ))
         .get_result::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -134,34 +111,4 @@ pub async fn update_role(
     event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleUpdated", &view);
 
     return Ok(Json(view));
-}
-
-fn ensure_user_has_manage_role_permission(
-    campsite: &Campsite,
-    member: &CampsiteMember,
-    roles: &Vec<CampsiteRole>,
-    given_permissions: Option<&PermissionsDictionary>,
-) -> Result<(), XRPCError> {
-    if campsite.owner == member.user_id {
-        return Ok(());
-    }
-
-    let permissions = aggregate_member_permissions(&member, &roles);
-
-    // The user might not even have the permission to manage roles
-    if permissions.general & PermissionConsts::MANAGE_ROLES == 0 {
-        return Err(XRPCError::Forbidden(
-            "No given permission to do that".to_string(),
-        ));
-    } else if given_permissions.as_ref().map_or(false, |x| {
-        (x.general & permissions.general != x.general)
-            && (x.content & permissions.content != x.content)
-    }) {
-        // Ensure user does not give themselves Manage Tent permission if they have Give Role & Manage Roles combo
-        return Err(XRPCError::Forbidden(
-            "Cannot give role permissions that the member does not have".to_string(),
-        ));
-    }
-
-    Ok(())
 }

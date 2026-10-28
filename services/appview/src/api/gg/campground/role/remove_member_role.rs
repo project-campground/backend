@@ -16,7 +16,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_select_first_error,
-        permissions::{PermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next,
     },
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
@@ -83,13 +86,13 @@ pub async fn remove_member_role(
         given_role.priority,
         auth.member.roles.clone(),
     )?;
-
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        PermissionConsts::GIVE_ROLES,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionConsts::GIVE_ROLES))?
+    );
 
     let updated_members = diesel::update(campsite_member::table)
         .filter(
@@ -120,8 +123,7 @@ pub async fn remove_member_role(
             campsite_id: campsite_id.to_string(),
             actors: member_ids.clone(),
             role_id: given_role.id,
-            permissions_are_empty: given_role.general_permissions == 0
-                && given_role.content_permissions == 0,
+            permissions_are_empty: given_role.permissions == 0,
             removed: true,
             binary: payload,
         }

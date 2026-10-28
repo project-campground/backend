@@ -1,8 +1,5 @@
 use appview_schema::models::appview::{Campsite, CampsiteMember, CampsiteRole};
-use campground_lexicon::gg::campground::{
-    permission::PermissionsDictionary,
-    role::{RoleMotion, RoleViewBasic},
-};
+use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
 use chrono::Utc;
 use diesel::RunQueryDsl;
 use rocket::{State, serde::json::Json};
@@ -13,7 +10,7 @@ use crate::{
     database::{campsites::get_roles_from_db, establish_connection},
     helpers::{
         api::handle_select_first_error,
-        permissions::{PermissionConsts, aggregate_member_permissions},
+        permissions::{PermissionConsts, check::PermissionCheck},
         ws::event_next_campsite,
     },
     realtime::data::ReactiveSubject,
@@ -32,7 +29,7 @@ pub struct CreateRoleBody {
     colors: Option<Vec<u32>>,
     raised: Option<bool>,
     pingable: Option<bool>,
-    permissions: PermissionsDictionary,
+    permissions: u32,
 }
 
 #[post("/xrpc/gg.campground.role.createRole?<campsite_id>", data = "<body>")]
@@ -98,8 +95,7 @@ pub async fn create_role(
             motion: motion.clone().map_or(0, |motion| from_role_motion(motion)),
             display_separately: raised.clone().unwrap_or(false),
             mentionable: pingable.clone().unwrap_or(false),
-            general_permissions: permissions.general as i64,
-            content_permissions: permissions.content as i64,
+            permissions: *permissions as i32,
             priority: lowest_priority.priority + 1,
             created_by: auth.actor.did.clone(),
             created_at: current_date,
@@ -117,26 +113,27 @@ pub async fn create_role(
     return Ok(Json(view));
 }
 
-fn ensure_user_has_manage_role_permission(
+pub fn ensure_user_has_manage_role_permission(
     campsite: &Campsite,
     member: &CampsiteMember,
     roles: &Vec<CampsiteRole>,
-    given_permissions: &PermissionsDictionary,
+    given_permissions: &u32,
 ) -> Result<(), XRPCError> {
     if campsite.owner == member.user_id {
         return Ok(());
     }
 
-    let permissions = aggregate_member_permissions(&member, &roles);
+    let member_permissions = PermissionCheck::member(&member)
+        .never_owner()
+        .with_roles(roles)
+        .role_permissions;
 
     // The user might not even have the permission to manage roles
-    if permissions.general & PermissionConsts::MANAGE_ROLES == 0 {
+    if member_permissions & PermissionConsts::MANAGE_ROLES == 0 {
         return Err(XRPCError::Forbidden(
             "No given permission to do that".to_string(),
         ));
-    } else if (given_permissions.general & permissions.general != given_permissions.general)
-        || (given_permissions.general & permissions.general != given_permissions.general)
-    {
+    } else if member_permissions & given_permissions != *given_permissions {
         // Ensure user does not give themselves Manage Tent permission if they have Give Role & Manage Roles combo
         return Err(XRPCError::Forbidden(
             "Cannot give role permissions that the member does not have".to_string(),
