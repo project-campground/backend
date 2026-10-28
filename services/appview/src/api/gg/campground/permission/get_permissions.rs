@@ -9,12 +9,15 @@ use uuid::Uuid;
 use crate::{
     database::establish_connection,
     expect_permission,
-    helpers::{api::handle_all_db_errors, permissions::PermissionConsts},
-    views::permissions::permission_view_detailed,
-    xrpc::{
-        campsite::{BonfireInfo, CategoryInfo, OneOfInfo, TentInfo},
-        error::Result,
+    helpers::{
+        api::handle_all_db_errors,
+        permissions::{
+            PermissionConsts,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
     },
+    views::permissions::permission_view_detailed,
+    xrpc::{campsite::OneOfInfo, error::Result},
 };
 
 #[derive(FromForm)]
@@ -28,6 +31,44 @@ pub struct GetPermissionsQuery {
     non_self: Option<bool>,
 }
 
+macro_rules! get_scoped_permissions {
+    (campsite: $campsite: expr, bonfire: $bonfire: expr, category: $category: expr, tent: $tent: expr, member: $member: expr, non_self: $non_self: expr, permission_filter: $perm_filter: expr) => {{
+        // Since it depends from where you want to get permissions
+        expect_permission!(
+            PermissionCheck::member(&$member)
+                .is_owner(&$campsite)
+                .skip_if_owner(|permission| scoped_permission(
+                    permission.fetch_roles(),
+                    &$campsite.id,
+                    $bonfire,
+                    $category,
+                    $tent
+                )
+                .has_permissions(
+                    PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS
+                ))?
+        );
+        let mut conn = establish_connection().unwrap();
+
+        let permissions = campsite_permission::table
+            .filter(
+                $perm_filter.and(
+                    campsite_permission::roleid
+                        .is_null()
+                        .and(campsite_permission::userid.ne(&$member.user_id))
+                        .or::<bool, Bool>(!$non_self),
+                ),
+            )
+            .load::<CampsitePermission>(&mut conn)
+            .map_err(handle_all_db_errors)?
+            .iter()
+            .map(permission_view_detailed)
+            .collect::<Vec<PermissionViewDetailed>>();
+
+        Ok(Json(GetPermissionsOutput { permissions }))
+    }};
+}
+
 #[get("/xrpc/gg.campground.permission.getPermissions?<query..>", rank = 1)]
 pub async fn get_permissions(
     auth: OneOfInfo<'_>,
@@ -36,112 +77,38 @@ pub async fn get_permissions(
     let non_self = query.non_self.unwrap_or(false);
 
     match auth {
-        OneOfInfo::Tent(tent_auth) => get_tent_permissions(tent_auth, non_self).await,
-        OneOfInfo::Category(category_auth) => {
-            get_category_permissions(category_auth, non_self).await
+        OneOfInfo::Tent(auth) => {
+            get_scoped_permissions!(
+                campsite: auth.campsite,
+                bonfire: &auth.tent.bonfire_id,
+                category: auth.tent.category_id.as_ref(),
+                tent: Some(&auth.tent.id),
+                member: auth.member,
+                non_self: non_self,
+                permission_filter: campsite_permission::tentid.eq(auth.tent.id)
+            )
         }
-        OneOfInfo::Bonfire(bonfire_auth) => get_bonfire_permissions(bonfire_auth, non_self).await,
+        OneOfInfo::Category(auth) => {
+            get_scoped_permissions!(
+                campsite: auth.campsite,
+                bonfire: &auth.category.bonfire_id,
+                category: Some(&auth.category.id),
+                tent: None,
+                member: auth.member,
+                non_self: non_self,
+                permission_filter: campsite_permission::categoryid.eq(auth.category.id)
+            )
+        }
+        OneOfInfo::Bonfire(auth) => {
+            get_scoped_permissions!(
+                campsite: auth.campsite,
+                bonfire: &auth.bonfire.id,
+                category: None,
+                tent: None,
+                member: auth.member,
+                non_self: non_self,
+                permission_filter: campsite_permission::bonfireid.eq(auth.bonfire.id)
+            )
+        }
     }
-}
-
-pub async fn get_tent_permissions(
-    auth: TentInfo<'_>,
-    non_self: bool,
-) -> Result<Json<GetPermissionsOutput>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.tent.bonfire_id,
-        auth.tent.category_id.clone(),
-        Some(auth.tent.id.clone()),
-        &auth.member,
-        PermissionConsts::MANAGE_ROLES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
-
-    let mut conn = establish_connection().unwrap();
-
-    let permissions = campsite_permission::table
-        .filter(
-            campsite_permission::tentid.eq(auth.tent.id).and(
-                campsite_permission::roleid
-                    .is_null()
-                    .and(campsite_permission::userid.ne(&auth.actor.did))
-                    .or::<bool, Bool>(!non_self),
-            ),
-        )
-        .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_all_db_errors)?
-        .iter()
-        .map(|x| permission_view_detailed(x))
-        .collect::<Vec<PermissionViewDetailed>>();
-
-    Ok(Json(GetPermissionsOutput { permissions }))
-}
-
-pub async fn get_category_permissions(
-    auth: CategoryInfo<'_>,
-    non_self: bool,
-) -> Result<Json<GetPermissionsOutput>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.category.bonfire_id,
-        Some(auth.category.id.clone()),
-        None,
-        &auth.member,
-        PermissionConsts::MANAGE_ROLES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
-
-    let mut conn = establish_connection().unwrap();
-
-    let permissions = campsite_permission::table
-        .filter(
-            campsite_permission::categoryid.eq(auth.category.id).and(
-                campsite_permission::roleid
-                    .is_null()
-                    .and(campsite_permission::userid.ne(&auth.actor.did))
-                    .or::<bool, Bool>(!non_self),
-            ),
-        )
-        .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_all_db_errors)?
-        .iter()
-        .map(|x| permission_view_detailed(x))
-        .collect::<Vec<PermissionViewDetailed>>();
-
-    Ok(Json(GetPermissionsOutput { permissions }))
-}
-
-pub async fn get_bonfire_permissions(
-    auth: BonfireInfo<'_>,
-    non_self: bool,
-) -> Result<Json<GetPermissionsOutput>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.bonfire.id,
-        None,
-        None,
-        &auth.member,
-        PermissionConsts::MANAGE_ROLES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
-
-    let mut conn = establish_connection().unwrap();
-
-    let permissions = campsite_permission::table
-        .filter(
-            campsite_permission::bonfireid.eq(&auth.bonfire.id).and(
-                campsite_permission::roleid
-                    .is_null()
-                    .and(campsite_permission::userid.ne(&auth.actor.did))
-                    .or::<bool, Bool>(!non_self),
-            ),
-        )
-        .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_all_db_errors)?
-        .iter()
-        .map(|x| permission_view_detailed(x))
-        .collect::<Vec<PermissionViewDetailed>>();
-
-    Ok(Json(GetPermissionsOutput { permissions }))
 }

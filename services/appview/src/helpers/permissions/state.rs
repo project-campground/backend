@@ -1,3 +1,23 @@
+// This is stupid, but I am not repeating it
+// Total of 32 flags available (64 bits / 2 bit flag)
+// This eliminates the need to calculate this fucking bullshit every single time
+pub const INVALID_PERMISSION_FLAG_MASK: u64 = {
+    let mut value: u64 = 0;
+    let mut i = 0;
+
+    // Since for i in 0..62.step_by(2) can't be used in consts
+    loop {
+        value |= 0b01 << i;
+
+        i += 2;
+        if i >= 64 {
+            break;
+        }
+    }
+
+    value
+};
+
 #[derive(PartialEq, Eq, Debug)]
 pub enum PermissionState {
     Allowed,
