@@ -56,17 +56,17 @@ pub async fn update_ws_permissions<'a>(
         .map_err(handle_all_db_errors)?;
 
     // Aggregate/index all the permissions for each bonfire, tent category and tent
-    let bonfires: HashMap<String, PermissionsStateDictionary> = aggregate_ws_item_permissions(
+    let bonfires: HashMap<String, u64> = aggregate_ws_item_permissions(
         permissions
             .iter()
             .filter(|x| x.tent_id.is_none() && x.category_id.is_none()),
         |perm| perm.bonfire_id.clone(),
     );
-    let categories: HashMap<Uuid, PermissionsStateDictionary> = aggregate_ws_item_permissions(
+    let categories: HashMap<Uuid, u64> = aggregate_ws_item_permissions(
         permissions.iter().filter(|x| x.category_id.is_some()),
         |perm| perm.category_id.unwrap(),
     );
-    let tents: HashMap<Uuid, PermissionsStateDictionary> =
+    let tents: HashMap<Uuid, u64> =
         aggregate_ws_item_permissions(permissions.iter().filter(|x| x.tent_id.is_some()), |perm| {
             perm.tent_id.unwrap()
         });
@@ -110,17 +110,17 @@ pub async fn aggregate_ws_permissions<'a>(
         .filter(|x| member.roles.contains(&Some(x.id)))
         .aggregate_permissions();
 
-    let bonfires: HashMap<String, PermissionsStateDictionary> = aggregate_ws_item_permissions(
+    let bonfires: HashMap<String, u64> = aggregate_ws_item_permissions(
         permissions
             .iter()
             .filter(|x| x.tent_id.is_none() && x.category_id.is_none()),
         |perm| perm.bonfire_id.clone(),
     );
-    let categories: HashMap<Uuid, PermissionsStateDictionary> = aggregate_ws_item_permissions(
+    let categories: HashMap<Uuid, u64> = aggregate_ws_item_permissions(
         permissions.iter().filter(|x| x.category_id.is_some()),
         |perm| perm.category_id.unwrap(),
     );
-    let tents: HashMap<Uuid, PermissionsStateDictionary> =
+    let tents: HashMap<Uuid, u64> =
         aggregate_ws_item_permissions(permissions.iter().filter(|x| x.tent_id.is_some()), |perm| {
             perm.tent_id.unwrap()
         });
@@ -140,11 +140,18 @@ fn aggregate_ws_item_permissions<
 >(
     permissions: I,
     mut get_key: F,
-) -> HashMap<K, PermissionsStateDictionary> {
+) -> HashMap<K, u64> {
     permissions
         .map(|x| (get_key(x), x))
         .collect::<MultiMap<K, &CampsitePermission>>()
         .iter_all()
-        .map(|(key, values)| (key.clone(), aggregate_permissions_double_ref(values.iter())))
-        .collect::<HashMap<K, PermissionsStateDictionary>>()
+        .map(|(key, values)| {
+            (
+                key.clone(),
+                values.iter().fold(0u64, |initial, permission| {
+                    initial | permission.permissions as u64
+                }),
+            )
+        })
+        .collect::<HashMap<K, u64>>()
 }

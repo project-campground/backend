@@ -353,7 +353,7 @@ pub async fn on_reactive_data(
                 permissions.bonfires.get(&bonfire_id),
                 PermissionConsts::VIEW_CONTENT,
             )
-            .map_inherit(|| {
+            .map_inherit(|_value| {
                 PermissionState::from_role(&permissions.roles, PermissionConsts::VIEW_CONTENT)
             });
 
@@ -388,12 +388,12 @@ pub async fn on_reactive_data(
                 permissions.categories.get(&category_id),
                 PermissionConsts::VIEW_CONTENT,
             )
-            .map_inherit(|| {
+            .map_inherit(|_value| {
                 PermissionState::from_optional(
                     permissions.bonfires.get(&bonfire_id),
                     PermissionConsts::VIEW_CONTENT,
                 )
-                .map_inherit(|| {
+                .map_inherit(|_value| {
                     PermissionState::from_role(&permissions.roles, PermissionConsts::VIEW_CONTENT)
                 })
             });
@@ -429,19 +429,19 @@ pub async fn on_reactive_data(
                 permissions.tents.get(&tent_id),
                 PermissionConsts::VIEW_CONTENT,
             )
-            .map_inherit(|| {
+            .map_inherit(|_value| {
                 PermissionState::from_optional(
                     category_id
                         .map(|x| permissions.categories.get(&x))
                         .flatten(),
                     PermissionConsts::VIEW_CONTENT,
                 )
-                .map_inherit(|| {
+                .map_inherit(|_value| {
                     PermissionState::from_optional(
                         permissions.bonfires.get(&bonfire_id),
                         PermissionConsts::VIEW_CONTENT,
                     )
-                    .map_inherit(|| {
+                    .map_inherit(|_value| {
                         PermissionState::from_role(
                             &permissions.roles,
                             PermissionConsts::VIEW_CONTENT,
