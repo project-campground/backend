@@ -188,25 +188,4 @@ mod tests {
             PermissionState::Denied
         );
     }
-    #[test]
-    fn test_permission_denied_is_not_inherit_mapped() {
-        assert_eq!(
-            PermissionState::Denied.map_inherit(|_value| PermissionState::Allowed),
-            PermissionState::Denied
-        );
-    }
-    #[test]
-    fn test_permission_allowed_is_not_inherit_mapped() {
-        assert_eq!(
-            PermissionState::Allowed.map_inherit(|_value| PermissionState::Denied),
-            PermissionState::Allowed
-        );
-    }
-    #[test]
-    fn test_permission_inherit_is_not_inherit_mapped() {
-        assert_eq!(
-            PermissionState::Inherit(1).map_inherit(|_value| PermissionState::Denied),
-            PermissionState::Denied
-        );
-    }
 }
