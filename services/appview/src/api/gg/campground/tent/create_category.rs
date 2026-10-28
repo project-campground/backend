@@ -12,7 +12,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_category,
@@ -78,7 +78,7 @@ pub async fn create_category(
                 None,
                 None
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     let current_date = Utc::now().naive_utc();

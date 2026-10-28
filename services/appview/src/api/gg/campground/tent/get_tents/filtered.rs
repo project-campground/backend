@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use appview_schema::models::appview::CampsitePermission;
 use uuid::Uuid;
 
-use crate::helpers::permissions::{PermissionConsts, state::PermissionState};
+use crate::helpers::permissions::{PermissionFlag, state::PermissionState};
 
 pub fn get_denied_item_ids<'a, T, Filter: FnMut(&&'a CampsitePermission) -> bool>(
     permissions: &T,
@@ -42,7 +42,7 @@ where
 {
     permissions
         .filter(move |x| {
-            PermissionState::from_single(&(x.permissions as u64), PermissionConsts::VIEW_CONTENT)
+            PermissionState::from_single(&(x.permissions as u64), PermissionFlag::VIEW_CONTENT)
                 == expected_value
         })
         .map(|x| x.category_id.or(x.tent_id).unwrap())

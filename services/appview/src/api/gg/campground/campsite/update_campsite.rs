@@ -11,7 +11,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::event_next_campsite_global,
@@ -100,7 +100,7 @@ pub async fn update_campsite(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::MANAGE_CAMPSITE))?
+                .has_permissions(PermissionFlag::MANAGE_CAMPSITE))?
     );
 
     let mut conn = establish_connection().unwrap();

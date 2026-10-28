@@ -11,7 +11,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_bonfire,
@@ -89,7 +89,7 @@ pub async fn update_bonfire<'a>(
                 None,
                 None
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_BONFIRES))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_BONFIRES))?
     );
 
     let current_date = Utc::now().naive_utc();

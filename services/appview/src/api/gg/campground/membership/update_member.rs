@@ -13,7 +13,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
     },
@@ -40,9 +40,9 @@ pub async fn update_member(
     let mut conn = establish_connection().unwrap();
 
     let required_permission = if auth.actor.did == actor {
-        PermissionConsts::MANAGE_SELF_IDENTITY
+        PermissionFlag::MANAGE_SELF_IDENTITY
     } else {
-        PermissionConsts::MANAGE_OTHERS_IDENTITY
+        PermissionFlag::MANAGE_OTHERS_IDENTITY
     };
 
     expect_permission!(

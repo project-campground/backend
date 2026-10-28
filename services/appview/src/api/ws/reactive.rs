@@ -19,7 +19,7 @@ use crate::{
     helpers::{
         api::handle_all_db_errors,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             fetch::{fetch_all_campsite_permissions, fetch_only_specific_permissions},
             state::PermissionState,
         },
@@ -351,10 +351,10 @@ pub async fn on_reactive_data(
             // Permission check to not have non-mod members see events from mod-only bonfire
             let bonfire_permissions = PermissionState::from_optional(
                 permissions.bonfires.get(&bonfire_id),
-                PermissionConsts::VIEW_CONTENT,
+                PermissionFlag::VIEW_CONTENT,
             )
             .map_inherit(|_value| {
-                PermissionState::from_role(&permissions.roles, PermissionConsts::VIEW_CONTENT)
+                PermissionState::from_role(&permissions.roles, PermissionFlag::VIEW_CONTENT)
             });
 
             // To no longer track it
@@ -386,15 +386,15 @@ pub async fn on_reactive_data(
             // Permission check to not have non-mod members see events from mod-only bonfire
             let category_permissions = PermissionState::from_optional(
                 permissions.categories.get(&category_id),
-                PermissionConsts::VIEW_CONTENT,
+                PermissionFlag::VIEW_CONTENT,
             )
             .map_inherit(|_value| {
                 PermissionState::from_optional(
                     permissions.bonfires.get(&bonfire_id),
-                    PermissionConsts::VIEW_CONTENT,
+                    PermissionFlag::VIEW_CONTENT,
                 )
                 .map_inherit(|_value| {
-                    PermissionState::from_role(&permissions.roles, PermissionConsts::VIEW_CONTENT)
+                    PermissionState::from_role(&permissions.roles, PermissionFlag::VIEW_CONTENT)
                 })
             });
             // To no longer track it
@@ -427,24 +427,24 @@ pub async fn on_reactive_data(
             // Permission check to not have non-mod members see events from mod-only bonfire
             let tent_permissions = PermissionState::from_optional(
                 permissions.tents.get(&tent_id),
-                PermissionConsts::VIEW_CONTENT,
+                PermissionFlag::VIEW_CONTENT,
             )
             .map_inherit(|_value| {
                 PermissionState::from_optional(
                     category_id
                         .map(|x| permissions.categories.get(&x))
                         .flatten(),
-                    PermissionConsts::VIEW_CONTENT,
+                    PermissionFlag::VIEW_CONTENT,
                 )
                 .map_inherit(|_value| {
                     PermissionState::from_optional(
                         permissions.bonfires.get(&bonfire_id),
-                        PermissionConsts::VIEW_CONTENT,
+                        PermissionFlag::VIEW_CONTENT,
                     )
                     .map_inherit(|_value| {
                         PermissionState::from_role(
                             &permissions.roles,
-                            PermissionConsts::VIEW_CONTENT,
+                            PermissionFlag::VIEW_CONTENT,
                         )
                     })
                 })

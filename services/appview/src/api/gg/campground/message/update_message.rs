@@ -14,7 +14,7 @@ use crate::{
     expect_permission,
     helpers::{
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_tent,
@@ -104,7 +104,7 @@ pub async fn update_message(
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::CREATE_CONTENT))?
+            .has_permissions(PermissionFlag::CREATE_CONTENT))?
     );
 
     let updated_at = Utc::now().naive_utc();

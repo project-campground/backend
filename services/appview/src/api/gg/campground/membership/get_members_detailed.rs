@@ -12,7 +12,7 @@ use crate::{
     helpers::{
         api::handle_all_db_errors,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
     },
@@ -34,10 +34,10 @@ pub async fn get_members_detailed(
         PermissionCheck::member(&auth.member)
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission.fetch_roles().has_any_permissions(
-                PermissionConsts::BAN_MEMBERS
-                    | PermissionConsts::KICK_MEMBERS
-                    | PermissionConsts::GIVE_ROLES
-                    | PermissionConsts::MUTE_MEMBERS
+                PermissionFlag::BAN_MEMBERS
+                    | PermissionFlag::KICK_MEMBERS
+                    | PermissionFlag::GIVE_ROLES
+                    | PermissionFlag::MUTE_MEMBERS
             ))?
     );
 

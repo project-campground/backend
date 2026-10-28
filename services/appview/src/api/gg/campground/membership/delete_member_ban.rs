@@ -12,7 +12,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::event_next_campsite,
@@ -43,7 +43,7 @@ pub async fn delete_member_ban(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::CREATE_INVITES))?
+                .has_permissions(PermissionFlag::CREATE_INVITES))?
     );
 
     let mut conn = establish_connection().unwrap();
@@ -73,7 +73,7 @@ pub async fn delete_member_ban(
     event_next_campsite(
         event_subject,
         &auth.campsite.id,
-        PermissionConsts::BAN_MEMBERS,
+        PermissionFlag::BAN_MEMBERS,
         "MemberBanDeleted",
         &view,
     );

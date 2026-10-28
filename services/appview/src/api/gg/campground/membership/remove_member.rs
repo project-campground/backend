@@ -16,7 +16,7 @@ use crate::{
     helpers::{
         api::{handle_all_db_errors, handle_select_first_error},
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::{event_next, event_next_campsite},
@@ -54,7 +54,7 @@ pub async fn remove_member(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::KICK_MEMBERS))?
+                .has_permissions(PermissionFlag::KICK_MEMBERS))?
     );
 
     let mut conn = establish_connection().unwrap();

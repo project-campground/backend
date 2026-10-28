@@ -13,7 +13,7 @@ use crate::{
     helpers::{
         api::{handle_all_db_errors, handle_select_first_error},
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::event_next_campsite,
@@ -70,7 +70,7 @@ pub async fn delete_role(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::MANAGE_ROLES))?
+                .has_permissions(PermissionFlag::MANAGE_ROLES))?
     );
 
     conn.transaction(|conn| {

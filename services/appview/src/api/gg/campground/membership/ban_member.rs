@@ -21,7 +21,7 @@ use crate::{
     helpers::{
         api::{handle_all_db_errors, handle_select_first_error},
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::event_next_campsite,
@@ -71,7 +71,7 @@ pub async fn ban_member<'a>(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::MANAGE_CAMPSITE))?
+                .has_permissions(PermissionFlag::MANAGE_CAMPSITE))?
     );
 
     let mut conn = establish_connection().unwrap();
@@ -172,7 +172,7 @@ fn add_ban<'a>(
     event_next_campsite(
         event_subject,
         &campsite.id,
-        PermissionConsts::BAN_MEMBERS,
+        PermissionFlag::BAN_MEMBERS,
         "MemberBanCreated",
         &view,
     );

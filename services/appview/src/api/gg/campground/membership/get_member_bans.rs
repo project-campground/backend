@@ -12,7 +12,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
     },
@@ -42,7 +42,7 @@ pub async fn get_member_bans(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::BAN_MEMBERS))?
+                .has_permissions(PermissionFlag::BAN_MEMBERS))?
     );
 
     let mut conn = establish_connection().unwrap();

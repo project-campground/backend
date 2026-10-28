@@ -16,7 +16,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_tent,
@@ -70,9 +70,9 @@ pub async fn delete_message(
         .map_err(handle_select_first_error)?;
 
     let required_perms = if msg.0.created_by != auth.actor.did {
-        PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_CONTENT
+        PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_CONTENT
     } else {
-        PermissionConsts::VIEW_CONTENT
+        PermissionFlag::VIEW_CONTENT
     };
 
     expect_permission!(

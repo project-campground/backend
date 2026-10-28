@@ -16,7 +16,7 @@ use crate::{
     helpers::{
         api::handle_all_db_errors,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
     },
@@ -52,7 +52,7 @@ pub async fn get_messages(
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT))?
     );
 
     let mut conn = establish_connection().unwrap();

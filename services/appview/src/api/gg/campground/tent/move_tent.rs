@@ -14,7 +14,7 @@ use crate::{
     api::gg::campground::tent::util::{check_bonfire_existence, check_category_existence},
     database::{DbConnection, establish_connection},
     expect_permission,
-    helpers::{api::handle_all_db_errors, permissions::PermissionConsts, ws::event_next_tent},
+    helpers::{api::handle_all_db_errors, permissions::PermissionFlag, ws::event_next_tent},
     make_room_for_items,
     realtime::data::ReactiveSubject,
     views::tents::tent_view_basic,
@@ -61,7 +61,7 @@ pub async fn move_tent(
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     match body.into_inner() {

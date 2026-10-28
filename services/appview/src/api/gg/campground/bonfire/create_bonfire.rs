@@ -12,7 +12,7 @@ use crate::{
     helpers::{
         api::handle_all_db_errors,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::event_next_bonfire,
@@ -67,7 +67,7 @@ pub async fn create_bonfire(
         PermissionCheck::member(&auth.member)
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission.fetch_roles().has_permissions(
-                PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS
+                PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS
             ))?
     );
 

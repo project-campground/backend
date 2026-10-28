@@ -14,7 +14,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
     },
@@ -46,7 +46,7 @@ pub async fn get_invites(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::MANAGE_INVITES))?
+                .has_permissions(PermissionFlag::MANAGE_INVITES))?
     );
 
     let mut conn = establish_connection().unwrap();

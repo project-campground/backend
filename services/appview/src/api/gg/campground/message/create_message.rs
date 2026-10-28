@@ -15,7 +15,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_tent,
@@ -90,7 +90,7 @@ pub async fn create_message<'a>(
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::CREATE_CONTENT | PermissionConsts::VIEW_CONTENT))?
+            .has_permissions(PermissionFlag::CREATE_CONTENT | PermissionFlag::VIEW_CONTENT))?
     );
     let replies_query: Vec<TentMessage> = tent_message::table
         .filter(

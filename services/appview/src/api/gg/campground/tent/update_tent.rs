@@ -19,7 +19,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::{event_next_campsite, event_next_tent},
@@ -86,7 +86,7 @@ pub async fn update_tent<'a>(
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     let (actor, profile) =

@@ -8,7 +8,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
     },
@@ -46,7 +46,7 @@ pub fn check_bonfire_existence(
                 None,
                 None
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     return Ok(());
@@ -85,7 +85,7 @@ pub fn check_category_existence(
                 Some(&category_id),
                 None
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     return Ok(tent_category.bonfire_id.clone());

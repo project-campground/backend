@@ -4,7 +4,7 @@ use rocket::serde::json::Json;
 use crate::{
     expect_permission,
     helpers::permissions::{
-        PermissionConsts,
+        PermissionFlag,
         check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
     },
     views::tents::tent_view_detailed,
@@ -24,7 +24,7 @@ pub async fn get_tent(auth: TentInfo<'_>, tent_id: &str) -> Result<Json<TentView
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     return Ok(Json(tent_view_detailed(&auth.tent)));

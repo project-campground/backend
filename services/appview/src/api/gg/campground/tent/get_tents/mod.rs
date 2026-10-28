@@ -15,7 +15,7 @@ use crate::{
     database::{DbConnection, establish_connection},
     helpers::{
         api::{handle_all_db_errors, handle_select_first_error},
-        permissions::{PermissionConsts, state::PermissionState},
+        permissions::{PermissionFlag, state::PermissionState},
     },
     util::iter::AggregatePermissions,
     views::{
@@ -143,7 +143,7 @@ fn member_has_role_permissions(
             initial | (role_permission as u32)
         });
 
-    Ok(member_role_permissions & PermissionConsts::VIEW_CONTENT == PermissionConsts::VIEW_CONTENT)
+    Ok(member_role_permissions & PermissionFlag::VIEW_CONTENT == PermissionFlag::VIEW_CONTENT)
 }
 
 async fn has_perms_to_view_bonfire<'a, T>(
@@ -166,7 +166,7 @@ where
     let perms = bonfire_perms.aggregate_permissions();
 
     Ok(
-        PermissionState::from_single(&perms, PermissionConsts::VIEW_CONTENT).map_non_denied(|| {
+        PermissionState::from_single(&perms, PermissionFlag::VIEW_CONTENT).map_non_denied(|| {
             if has_role_perm {
                 PermissionState::Allowed
             } else {

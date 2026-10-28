@@ -68,13 +68,22 @@ impl PermissionState {
 
         for pos in flags.trailing_zeros()..(32 - flags.leading_zeros()) {
             let state = (permission >> (pos * 2)) & 0b11;
+            let flag_in_pos = 1 << pos;
+
+            // Ignore if flag was not specified
+            if flags & flag_in_pos == 0 {
+                continue;
+            }
 
             if state == 0b11 {
+                // Other can be denied or inherited
                 continue;
             } else if state == 0b10 {
+                // If one flag is denied, requests will be denied anyways
                 return PermissionState::Denied;
             } else {
-                missing |= 1 >> pos;
+                // To know what to check in roles. Allowed permissions should not be checked against role permissions.
+                missing |= 1 << pos;
             }
         }
 
@@ -96,5 +105,108 @@ impl PermissionState {
     }
     pub fn is_allowed(self) -> bool {
         self == PermissionState::Allowed
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::helpers::permissions::{PermissionFlag, PermissionPosition, state::PermissionState};
+
+    const fn get_bit_pair(value: u64, position: u8) -> u64 {
+        value << (position * 2)
+    }
+
+    #[test]
+    fn test_from_role_empty_fails() {
+        assert_eq!(
+            PermissionState::from_role(&0u32, PermissionFlag::VIEW_CONTENT),
+            PermissionState::Denied
+        );
+    }
+    #[test]
+    fn test_from_role_single_success() {
+        assert_eq!(
+            PermissionState::from_role(&PermissionFlag::VIEW_CONTENT, PermissionFlag::VIEW_CONTENT),
+            PermissionState::Allowed
+        );
+    }
+    #[test]
+    fn test_from_role_both_empty() {
+        assert_eq!(PermissionState::from_role(&0, 0), PermissionState::Allowed);
+    }
+    #[test]
+    fn test_from_empty_permission_is_inherit() {
+        assert_eq!(
+            PermissionState::from(&0, PermissionFlag::VIEW_CONTENT),
+            PermissionState::Inherit(PermissionFlag::VIEW_CONTENT)
+        );
+    }
+    #[test]
+    fn test_from_empty_permission_is_inherit_multiple_flags() {
+        assert_eq!(
+            PermissionState::from(
+                &0,
+                PermissionFlag::VIEW_CONTENT | PermissionFlag::BAN_MEMBERS
+            ),
+            PermissionState::Inherit(PermissionFlag::VIEW_CONTENT | PermissionFlag::BAN_MEMBERS)
+        );
+    }
+    #[test]
+    fn test_from_single_permission_is_inherit_multiple_flags() {
+        assert_eq!(
+            PermissionState::from(
+                &(get_bit_pair(0b11, PermissionPosition::VIEW_CONTENT)
+                    | get_bit_pair(0b11, PermissionPosition::BAN_MEMBERS)),
+                PermissionFlag::VIEW_CONTENT
+                    | PermissionFlag::BAN_MEMBERS
+                    | PermissionFlag::CREATE_CONTENT
+            ),
+            PermissionState::Inherit(PermissionFlag::CREATE_CONTENT)
+        );
+    }
+    #[test]
+    fn test_permission_allowed() {
+        assert_eq!(
+            PermissionState::from(
+                &(get_bit_pair(0b11, PermissionPosition::VIEW_CONTENT)
+                    | get_bit_pair(0b11, PermissionPosition::BAN_MEMBERS)),
+                PermissionFlag::VIEW_CONTENT | PermissionFlag::BAN_MEMBERS
+            ),
+            PermissionState::Allowed
+        );
+    }
+    #[test]
+    fn test_permission_denied() {
+        assert_eq!(
+            PermissionState::from(
+                &(get_bit_pair(0b11, PermissionPosition::VIEW_CONTENT)
+                    | get_bit_pair(0b10, PermissionPosition::BAN_MEMBERS)),
+                PermissionFlag::VIEW_CONTENT
+                    | PermissionFlag::BAN_MEMBERS
+                    | PermissionFlag::CREATE_CONTENT
+            ),
+            PermissionState::Denied
+        );
+    }
+    #[test]
+    fn test_permission_denied_is_not_inherit_mapped() {
+        assert_eq!(
+            PermissionState::Denied.map_inherit(|_value| PermissionState::Allowed),
+            PermissionState::Denied
+        );
+    }
+    #[test]
+    fn test_permission_allowed_is_not_inherit_mapped() {
+        assert_eq!(
+            PermissionState::Allowed.map_inherit(|_value| PermissionState::Denied),
+            PermissionState::Allowed
+        );
+    }
+    #[test]
+    fn test_permission_inherit_is_not_inherit_mapped() {
+        assert_eq!(
+            PermissionState::Inherit(1).map_inherit(|_value| PermissionState::Denied),
+            PermissionState::Denied
+        );
     }
 }

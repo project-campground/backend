@@ -17,7 +17,7 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
         ws::event_next,
@@ -86,7 +86,7 @@ pub async fn add_member_role(
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionConsts::GIVE_ROLES))?
+                .has_permissions(PermissionFlag::GIVE_ROLES))?
     );
 
     let updated_members = diesel::update(campsite_member::table)

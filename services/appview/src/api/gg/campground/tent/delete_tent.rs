@@ -10,7 +10,7 @@ use crate::{
     helpers::{
         api::handle_all_db_errors,
         permissions::{
-            PermissionConsts,
+            PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_tent,
@@ -36,7 +36,7 @@ pub async fn delete_tent(
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionConsts::VIEW_CONTENT | PermissionConsts::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
     let mut conn = establish_connection().unwrap();
 
