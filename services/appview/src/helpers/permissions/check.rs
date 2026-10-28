@@ -75,10 +75,7 @@ impl PermissionCheckWithOwner {
             .filter(|x| self.basic.roles.contains(&x.id))
             .fold(0u32, |initial, value| initial | (value.permissions as u32));
 
-        PermissionCheckWithRolesEager {
-            with_owner: self,
-            role_permissions,
-        }
+        PermissionCheckWithRolesEager { role_permissions }
     }
 }
 
@@ -97,7 +94,6 @@ pub trait PermissionCheckWithRoles: PermissionCheckTestable {
     fn get_actor(&self) -> &str;
 }
 pub struct PermissionCheckWithRolesEager {
-    pub with_owner: PermissionCheckWithOwner,
     pub role_permissions: u32,
 }
 pub struct PermissionCheckWithRolesLazy {

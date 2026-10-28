@@ -3,7 +3,6 @@ use appview_schema::{
     schema::appview::{campsite, campsite_member, campsite_role, profile},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use uuid::Uuid;
 
 use crate::{
     database::establish_connection, helpers::api::handle_select_first_error, xrpc::error::XRPCError,
@@ -61,14 +60,6 @@ pub fn get_roles_from_db(campsite_id: &str) -> Result<Vec<CampsiteRole>, XRPCErr
     let mut conn = establish_connection().unwrap();
     campsite_role::table
         .filter(campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
-        .map_err(handle_select_first_error)
-}
-
-pub fn get_specific_roles(role_ids: &Vec<Uuid>) -> Result<Vec<CampsiteRole>, XRPCError> {
-    let mut conn = establish_connection().unwrap();
-    campsite_role::table
-        .filter(campsite_role::id.eq_any(role_ids))
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)
 }

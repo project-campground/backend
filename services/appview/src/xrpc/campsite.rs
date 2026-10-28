@@ -68,13 +68,6 @@ pub enum OneOfInfo<'a> {
     Bonfire(BonfireInfo<'a>),
 }
 impl<'a> OneOfInfo<'a> {
-    pub fn get_actor(&self) -> Actor {
-        match self {
-            OneOfInfo::Bonfire(auth) => auth.actor.clone(),
-            OneOfInfo::Category(auth) => auth.actor.clone(),
-            OneOfInfo::Tent(auth) => auth.actor.clone(),
-        }
-    }
     pub fn get_actor_did(&self) -> String {
         match self {
             OneOfInfo::Bonfire(auth) => auth.actor.did.clone(),

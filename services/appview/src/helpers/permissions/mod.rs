@@ -31,15 +31,23 @@ impl PermissionConsts {
     // Content
     pub const VIEW_CONTENT: u32 = 1 << 16;
     pub const CREATE_CONTENT: u32 = 1 << 17;
+    #[allow(dead_code)]
     pub const PIN_CONTENT: u32 = 1 << 18;
     pub const MANAGE_CONTENT: u32 = 1 << 19;
+    #[allow(dead_code)]
     pub const MENTION_EVERYONE: u32 = 1 << 20;
+    #[allow(dead_code)]
     pub const CREATE_PRIVATE_CONTENT: u32 = 1 << 21;
 
+    #[allow(dead_code)]
     pub const MAX_CAMPSITE: u32 = 0b1111;
+    #[allow(dead_code)]
     pub const MAX_MEMBERSHIP: u32 = 0b1111 << 4;
+    #[allow(dead_code)]
     pub const MAX_IDENTITY: u32 = 0b11 << 8;
+    #[allow(dead_code)]
     pub const MAX_CONTENT: u32 = 0b111111 << 16;
+    #[allow(dead_code)]
     pub const MAX: u32 = PermissionConsts::MAX_CAMPSITE
         | PermissionConsts::MAX_MEMBERSHIP
         | PermissionConsts::MAX_IDENTITY
