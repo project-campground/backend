@@ -185,7 +185,7 @@ pub fn update_permission_in_database<'a>(
 
     let permission = modified_permissions.first().map_or_else(
         || PermissionViewBasic {
-            permissions,
+            permissions: permissions.to_string(),
             bonfire_id: bonfire_id.clone(),
             category_id: category_id.clone(),
             tent_id: tent_id.clone(),

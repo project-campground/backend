@@ -10,7 +10,7 @@ pub struct PermissionViewBasic {
     pub user_id: Option<String>,
     pub role_id: Option<Uuid>,
 
-    pub permissions: u64,
+    pub permissions: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -26,7 +26,7 @@ pub struct PermissionViewDetailed {
     pub user_id: Option<String>,
     pub role_id: Option<Uuid>,
 
-    pub permissions: u64,
+    pub permissions: String,
 
     pub created_by: String,
     pub created_at: String,

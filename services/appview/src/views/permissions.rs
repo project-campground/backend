@@ -12,7 +12,7 @@ pub fn permission_view_basic(permission: &CampsitePermission) -> PermissionViewB
         user_id: permission.user_id.clone(),
         role_id: permission.role_id.clone(),
 
-        permissions: permission.permissions as u64,
+        permissions: (permission.permissions as u64).to_string(),
     };
 }
 
@@ -28,7 +28,7 @@ pub fn permission_view_detailed(permission: &CampsitePermission) -> PermissionVi
         user_id: permission.user_id.clone(),
         role_id: permission.role_id.clone(),
 
-        permissions: permission.permissions as u64,
+        permissions: (permission.permissions as u64).to_string(),
 
         created_by: permission.created_by.clone(),
         created_at: serialize_datetime(permission.created_at),
