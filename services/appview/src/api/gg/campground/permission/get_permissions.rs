@@ -1,8 +1,14 @@
-use appview_schema::{models::appview::CampsitePermission, schema::appview::campsite_permission};
+use appview_schema::{
+    models::appview::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile},
+    schema::appview::{actor, campsite_member, campsite_permission, campsite_role, profile},
+};
 use campground_lexicon::gg::campground::permission::{
     GetPermissionsOutput, PermissionViewDetailed,
 };
-use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, sql_types::Bool};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl,
+    RunQueryDsl, sql_types::Bool,
+};
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
@@ -57,10 +63,46 @@ macro_rules! get_scoped_permissions {
                         .or::<bool, Bool>(!$non_self),
                 ),
             )
-            .load::<CampsitePermission>(&mut conn)
+            .left_join(
+                campsite_role::table.on(campsite_permission::roleid
+                    .is_not_null()
+                    .and(campsite_role::id.eq(campsite_permission::roleid.assume_not_null()))),
+            )
+            .left_join(
+                campsite_member::table.on(campsite_permission::userid.is_not_null().and(
+                    campsite_member::userid.eq(campsite_permission::userid.assume_not_null()),
+                )),
+            )
+            .left_join(
+                profile::table.on(campsite_permission::userid.is_not_null().and(
+                    profile::creator
+                        .eq(campsite_permission::userid.assume_not_null())
+                        .assume_not_null(),
+                )),
+            )
+            .left_join(
+                actor::table.on(campsite_permission::userid
+                    .is_not_null()
+                    .and(actor::did.eq(campsite_permission::userid.assume_not_null()))),
+            )
+            .load::<(
+                CampsitePermission,
+                Option<CampsiteRole>,
+                Option<CampsiteMember>,
+                Option<Profile>,
+                Option<Actor>,
+            )>(&mut conn)
             .map_err(handle_all_db_errors)?
             .iter()
-            .map(permission_view_detailed)
+            .map(|(permission, role, member, profile, actor)| {
+                permission_view_detailed(
+                    permission,
+                    role.as_ref(),
+                    actor
+                        .as_ref()
+                        .map(|actor| (actor, profile.as_ref(), member.as_ref())),
+                )
+            })
             .collect::<Vec<PermissionViewDetailed>>();
 
         Ok(Json(GetPermissionsOutput { permissions }))
