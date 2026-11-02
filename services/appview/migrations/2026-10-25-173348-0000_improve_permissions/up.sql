@@ -11,6 +11,8 @@ ALTER TABLE appview.campsite_role
 DROP COLUMN IF EXISTS generalPermissions;
 
 -- Permission
+DELETE FROM appview.campsite_permission;
+
 ALTER TABLE appview.campsite_permission
 ADD COLUMN IF NOT EXISTS permissions bigint NOT NULL
 DEFAULT 0;
@@ -29,4 +31,4 @@ DROP COLUMN IF EXISTS deniedContentPermissions;
 
 ALTER TABLE appview.campsite_permission
 ADD CONSTRAINT campsite_permission_unique_keys
-UNIQUE (userid, roleid, tentid, categoryid, bonfireid, campsiteid);
+UNIQUE NULLS NOT DISTINCT (userid, roleid, tentid, categoryid, bonfireid, campsiteid);
