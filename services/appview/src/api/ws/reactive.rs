@@ -13,7 +13,7 @@ use ws::Message;
 use crate::{
     api::ws::permissions::{aggregate_ws_permissions, update_ws_permissions},
     database::{
-        campsites::{get_campsite_member, get_roles_from_db},
+        campsites::{get_campsite_and_member_from_db, get_roles_from_db},
         establish_connection,
     },
     helpers::{
@@ -46,6 +46,12 @@ pub enum WebSocketOutput {
 lazy_static! {
     pub static ref MEMBER_PERMS_DEFAULT: CampsiteMemberPermissions = CampsiteMemberPermissions {
         roles: 0,
+        bonfires: HashMap::new(),
+        categories: HashMap::new(),
+        tents: HashMap::new(),
+    };
+    pub static ref OWNER_PERMS_DEFAULT: CampsiteMemberPermissions = CampsiteMemberPermissions {
+        roles: PermissionFlag::MAX,
         bonfires: HashMap::new(),
         categories: HashMap::new(),
         tents: HashMap::new(),
@@ -97,8 +103,22 @@ pub async fn on_rocket_message(
                             if let Some(campsite_id) = current_campsite
                                 && let Some(ws_actor) = ws_actor
                             {
-                                *current_membership =
-                                    get_campsite_member(campsite_id, ws_actor).ok();
+                                let membership =
+                                    get_campsite_and_member_from_db(campsite_id, ws_actor).ok();
+
+                                if membership.is_none() {
+                                    return WebSocketOutput::Ignore;
+                                }
+
+                                let (campsite, campsite_member) = membership.unwrap();
+                                let is_owner = campsite.owner == campsite_member.user_id.clone();
+
+                                *current_membership = Some(campsite_member);
+
+                                if is_owner {
+                                    *permissions = OWNER_PERMS_DEFAULT.clone();
+                                    return WebSocketOutput::Ignore;
+                                }
 
                                 // Basically empty permissions that are going to be changed anyways (most likely)
                                 *permissions = MEMBER_PERMS_DEFAULT.clone();
@@ -442,10 +462,7 @@ pub async fn on_reactive_data(
                         PermissionFlag::VIEW_CONTENT,
                     )
                     .map_inherit(|_value| {
-                        PermissionState::from_role(
-                            &permissions.roles,
-                            PermissionFlag::VIEW_CONTENT,
-                        )
+                        PermissionState::from_role(&permissions.roles, PermissionFlag::VIEW_CONTENT)
                     })
                 })
             });
