@@ -1,5 +1,5 @@
 use appview_schema::schema::appview::{campsite_permission, tent, tent_category};
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
@@ -26,7 +26,7 @@ pub async fn delete_category(
     auth: CategoryInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     category_id: &str,
-) -> Result<Json<TentCategoryView>> {
+) -> Result<Json<TentCategoryViewDetailed>> {
     expect_permission!(
         PermissionCheck::member(&auth.member)
             .is_owner(&auth.campsite)

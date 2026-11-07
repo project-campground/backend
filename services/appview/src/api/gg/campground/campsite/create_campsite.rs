@@ -18,7 +18,6 @@ use crate::{
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
     util::params::{OptionValidity, ensure_valid_set_uri},
     views::{
-        bonfires::bonfire_view_basic,
         campsites::campsite_view_detailed,
         members::member_view_basic,
         roles::{CampsiteRoleFlag, role_view_basic},
@@ -222,7 +221,6 @@ pub async fn create_campsite(
 
             let campsite_view = campsite_view_detailed(
                 campsite,
-                vec![bonfire_view_basic(home_bonfire)],
                 vec![role_view_basic(default_role)],
                 member_view_basic(owner_member, profile.as_ref(), actor),
             );

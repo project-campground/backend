@@ -4,11 +4,7 @@ use crate::gg::campground::{membership::MemberViewAuthor, role::RoleViewBasic};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PermissionViewBasic {
-    pub bonfire_id: String,
-    pub category_id: Option<Uuid>,
-    pub tent_id: Option<Uuid>,
-
+pub struct PermissionViewEmbedded {
     pub user_id: Option<String>,
     pub role_id: Option<Uuid>,
 

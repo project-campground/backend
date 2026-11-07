@@ -1,4 +1,4 @@
-use crate::gg::campground::tent::{TentCategoryView, TentViewBasic};
+use crate::gg::campground::permission::PermissionViewEmbedded;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -11,6 +11,19 @@ pub struct BonfireViewBasic {
     pub banner_uri: Option<String>,
     pub position: i32,
     pub home: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BonfireViewInList {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub avatar_uri: Option<String>,
+    pub banner_uri: Option<String>,
+    pub position: i32,
+    pub home: bool,
+    pub permissions: Vec<PermissionViewEmbedded>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -28,6 +41,4 @@ pub struct BonfireViewDetailed {
     pub created_at: String,
     pub updated_by: String,
     pub updated_at: String,
-    pub tents: Vec<TentViewBasic>,
-    pub categories: Vec<TentCategoryView>,
 }

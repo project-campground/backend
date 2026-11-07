@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::TentCategory, schema::appview};
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -42,7 +42,7 @@ pub async fn move_category(
     event_subject: &State<ReactiveSubject>,
     category_id: &str,
     body: Json<MoveTentBody>,
-) -> Result<Json<TentCategoryView>> {
+) -> Result<Json<TentCategoryViewDetailed>> {
     expect_permission!(
         PermissionCheck::member(&auth.member)
             .is_owner(&auth.campsite)
@@ -71,7 +71,7 @@ fn handle_moved_categories(
     auth: &CategoryInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     result: (Vec<TentCategory>, Vec<(Uuid, i32)>),
-) -> Result<Json<TentCategoryView>, XRPCError> {
+) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     let category = result.0.first().unwrap();
 
     let view = tent_category_view(category);
@@ -84,7 +84,7 @@ async fn move_tent_to_pos(
     auth: CategoryInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     position: i32,
-) -> Result<Json<TentCategoryView>, XRPCError> {
+) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     // Maybe a client had failed checked
     if auth.category.priority == position {
         return Ok(Json(tent_category_view(&auth.category)));
@@ -103,7 +103,7 @@ async fn move_tent_to_bonfire(
     event_subject: &State<ReactiveSubject>,
     bonfire_id: String,
     position: i32,
-) -> Result<Json<TentCategoryView>, XRPCError> {
+) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     // Maybe a client had failed checked
     if bonfire_id == auth.category.bonfire_id {
         return Ok(Json(tent_category_view(&auth.category)));

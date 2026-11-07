@@ -1,5 +1,5 @@
 use appview_schema::models::appview::TentCategory;
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -42,7 +42,7 @@ pub async fn create_category(
     event_subject: &State<ReactiveSubject>,
     bonfire_id: &str,
     body: Json<CreateCategoryBody>,
-) -> Result<Json<TentCategoryView>> {
+) -> Result<Json<TentCategoryViewDetailed>> {
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest(

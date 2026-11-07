@@ -106,6 +106,62 @@ impl PermissionState {
     pub fn is_allowed(self) -> bool {
         self == PermissionState::Allowed
     }
+    pub fn with_condition(self, inherits: bool) -> bool {
+        match self {
+            PermissionState::Allowed => true,
+            PermissionState::Inherit(_) => inherits,
+            PermissionState::Denied => false,
+        }
+    }
+}
+impl std::ops::BitOr for PermissionState {
+    type Output = PermissionState;
+
+    fn bitor(self, rhs: Self::Output) -> Self {
+        match self {
+            PermissionState::Allowed => PermissionState::Allowed,
+            PermissionState::Denied => match rhs {
+                PermissionState::Allowed => PermissionState::Allowed,
+                _ => PermissionState::Denied,
+            },
+            PermissionState::Inherit(value) => match rhs {
+                PermissionState::Inherit(value_right) => {
+                    PermissionState::Inherit(value | value_right)
+                }
+                rhs => rhs,
+            },
+        }
+    }
+}
+pub trait PermissionStateIterator {
+    fn collapse(self) -> PermissionState;
+}
+impl<'a, T: 'a + Iterator<Item = PermissionState>> PermissionStateIterator for &mut T {
+    fn collapse(self) -> PermissionState {
+        let mut current_value = PermissionState::Inherit(0);
+
+        for state in self {
+            match state {
+                // If it's allowed, ignore all denied
+                PermissionState::Allowed => {
+                    return PermissionState::Allowed;
+                }
+                // It could be allowed somewhere
+                PermissionState::Denied => current_value = PermissionState::Denied,
+                PermissionState::Inherit(value) => {
+                    // If it was denied, ignore, but otherwise add up the inherit
+                    current_value = match current_value {
+                        PermissionState::Inherit(current_value) => {
+                            PermissionState::Inherit(current_value | value)
+                        }
+                        current_value => current_value,
+                    };
+                }
+            }
+        }
+
+        current_value
+    }
 }
 
 #[cfg(test)]

@@ -1,19 +1,17 @@
 use appview_schema::models::appview::{
     Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile,
 };
-use campground_lexicon::gg::campground::permission::{PermissionViewBasic, PermissionViewDetailed};
+use campground_lexicon::gg::campground::permission::{
+    PermissionViewDetailed, PermissionViewEmbedded,
+};
 
 use crate::views::{
     members::member_view_author, profiles::profile_view_basic, roles::role_view_basic,
     util::serialize_datetime,
 };
 
-pub fn permission_view_basic(permission: &CampsitePermission) -> PermissionViewBasic {
-    return PermissionViewBasic {
-        bonfire_id: permission.bonfire_id.clone(),
-        category_id: permission.category_id.clone(),
-        tent_id: permission.tent_id.clone(),
-
+pub fn permission_view_embedded(permission: &CampsitePermission) -> PermissionViewEmbedded {
+    return PermissionViewEmbedded {
         user_id: permission.user_id.clone(),
         role_id: permission.role_id.clone(),
 

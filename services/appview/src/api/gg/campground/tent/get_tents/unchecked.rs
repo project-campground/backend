@@ -1,29 +1,13 @@
-use appview_schema::{
-    models::appview::{CampsitePermission, Tent, TentCategory},
-    schema::appview::campsite_permission,
-};
-use campground_lexicon::gg::campground::{
-    permission::PermissionViewBasic,
-    tent::{GetTentsOutput, TentCategoryView, TentViewBasic},
+use appview_schema::models::appview::{Tent, TentCategory};
+use campground_lexicon::gg::campground::tent::{
+    GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
-use crate::{
-    database::establish_connection,
-    helpers::api::handle_all_db_errors,
-    views::{
-        permissions::permission_view_basic,
-        tents::{tent_category_view, tent_view_basic},
-    },
-    xrpc::error::Result,
-};
+use crate::{database::establish_connection, xrpc::error::Result};
 
-pub async fn get_tents(
-    actor: &str,
-    campsite_id: &str,
-    bonfire_id: &str,
-) -> Result<Json<GetTentsOutput>> {
+pub async fn get_tents(campsite_id: &str, bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
     let mut conn = establish_connection().unwrap();
 
     let categories = crate::schema::appview::tent_category::table
@@ -35,8 +19,14 @@ pub async fn get_tents(
         .load::<TentCategory>(&mut conn)
         .expect("Error loading tent categories")
         .iter()
-        .map(tent_category_view)
-        .collect::<Vec<TentCategoryView>>();
+        .map(|tent_category| TentCategoryViewInList {
+            id: tent_category.id,
+            name: tent_category.name.clone(),
+            description: tent_category.description.clone(),
+            position: tent_category.priority,
+            permissions: vec![],
+        })
+        .collect::<Vec<_>>();
     let tents = crate::schema::appview::tent::table
         .filter(
             crate::schema::appview::tent::campsiteid
@@ -46,25 +36,17 @@ pub async fn get_tents(
         .load::<Tent>(&mut conn)
         .expect("Error loading tents")
         .iter()
-        .map(tent_view_basic)
-        .collect::<Vec<TentViewBasic>>();
-    let permissions = campsite_permission::table
-        .filter(
-            campsite_permission::bonfireid.eq(bonfire_id).and(
-                campsite_permission::roleid
-                    .is_not_null()
-                    .or(campsite_permission::userid.eq(&actor)),
-            ),
-        )
-        .load::<CampsitePermission>(&mut conn)
-        .map_err(handle_all_db_errors)?
-        .iter()
-        .map(permission_view_basic)
-        .collect::<Vec<PermissionViewBasic>>();
+        .map(|tent| TentViewInList {
+            id: tent.id.clone(),
+            category_id: tent.category_id,
+            name: tent.name.clone(),
+            description: tent.description.clone(),
+            r#type: TentType::Text,
+            view_type: tent.view_type,
+            position: tent.priority,
+            permissions: vec![],
+        })
+        .collect::<Vec<_>>();
 
-    return Ok(Json(GetTentsOutput {
-        tents,
-        categories,
-        permissions,
-    }));
+    return Ok(Json(GetTentsOutput { tents, categories }));
 }

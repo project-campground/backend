@@ -66,9 +66,9 @@ pub async fn create_bonfire(
     expect_permission!(
         PermissionCheck::member(&auth.member)
             .is_owner(&auth.campsite)
-            .skip_if_owner(|permission| permission.fetch_roles().has_permissions(
-                PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS
-            ))?
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
     let avatar_uri = &ensure_valid_set_uri(avatar_uri)

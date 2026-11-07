@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::TentCategory, schema::appview};
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -41,7 +41,7 @@ pub async fn update_category(
     event_subject: &State<ReactiveSubject>,
     category_id: &str,
     body: Json<UpdateCategoryBody>,
-) -> Result<Json<TentCategoryView>> {
+) -> Result<Json<TentCategoryViewDetailed>> {
     let inner_body = &body.into_inner();
     if inner_body
         .name

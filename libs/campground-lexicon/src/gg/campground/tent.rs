@@ -1,12 +1,28 @@
 use uuid::Uuid;
 
-use crate::gg::campground::permission::PermissionViewBasic;
+use crate::gg::campground::permission::PermissionViewEmbedded;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[non_exhaustive]
 pub enum TentType {
     Text = 0,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TentViewInList {
+    pub id: Uuid,
+    pub category_id: Option<Uuid>,
+
+    pub name: String,
+    pub description: String,
+    pub r#type: TentType,
+    pub view_type: i16,
+
+    pub position: i32,
+
+    pub permissions: Vec<PermissionViewEmbedded>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -32,7 +48,7 @@ pub struct TentViewDetailed {
     pub campsite_id: String,
     pub bonfire_id: String,
     pub category_id: Option<Uuid>,
-    
+
     pub name: String,
     pub description: String,
     pub r#type: TentType,
@@ -48,26 +64,35 @@ pub struct TentViewDetailed {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TentCategoryView {
+pub struct TentCategoryViewDetailed {
     pub id: Uuid,
     pub campsite_id: String,
     pub bonfire_id: String,
-    
+
     pub name: String,
     pub description: String,
 
     pub position: i32,
-    
+
     pub created_by: String,
     pub created_at: String,
     pub updated_by: String,
     pub updated_at: String,
 }
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TentCategoryViewInList {
+    pub id: Uuid,
+    pub name: String,
+    pub description: String,
+
+    pub position: i32,
+    pub permissions: Vec<PermissionViewEmbedded>,
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetTentsOutput {
-    pub permissions: Vec<PermissionViewBasic>,
-    pub tents: Vec<TentViewBasic>,
-    pub categories: Vec<TentCategoryView>,
+    pub tents: Vec<TentViewInList>,
+    pub categories: Vec<TentCategoryViewInList>,
 }

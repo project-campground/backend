@@ -3,9 +3,12 @@ use appview_schema::{
     schema::appview::{campsite, campsite_member, campsite_role, profile},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use uuid::Uuid;
 
 use crate::{
-    database::establish_connection, helpers::api::handle_select_first_error, xrpc::error::XRPCError,
+    database::{DbConnection, establish_connection},
+    helpers::api::handle_select_first_error,
+    xrpc::error::XRPCError,
 };
 
 pub fn get_campsite_and_member_from_db(
@@ -62,4 +65,20 @@ pub fn get_roles_from_db(campsite_id: &str) -> Result<Vec<CampsiteRole>, XRPCErr
         .filter(campsite_role::campsiteid.eq(campsite_id))
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)
+}
+pub fn get_role_permissions_from_db(
+    conn: &mut DbConnection,
+    campsite_id: &str,
+    role_ids: &Vec<Uuid>,
+) -> Result<u32, diesel::result::Error> {
+    Ok(campsite_role::table
+        .filter(
+            campsite_role::campsiteid
+                .eq(campsite_id)
+                .and(campsite_role::id.eq_any(role_ids)),
+        )
+        .select(campsite_role::permissions)
+        .load::<i32>(conn)?
+        .iter()
+        .fold(0u32, |initial, permission| initial | (*permission as u32)))
 }

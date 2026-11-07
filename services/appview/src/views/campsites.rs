@@ -1,6 +1,5 @@
 use appview_schema::models::appview::Campsite;
 use campground_lexicon::gg::campground::{
-    bonfire::BonfireViewBasic,
     campsite::{CampsiteViewBasic, CampsiteViewDetailed},
     membership::MemberViewBasic,
     role::RoleViewBasic,
@@ -24,7 +23,6 @@ pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
 
 pub fn campsite_view_detailed(
     campsite: &Campsite,
-    bonfires: Vec<BonfireViewBasic>,
     roles: Vec<RoleViewBasic>,
     member: MemberViewBasic,
 ) -> CampsiteViewDetailed {
@@ -42,7 +40,6 @@ pub fn campsite_view_detailed(
         created_at: serialize_datetime(campsite.created_at),
         updated_by: campsite.updated_by.clone(),
         updated_at: serialize_datetime(campsite.updated_at),
-        bonfires: bonfires,
         roles: roles,
         me: member,
     };

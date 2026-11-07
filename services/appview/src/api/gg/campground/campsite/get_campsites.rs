@@ -1,6 +1,6 @@
 use appview_schema::models::appview::Campsite;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::campsite::{CampsiteViewBasic, GetCampsitesOutput};
+use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
@@ -21,7 +21,7 @@ pub async fn get_campsites(
     _client: &State<Client>,
     _did_document_storage: &State<LruDidDocumentStorage>,
     campsite_ids: Vec<&str>,
-) -> Result<Json<GetCampsitesOutput>> {
+) -> Result<Json<Vec<CampsiteViewBasic>>> {
     let mut conn = establish_connection().unwrap();
 
     let campsite_ids = deduplicate_list(lower_list(campsite_ids));
@@ -38,9 +38,7 @@ pub async fn get_campsites(
         .expect("Error loading campsites")
         .iter()
         .map(campsite_view_basic)
-        .collect::<Vec<CampsiteViewBasic>>();
+        .collect::<Vec<_>>();
 
-    return Ok(Json(GetCampsitesOutput {
-        campsites: campsites,
-    }));
+    return Ok(Json(campsites));
 }

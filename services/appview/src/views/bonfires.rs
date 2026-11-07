@@ -1,8 +1,5 @@
 use appview_schema::models::appview::Bonfire;
-use campground_lexicon::gg::campground::{
-    bonfire::{BonfireViewBasic, BonfireViewDetailed},
-    tent::{TentCategoryView, TentViewBasic},
-};
+use campground_lexicon::gg::campground::bonfire::{BonfireViewBasic, BonfireViewDetailed};
 
 use crate::views::util::serialize_datetime;
 
@@ -18,11 +15,7 @@ pub fn bonfire_view_basic(bonfire: &Bonfire) -> BonfireViewBasic {
         home: bonfire.home,
     };
 }
-pub fn bonfire_view_detailed(
-    bonfire: &Bonfire,
-    tents: Vec<TentViewBasic>,
-    categories: Vec<TentCategoryView>,
-) -> BonfireViewDetailed {
+pub fn bonfire_view_detailed(bonfire: &Bonfire) -> BonfireViewDetailed {
     return BonfireViewDetailed {
         id: bonfire.id.clone(),
         campsite_id: bonfire.campsite_id.clone(),
@@ -36,7 +29,5 @@ pub fn bonfire_view_detailed(
         created_at: serialize_datetime(bonfire.created_at),
         updated_by: bonfire.updated_by.clone(),
         updated_at: serialize_datetime(bonfire.updated_at),
-        tents,
-        categories,
     };
 }

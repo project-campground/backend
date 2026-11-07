@@ -2,11 +2,11 @@ use appview_schema::{
     models::appview::{CampsitePermission, Tent, TentCategory},
     schema::appview::{campsite_permission, campsite_role, tent, tent_category},
 };
-use campground_lexicon::gg::campground::{
-    permission::PermissionViewBasic,
-    tent::{GetTentsOutput, TentCategoryView, TentViewBasic},
+use campground_lexicon::gg::campground::tent::{
+    GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, dsl::not};
+use multimap::MultiMap;
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
@@ -18,10 +18,7 @@ use crate::{
         permissions::{PermissionFlag, state::PermissionState},
     },
     util::iter::AggregatePermissions,
-    views::{
-        permissions::permission_view_basic,
-        tents::{tent_category_view, tent_view_basic},
-    },
+    views::permissions::permission_view_embedded,
     xrpc::{
         campsite::BonfireInfo,
         error::{Result, XRPCError},
@@ -31,7 +28,7 @@ use crate::{
 #[get("/xrpc/gg.campground.tent.getTents?<bonfire_id>")]
 pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
     if auth.campsite.owner == auth.actor.did {
-        return unchecked::get_tents(&auth.actor.did, &auth.bonfire.campsite_id, bonfire_id).await;
+        return unchecked::get_tents(&auth.bonfire.campsite_id, bonfire_id).await;
     }
 
     let mut conn = establish_connection().unwrap();
@@ -56,7 +53,7 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
         .load::<CampsitePermission>(&mut conn)
         .map_err(handle_all_db_errors)?;
 
-    let relevant_member_permissions = &permissions.iter().filter(|x| {
+    let relevant_member_permissions = permissions.iter().filter(|x| {
         x.role_id.map_or_else(
             || x.user_id.clone().unwrap() == auth.actor.did,
             |y| member_roles.contains(&y),
@@ -68,7 +65,7 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
             &auth.actor.did,
             member_roles,
             member_has_role_perms,
-            relevant_member_permissions,
+            &relevant_member_permissions,
         )
         .await?)
     {
@@ -78,9 +75,27 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
     }
 
     // IDs to avoid when fetching in DB
-    let denied_categories = &get_denied_item_ids(relevant_member_permissions, |item| {
+    let denied_categories = &get_denied_item_ids(&relevant_member_permissions, |item| {
         item.category_id.is_some()
     });
+
+    // To reduce allocations, but it also increases memory that will not be needed to be allocated
+    // Divided by three, so the memory is significantly reduced and only a few reallocations would be needed
+    let expected_capacity = permissions.len() / 3;
+
+    let mut tent_permissions = MultiMap::with_capacity(expected_capacity);
+    let mut category_permissions = MultiMap::with_capacity(expected_capacity);
+
+    // To not filter like a dozen times
+    for permission in permissions.clone() {
+        if let Some(category_id) = permission.category_id {
+            category_permissions.insert(category_id, permission.clone());
+        }
+
+        let tent = permission.tent_id.clone().unwrap();
+
+        tent_permissions.insert(tent, permission);
+    }
 
     let categories = tent_category::table
         .filter(
@@ -92,11 +107,25 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
         .load::<TentCategory>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(tent_category_view)
-        .collect::<Vec<TentCategoryView>>();
+        .map(|category| TentCategoryViewInList {
+            id: category.id,
+            name: category.name.to_owned(),
+            description: category.description.to_owned(),
+            position: category.priority,
+            permissions: category_permissions.get_vec(&category.id).map_or_else(
+                || vec![],
+                |category_permissions| {
+                    category_permissions
+                        .iter()
+                        .map(permission_view_embedded)
+                        .collect::<Vec<_>>()
+                },
+            ),
+        })
+        .collect::<Vec<_>>();
 
     let denied_tents =
-        &get_denied_item_ids(relevant_member_permissions, |item| item.tent_id.is_some());
+        &get_denied_item_ids(&relevant_member_permissions, |item| item.tent_id.is_some());
     let tents = tent::table
         .filter(
             tent::campsiteid
@@ -112,19 +141,27 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
         .load::<Tent>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
-        .map(tent_view_basic)
-        .collect::<Vec<TentViewBasic>>();
+        .map(|tent| TentViewInList {
+            id: tent.id,
+            name: tent.name.clone(),
+            category_id: tent.category_id.clone(),
+            r#type: TentType::Text,
+            view_type: 0,
+            description: tent.description.to_owned(),
+            position: tent.priority,
+            permissions: tent_permissions.get_vec(&tent.id).map_or_else(
+                || vec![],
+                |tent_permissions| {
+                    tent_permissions
+                        .iter()
+                        .map(permission_view_embedded)
+                        .collect::<Vec<_>>()
+                },
+            ),
+        })
+        .collect::<Vec<_>>();
 
-    let permissions = permissions
-        .iter()
-        .map(permission_view_basic)
-        .collect::<Vec<PermissionViewBasic>>();
-
-    return Ok(Json(GetTentsOutput {
-        permissions,
-        categories,
-        tents,
-    }));
+    return Ok(Json(GetTentsOutput { categories, tents }));
 }
 
 fn member_has_role_permissions(

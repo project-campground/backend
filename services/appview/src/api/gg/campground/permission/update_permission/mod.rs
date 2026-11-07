@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::CampsitePermission, schema::appview::campsite_permission};
-use campground_lexicon::gg::campground::permission::PermissionViewBasic;
+use campground_lexicon::gg::campground::permission::PermissionViewEmbedded;
 use chrono::Utc;
 use diesel::{
     BoolExpressionMethods, Connection, ExpressionMethods, PgExpressionMethods, RunQueryDsl,
@@ -16,7 +16,7 @@ use crate::{
         api::handle_all_db_errors, permissions::state::INVALID_PERMISSION_FLAG_MASK, ws::event_next,
     },
     realtime::data::{ReactiveSubject, ReactiveSubjectData},
-    views::permissions::permission_view_basic,
+    views::permissions::permission_view_embedded,
     xrpc::{campsite::OneOfInfo, error::XRPCError},
 };
 
@@ -49,7 +49,7 @@ pub async fn update_permission(
     query: UpdatePermissionsQuery,
     event_subject: &State<ReactiveSubject>,
     body: Json<UpdatePermissionBody>,
-) -> Result<Json<PermissionViewBasic>, XRPCError> {
+) -> Result<Json<PermissionViewEmbedded>, XRPCError> {
     let UpdatePermissionBody { permissions } = body.into_inner();
 
     if has_invalid_flag(&permissions) {
@@ -133,7 +133,7 @@ pub fn update_permission_in_database<'a>(
     role_id: Option<&Uuid>,
     user_id: Option<&String>,
     permissions: u64,
-) -> Result<Json<PermissionViewBasic>, XRPCError> {
+) -> Result<Json<PermissionViewEmbedded>, XRPCError> {
     let executor_roles = auth
         .member_roles()
         .iter()
@@ -184,15 +184,12 @@ pub fn update_permission_in_database<'a>(
         .map_err(handle_all_db_errors)?;
 
     let permission = modified_permissions.first().map_or_else(
-        || PermissionViewBasic {
+        || PermissionViewEmbedded {
             permissions: permissions.to_string(),
-            bonfire_id: bonfire_id.clone(),
-            category_id: category_id.clone(),
-            tent_id: tent_id.clone(),
             user_id: user_id.cloned(),
             role_id: role_id.cloned(),
         },
-        |permission| permission_view_basic(permission),
+        |permission| permission_view_embedded(permission),
     );
 
     event_next(event_subject, "PermissionUpdated", &permission, |binary| {
