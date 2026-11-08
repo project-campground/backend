@@ -18,7 +18,7 @@ pub const INVALID_PERMISSION_FLAG_MASK: u64 = {
     value
 };
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum PermissionState {
     Allowed,
     Inherit(u32),
@@ -30,12 +30,6 @@ impl PermissionState {
         match self {
             PermissionState::Inherit(value) => map(value),
             _ => self,
-        }
-    }
-    pub fn map_non_denied<F: FnOnce() -> PermissionState>(self, map: F) -> PermissionState {
-        match self {
-            PermissionState::Denied => self,
-            _ => map(),
         }
     }
     pub fn from_role(permissions: &u32, flag: u32) -> PermissionState {
@@ -103,8 +97,8 @@ impl PermissionState {
             Self::from(category, flag).map_inherit(|flag| Self::from(bonfire, flag))
         })
     }
-    pub fn is_allowed(self) -> bool {
-        self == PermissionState::Allowed
+    pub fn is_allowed(&self) -> bool {
+        *self == PermissionState::Allowed
     }
     pub fn with_condition(self, inherits: bool) -> bool {
         match self {
@@ -133,6 +127,7 @@ impl std::ops::BitOr for PermissionState {
         }
     }
 }
+#[allow(dead_code)]
 pub trait PermissionStateIterator {
     fn collapse(self) -> PermissionState;
 }

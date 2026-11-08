@@ -2,19 +2,20 @@ use appview_schema::{models::appview::Bonfire, schema::appview::campsite_permiss
 use campground_lexicon::gg::campground::{
     bonfire::BonfireViewInList, permission::PermissionViewEmbedded,
 };
-use diesel::{BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
+use diesel::{
+    BoolExpressionMethods, Connection, ExpressionMethods, IntoSql, QueryDsl, RunQueryDsl, dsl::not,
+    sql_types::Bool,
+};
 use multimap::MultiMap;
 use rocket::serde::json::Json;
 use uuid::Uuid;
 
 use crate::{
     database::{DbConnection, campsites::get_role_permissions_from_db, establish_connection},
+    get_allowed_or_inherited,
     helpers::{
-        api::handle_all_db_errors,
-        permissions::{
-            PermissionFlag,
-            state::{PermissionState, PermissionStateIterator},
-        },
+        api::handle_all_db_errors, filtered::get_allowed_and_denied_item_ids,
+        permissions::PermissionFlag,
     },
     xrpc::{campsite::CampsiteInfo, error::Result},
 };
@@ -43,37 +44,46 @@ pub async fn get_bonfires(
             let role_allows =
                 (role_permissions & PermissionFlag::VIEW_CONTENT) == PermissionFlag::VIEW_CONTENT;
 
+            let fetched_permissions =
+                get_bonfire_perms(conn, campsite_id, &roles, &auth.member.user_id)?;
+
+            let bonfire_states = &get_allowed_and_denied_item_ids(
+                &mut fetched_permissions
+                    .iter()
+                    .map(|perm| (perm.0.clone(), perm.3 as u64)),
+            );
+
             let mut permissions = MultiMap::<String, (Option<Uuid>, Option<String>, u64)>::new();
 
-            for (id, role, user, perms) in
-                get_bonfire_perms(conn, campsite_id, &roles, &auth.member.user_id)?
-            {
+            for (id, role, user, perms) in fetched_permissions {
                 permissions.insert(id, (role, user, perms as u64));
             }
 
-            let allowed_bonfires = permissions
-                .iter_all()
-                .filter(|(_, perms)| {
-                    let state = perms
-                        .iter()
-                        .map(|(_, _, perms)| {
-                            PermissionState::from(perms, PermissionFlag::VIEW_CONTENT)
-                        })
-                        .collapse();
-
-                    state.with_condition(role_allows)
-                })
-                .map(|(id, _)| id.clone());
+            let allowed_bonfires = bonfire_states
+                .get_vec(&true)
+                .cloned()
+                .unwrap_or_else(|| vec![]);
+            let denied_bonfires = bonfire_states
+                .get_vec(&false)
+                .cloned()
+                .unwrap_or_else(|| vec![]);
 
             Ok((
                 crate::schema::appview::bonfire::table
                     .filter(
+                        // Scoping
                         crate::schema::appview::bonfire::campsiteid
                             .eq(campsite_id)
                             .and(
-                                crate::schema::appview::bonfire::id
-                                    .eq_any(allowed_bonfires)
-                                    .or(crate::schema::appview::bonfire::home),
+                                // Home always displayed
+                                crate::schema::appview::bonfire::home.or(
+                                    get_allowed_or_inherited!(
+                                        id: crate::schema::appview::bonfire::id,
+                                        allowed: allowed_bonfires,
+                                        denied: denied_bonfires,
+                                        inherit: role_allows
+                                    ),
+                                ),
                             ),
                     )
                     .load::<Bonfire>(conn)?,

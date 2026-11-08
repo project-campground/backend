@@ -2,12 +2,10 @@ use appview_schema::{
     models::appview::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile},
     schema::appview::{actor, campsite_member, campsite_permission, campsite_role, profile},
 };
-use campground_lexicon::gg::campground::permission::{
-    GetPermissionsOutput, PermissionViewDetailed,
-};
+use campground_lexicon::gg::campground::permission::PermissionViewDetailed;
 use diesel::{
-    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl,
-    RunQueryDsl, sql_types::Bool,
+    BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
+    PgExpressionMethods, QueryDsl, RunQueryDsl, sql_types::Bool,
 };
 use rocket::serde::json::Json;
 use uuid::Uuid;
@@ -38,7 +36,7 @@ pub struct GetPermissionsQuery {
 }
 
 macro_rules! get_scoped_permissions {
-    (campsite: $campsite: expr, bonfire: $bonfire: expr, category: $category: expr, tent: $tent: expr, member: $member: expr, non_self: $non_self: expr, permission_filter: $perm_filter: expr) => {{
+    (campsite: $campsite: expr, bonfire: $bonfire: expr, category: $category: expr, tent: $tent: expr, member: $member: expr, non_self: $non_self: expr) => {{
         // Since it depends from where you want to get permissions
         expect_permission!(
             PermissionCheck::member(&$member)
@@ -56,18 +54,25 @@ macro_rules! get_scoped_permissions {
 
         let permissions = campsite_permission::table
             .filter(
-                $perm_filter.and(
-                    campsite_permission::roleid
-                        .is_null()
-                        .and(campsite_permission::userid.ne(&$member.user_id))
-                        .or::<bool, Bool>(!$non_self),
-                ),
+                campsite_permission::campsiteid
+                    .eq(&$campsite.id)
+                    .and(campsite_permission::bonfireid.eq($bonfire))
+                    .and(campsite_permission::categoryid.is_not_distinct_from($category))
+                    .and(campsite_permission::tentid.is_not_distinct_from($tent))
+                    .and(
+                        campsite_permission::roleid
+                            .is_null()
+                            .and(campsite_permission::userid.ne(&$member.user_id))
+                            .or::<bool, Bool>(!$non_self),
+                    ),
             )
+            // Generally for more details
             .left_join(
                 campsite_role::table.on(campsite_permission::roleid
                     .is_not_null()
                     .and(campsite_role::id.eq(campsite_permission::roleid.assume_not_null()))),
             )
+            // All 3 tables for members
             .left_join(
                 campsite_member::table.on(campsite_permission::userid.is_not_null().and(
                     campsite_member::userid.eq(campsite_permission::userid.assume_not_null()),
@@ -105,7 +110,7 @@ macro_rules! get_scoped_permissions {
             })
             .collect::<Vec<PermissionViewDetailed>>();
 
-        Ok(Json(GetPermissionsOutput { permissions }))
+        Ok(Json(permissions))
     }};
 }
 
@@ -113,7 +118,7 @@ macro_rules! get_scoped_permissions {
 pub async fn get_permissions(
     auth: OneOfInfo<'_>,
     query: GetPermissionsQuery,
-) -> Result<Json<GetPermissionsOutput>> {
+) -> Result<Json<Vec<PermissionViewDetailed>>> {
     let non_self = query.non_self.unwrap_or(false);
 
     match auth {
@@ -124,8 +129,7 @@ pub async fn get_permissions(
                 category: auth.tent.category_id.as_ref(),
                 tent: Some(&auth.tent.id),
                 member: auth.member,
-                non_self: non_self,
-                permission_filter: campsite_permission::tentid.eq(auth.tent.id)
+                non_self: non_self
             )
         }
         OneOfInfo::Category(auth) => {
@@ -133,21 +137,19 @@ pub async fn get_permissions(
                 campsite: auth.campsite,
                 bonfire: &auth.category.bonfire_id,
                 category: Some(&auth.category.id),
-                tent: None,
+                tent: Option::<&Uuid>::None,
                 member: auth.member,
-                non_self: non_self,
-                permission_filter: campsite_permission::categoryid.eq(auth.category.id)
+                non_self: non_self
             )
         }
         OneOfInfo::Bonfire(auth) => {
             get_scoped_permissions!(
                 campsite: auth.campsite,
                 bonfire: &auth.bonfire.id,
-                category: None,
-                tent: None,
+                category: Option::<&Uuid>::None,
+                tent: Option::<&Uuid>::None,
                 member: auth.member,
-                non_self: non_self,
-                permission_filter: campsite_permission::bonfireid.eq(auth.bonfire.id)
+                non_self: non_self
             )
         }
     }

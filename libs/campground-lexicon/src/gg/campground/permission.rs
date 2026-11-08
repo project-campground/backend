@@ -30,9 +30,3 @@ pub struct PermissionViewDetailed {
     pub updated_by: String,
     pub updated_at: String,
 }
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetPermissionsOutput {
-    pub permissions: Vec<PermissionViewDetailed>,
-}
