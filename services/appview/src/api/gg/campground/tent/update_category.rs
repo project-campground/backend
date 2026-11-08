@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::TentCategory, schema::appview};
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -11,7 +11,8 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_category,
     },
@@ -40,7 +41,7 @@ pub async fn update_category(
     event_subject: &State<ReactiveSubject>,
     category_id: &str,
     body: Json<UpdateCategoryBody>,
-) -> Result<Json<TentCategoryView>> {
+) -> Result<Json<TentCategoryViewDetailed>> {
     let inner_body = &body.into_inner();
     if inner_body
         .name
@@ -59,16 +60,18 @@ pub async fn update_category(
             "Expected 'description' property to have a string of up to 200 characters".to_string(),
         ));
     }
-
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.category.bonfire_id,
-        Some(auth.category.id.clone()),
-        None,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.category.bonfire_id,
+                Some(&auth.category.id),
+                None
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
+    );
 
     let mut conn = establish_connection().unwrap();
 

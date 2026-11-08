@@ -5,8 +5,5 @@ pub fn routes() -> Vec<rocket::Route> {
     ]
 }
 
-
 mod get_permissions;
 mod update_permission;
-mod update_role_permission;
-mod update_user_permission;

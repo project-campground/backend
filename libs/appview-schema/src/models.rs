@@ -3,14 +3,23 @@
 #![allow(unused)]
 #![allow(clippy::all)]
 
-
 pub mod appview {
     use chrono::NaiveDateTime;
     use serde_json::Value;
     use uuid::Uuid;
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(name))]
     #[diesel(table_name = crate::schema::appview::setting)]
@@ -18,11 +27,21 @@ pub mod appview {
     #[serde(rename_all = "camelCase")]
     pub struct Setting {
         pub name: String,
-        pub value: Option<String>
+        pub value: Option<String>,
     }
-    
+
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(did))]
     #[diesel(table_name = crate::schema::appview::actor)]
@@ -38,7 +57,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(uri))]
     #[diesel(table_name = crate::schema::appview::profile)]
@@ -69,7 +98,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(uri))]
     #[diesel(table_name = crate::schema::appview::profile_post)]
@@ -94,7 +133,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::campsite)]
@@ -111,7 +160,7 @@ pub mod appview {
         pub avatar_uri: Option<String>,
         #[diesel(column_name = banneruri)]
         pub banner_uri: Option<String>,
-        
+
         pub tags: Vec<Option<String>>,
         #[diesel(column_name = memberdids)]
         pub member_dids: Vec<Option<String>>,
@@ -129,7 +178,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(userid, campsiteid))]
     #[diesel(table_name = crate::schema::appview::campsite_member)]
@@ -153,7 +212,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(userid, campsiteid))]
     #[diesel(table_name = crate::schema::appview::campsite_ban)]
@@ -174,11 +243,21 @@ pub mod appview {
         #[diesel(column_name = updatedby)]
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
-        pub updated_at: NaiveDateTime
+        pub updated_at: NaiveDateTime,
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::campsite_invite)]
@@ -203,7 +282,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::campsite_role)]
@@ -214,17 +303,12 @@ pub mod appview {
 
         #[diesel(column_name = campsiteid)]
         pub campsite_id: String,
-        
+
         pub name: String,
         #[diesel(column_name = displayseparately)]
         pub display_separately: bool,
         #[diesel(column_name = mentionable)]
         pub mentionable: bool,
-
-        #[diesel(column_name = generalpermissions)]
-        pub general_permissions: i64,
-        #[diesel(column_name = contentpermissions)]
-        pub content_permissions: i64,
 
         pub priority: i32,
 
@@ -232,7 +316,7 @@ pub mod appview {
         pub created_by: String,
         #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
-        
+
         #[diesel(column_name = updatedby)]
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
@@ -243,10 +327,22 @@ pub mod appview {
 
         pub colors: Vec<Option<i32>>,
         pub motion: i16,
+
+        pub permissions: i32,
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::campsite_permission)]
@@ -269,28 +365,31 @@ pub mod appview {
         #[diesel(column_name = tentid)]
         pub tent_id: Option<Uuid>,
 
-        #[diesel(column_name = allowedgeneralpermissions)]
-        pub allowed_general_permissions: i64,
-        #[diesel(column_name = deniedgeneralpermissions)]
-        pub denied_general_permissions: i64,
-        #[diesel(column_name = allowedcontentpermissions)]
-        pub allowed_content_permissions: i64,
-        #[diesel(column_name = deniedcontentpermissions)]
-        pub denied_content_permissions: i64,
-
         #[diesel(column_name = createdby)]
         pub created_by: String,
         #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
-        
+
         #[diesel(column_name = updatedby)]
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
+
+        pub permissions: i64,
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::bonfire)]
@@ -303,18 +402,18 @@ pub mod appview {
 
         pub name: String,
         pub description: String,
-        
+
         #[diesel(column_name = avataruri)]
         pub avatar_uri: Option<String>,
         #[diesel(column_name = banneruri)]
         pub banner_uri: Option<String>,
-        
+
         pub priority: i32,
         #[diesel(column_name = createdby)]
         pub created_by: String,
         #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
-        
+
         #[diesel(column_name = updatedby)]
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
@@ -324,7 +423,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::tent_category)]
@@ -332,29 +441,39 @@ pub mod appview {
     #[serde(rename_all = "camelCase")]
     pub struct TentCategory {
         pub id: Uuid,
-        
+
         #[diesel(column_name = campsiteid)]
         pub campsite_id: String,
         #[diesel(column_name = bonfireid)]
         pub bonfire_id: String,
-        
+
         pub name: String,
         pub description: String,
-        
+
         pub priority: i32,
         #[diesel(column_name = createdby)]
         pub created_by: String,
         #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
-        
+
         #[diesel(column_name = updatedby)]
         pub updated_by: String,
         #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
     }
-    
+
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::tent)]
@@ -362,7 +481,7 @@ pub mod appview {
     #[serde(rename_all = "camelCase")]
     pub struct Tent {
         pub id: Uuid,
-        
+
         #[diesel(column_name = campsiteid)]
         pub campsite_id: String,
         #[diesel(column_name = bonfireid)]
@@ -376,7 +495,7 @@ pub mod appview {
         #[diesel(column_name = viewtype)]
         pub view_type: i16,
         pub description: String,
-        
+
         pub priority: i32,
         #[diesel(column_name = createdby)]
         pub created_by: String,
@@ -390,7 +509,17 @@ pub mod appview {
     }
 
     #[derive(
-        Queryable, Identifiable, Insertable, AsChangeset, Selectable, Clone, Debug, PartialEq, Default, Serialize, Deserialize,
+        Queryable,
+        Identifiable,
+        Insertable,
+        AsChangeset,
+        Selectable,
+        Clone,
+        Debug,
+        PartialEq,
+        Default,
+        Serialize,
+        Deserialize,
     )]
     #[diesel(primary_key(id))]
     #[diesel(table_name = crate::schema::appview::tent_message)]
@@ -402,7 +531,7 @@ pub mod appview {
         pub campsite_id: String,
         #[diesel(column_name = tentid)]
         pub tent_id: Uuid,
-        
+
         pub content: String,
         #[diesel(column_name = replyingto)]
         pub replying_to: Vec<Option<Uuid>>,
@@ -413,7 +542,7 @@ pub mod appview {
         pub created_at: NaiveDateTime,
         #[diesel(column_name = updatedat)]
         pub updated_at: Option<NaiveDateTime>,
-        
+
         pub components: Vec<Option<Value>>,
         #[diesel(column_name = type_)]
         pub r#type: i16,

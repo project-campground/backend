@@ -1,5 +1,6 @@
 pub fn deduplicate_list<T>(list: Vec<T>) -> Vec<T>
-    where T: PartialEq + Clone
+where
+    T: PartialEq + Clone,
 {
     let mut deduplicated = Vec::new();
     for item in list {
@@ -11,7 +12,8 @@ pub fn deduplicate_list<T>(list: Vec<T>) -> Vec<T>
 }
 
 pub fn lower_list<T>(list: Vec<T>) -> Vec<String>
-    where T: ToString
+where
+    T: ToString,
 {
     let mut lowered = Vec::new();
     for item in list {
@@ -21,5 +23,6 @@ pub fn lower_list<T>(list: Vec<T>) -> Vec<String>
 }
 
 pub mod api;
+pub mod filtered;
 pub mod permissions;
 pub mod ws;

@@ -89,14 +89,11 @@ pub mod appview {
             bonfireid -> Varchar,
             categoryid -> Nullable<Uuid>,
             tentid -> Nullable<Uuid>,
-            allowedgeneralpermissions -> Int8,
-            deniedgeneralpermissions -> Int8,
-            allowedcontentpermissions -> Int8,
-            deniedcontentpermissions -> Int8,
             createdby -> Varchar,
             createdat -> Timestamp,
             updatedby -> Varchar,
             updatedat -> Timestamp,
+            permissions -> Int8,
         }
     }
 
@@ -107,8 +104,6 @@ pub mod appview {
             name -> Varchar,
             displayseparately -> Bool,
             mentionable -> Bool,
-            generalpermissions -> Int8,
-            contentpermissions -> Int8,
             priority -> Int4,
             createdby -> Varchar,
             createdat -> Timestamp,
@@ -118,6 +113,7 @@ pub mod appview {
             flags -> Int4,
             colors -> Array<Nullable<Int4>>,
             motion -> Int2,
+            permissions -> Int4,
         }
     }
 

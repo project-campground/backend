@@ -1,6 +1,5 @@
 use crate::gg::campground::{
-    bonfire::BonfireViewBasic, membership::MemberViewBasic, role::RoleViewBasic,
-    tent::TentViewBasic,
+    membership::MemberViewBasic, role::RoleViewBasic, tent::TentViewBasic,
 };
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -38,15 +37,8 @@ pub struct CampsiteViewDetailed {
     pub updated_by: String,
     pub updated_at: String,
 
-    pub bonfires: Vec<BonfireViewBasic>,
     pub roles: Vec<RoleViewBasic>,
     pub me: MemberViewBasic,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetCampsitesOutput {
-    pub campsites: Vec<CampsiteViewBasic>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

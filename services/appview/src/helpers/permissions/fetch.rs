@@ -40,7 +40,7 @@ pub fn fetch_leveled_permissions(
     tent_id: Option<Uuid>,
     actor: &str,
     role_ids: &Vec<Uuid>,
-) -> Result<Vec<CampsitePermission>, XRPCError> {
+) -> Result<Vec<(Option<Uuid>, Option<Uuid>, i64)>, XRPCError> {
     let mut conn = establish_connection().unwrap();
     campsite_permission::table
         .filter(
@@ -66,7 +66,13 @@ pub fn fetch_leveled_permissions(
                                 .and::<bool, Bool>(category_id.is_some()))),
                 ),
         )
-        .load::<CampsitePermission>(&mut conn)
+        // Reduce required parsing
+        .select((
+            campsite_permission::categoryid,
+            campsite_permission::tentid,
+            campsite_permission::permissions,
+        ))
+        .load::<(Option<Uuid>, Option<Uuid>, i64)>(&mut conn)
         .map_err(handle_select_first_error)
 }
 /// ## Summary

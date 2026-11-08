@@ -1,9 +1,6 @@
 #![allow(dead_code)]
 use appview_schema::models::appview::CampsiteRole;
-use campground_lexicon::gg::campground::{
-    permission::PermissionsDictionary,
-    role::{RoleMotion, RoleViewBasic},
-};
+use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
 use uuid::Uuid;
 
 use crate::{views::util::serialize_datetime, xrpc::error::XRPCError};
@@ -26,10 +23,7 @@ pub fn role_view_basic(role: &CampsiteRole) -> RoleViewBasic {
             .filter_map(|color| color.map(|color| color as u32))
             .collect::<Vec<u32>>(),
         motion: to_role_motion(role.motion),
-        permissions: PermissionsDictionary {
-            general: role.general_permissions as u64,
-            content: role.content_permissions as u64,
-        },
+        permissions: role.permissions as u32,
         position: role.priority,
         created_by: role.created_by.clone(),
         created_at: serialize_datetime(role.created_at),

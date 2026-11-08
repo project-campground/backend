@@ -1,5 +1,5 @@
 use appview_schema::models::appview::TentCategory;
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -12,7 +12,8 @@ use crate::{
     helpers::{
         api::handle_select_first_error,
         permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_category,
     },
@@ -41,7 +42,7 @@ pub async fn create_category(
     event_subject: &State<ReactiveSubject>,
     bonfire_id: &str,
     body: Json<CreateCategoryBody>,
-) -> Result<Json<TentCategoryView>> {
+) -> Result<Json<TentCategoryViewDetailed>> {
     let inner_body = &body.into_inner();
     if inner_body.name.len() < 3 || inner_body.name.len() > 48 {
         return Err(XRPCError::BadRequest(
@@ -67,15 +68,18 @@ pub async fn create_category(
         ));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.bonfire.id,
-        None,
-        None,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
+    );
 
     let current_date = Utc::now().naive_utc();
 

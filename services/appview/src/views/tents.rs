@@ -1,12 +1,12 @@
 use appview_schema::models::appview::{Tent, TentCategory};
 use campground_lexicon::gg::campground::tent::{
-    TentCategoryView, TentType, TentViewBasic, TentViewDetailed,
+    TentCategoryViewDetailed, TentType, TentViewBasic, TentViewDetailed,
 };
 
 use crate::views::util::serialize_datetime;
 
-pub fn tent_category_view(category: &TentCategory) -> TentCategoryView {
-    return TentCategoryView {
+pub fn tent_category_view(category: &TentCategory) -> TentCategoryViewDetailed {
+    return TentCategoryViewDetailed {
         id: category.id.clone(),
         campsite_id: category.campsite_id.clone(),
         bonfire_id: category.bonfire_id.clone(),

@@ -12,7 +12,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::{handle_all_db_errors, handle_select_first_error},
-        permissions::{GeneralPermissionConsts, has_role_perms_or_owner},
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
         ws::event_next_campsite,
     },
     realtime::data::ReactiveSubject,
@@ -62,12 +65,13 @@ pub async fn delete_role(
         auth.member.roles.clone(),
     )?;
 
-    expect_permission!(has_role_perms_or_owner(
-        &auth.campsite,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_ROLES,
-        0
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionFlag::MANAGE_ROLES))?
+    );
 
     conn.transaction(|conn| {
         diesel::delete(campsite_role::table)

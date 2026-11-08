@@ -1,7 +1,5 @@
 use uuid::Uuid;
 
-use crate::gg::campground::permission::PermissionsDictionary;
-
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum RoleMotion {
@@ -26,7 +24,7 @@ pub struct RoleViewBasic {
     pub pingable: bool,
     pub flags: i32,
 
-    pub permissions: PermissionsDictionary,
+    pub permissions: u32,
     pub position: i32,
 
     pub colors: Vec<u32>,

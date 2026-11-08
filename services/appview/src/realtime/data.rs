@@ -14,12 +14,12 @@ pub enum ReactiveSubjectData {
     /// This reduces the need for refreshing the client to reflect the globally visible changes in the campsite.
     CampsiteGlobal {
         campsite_id: String,
-        binary: Vec<u8>
+        binary: Vec<u8>,
     },
     #[allow(dead_code)]
     Personal {
         to_actor: String,
-        binary: Vec<u8>
+        binary: Vec<u8>,
     },
     /// This event is visible to actor who joined or created a campsite.
     /// Internally, this also modifies campsite filtering for the any active WebSockets from the actor.
@@ -39,35 +39,35 @@ pub enum ReactiveSubjectData {
     /// Redirects a campsite WebSocket message to any member who has the specified permissions in the campsite and is currently viewing the campsite.
     /// # Remarks
     /// This is useful for events that may be campsite-wide, but not bound to any tent, category or bonfire. Examples of this are role and role list modifications, as well as invite creation.
-    /// 
+    ///
     /// > **DANGER:** For events like campsite invite creation, it should require `MANAGE_INVITES` permission and not be visible to every member, as it could easily be abused by allowing anyone to invite to any campsite, whether it's private or not.
     Campsite {
         campsite_id: String,
-        permissions_required: u64,
-        binary: Vec<u8>
+        permissions_required: u32,
+        binary: Vec<u8>,
     },
     /// Redirects a campsite WebSocket message to any member who can view the bonfire and is currently viewing the campsite.
-    /// 
+    ///
     /// > **NOTE:** This only requires permissions to have bonfire visible in the API.
     #[allow(dead_code)]
     Bonfire {
         campsite_id: String,
         bonfire_id: String,
         deleted: bool,
-        binary: Vec<u8>
+        binary: Vec<u8>,
     },
     /// Redirects a campsite WebSocket message to any member who can view the bonfire and is currently viewing the campsite.
-    /// 
+    ///
     /// > **NOTE:** This only requires permissions to have tent category visible in the API.
     Category {
         campsite_id: String,
         bonfire_id: String,
         category_id: Uuid,
         deleted: bool,
-        binary: Vec<u8>
+        binary: Vec<u8>,
     },
     /// Redirects a campsite WebSocket message to any member who can view the bonfire and is currently viewing the campsite.
-    /// 
+    ///
     /// > **NOTE:** This only requires permissions to have tent visible in the API.
     Tent {
         campsite_id: String,
@@ -75,7 +75,7 @@ pub enum ReactiveSubjectData {
         category_id: Option<Uuid>,
         tent_id: Uuid,
         deleted: bool,
-        binary: Vec<u8>
+        binary: Vec<u8>,
     },
     /// # Summary
     /// This is similar to other Campsite WS messages, but it also updates actor's permissions in the campsite known to WebSocket.
@@ -107,4 +107,7 @@ pub enum ReactiveSubjectData {
     },
 }
 
-pub type ReactiveSubject = SharedCtx<Subject<MutArc<Subscribers<Box<dyn DynObserver<ReactiveSubjectData, Infallible> + Send>>>>, SharedScheduler>;
+pub type ReactiveSubject = SharedCtx<
+    Subject<MutArc<Subscribers<Box<dyn DynObserver<ReactiveSubjectData, Infallible> + Send>>>>,
+    SharedScheduler,
+>;

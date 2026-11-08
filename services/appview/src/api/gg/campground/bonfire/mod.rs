@@ -1,5 +1,6 @@
 pub fn routes() -> Vec<rocket::Route> {
     routes![
+        get_bonfires::get_bonfires,
         get_bonfire::get_bonfire,
         create_bonfire::create_bonfire,
         move_bonfire::move_bonfire,
@@ -8,8 +9,9 @@ pub fn routes() -> Vec<rocket::Route> {
     ]
 }
 
-mod get_bonfire;
 mod create_bonfire;
+mod delete_bonfire;
+mod get_bonfire;
+mod get_bonfires;
 mod move_bonfire;
 mod update_bonfire;
-mod delete_bonfire;

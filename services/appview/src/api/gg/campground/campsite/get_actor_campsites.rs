@@ -1,6 +1,6 @@
 use appview_schema::models::appview::Campsite;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::campsite::{CampsiteViewBasic, GetCampsitesOutput};
+use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
@@ -20,7 +20,7 @@ pub async fn get_actor_campsites(
     auth: Authorization<'_>,
     client: &State<Client>,
     did_document_storage: &State<LruDidDocumentStorage>,
-) -> Result<Json<GetCampsitesOutput>> {
+) -> Result<Json<Vec<CampsiteViewBasic>>> {
     let actor = get_actor(client, did_document_storage, &auth.actor_did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
@@ -37,7 +37,7 @@ pub async fn get_actor_specific_campsites(
     client: &State<Client>,
     did_document_storage: &State<LruDidDocumentStorage>,
     campsites: Vec<&str>,
-) -> Result<Json<GetCampsitesOutput>> {
+) -> Result<Json<Vec<CampsiteViewBasic>>> {
     let actor = get_actor(client, did_document_storage, &auth.actor_did)
         .await
         .map_err(|_| XRPCError::Unauthorized)?;
@@ -55,7 +55,9 @@ pub async fn get_actor_specific_campsites(
     return get_actor_campsites_from_list(campsite_ids_filtered);
 }
 
-fn get_actor_campsites_from_list(campsite_ids: Vec<String>) -> Result<Json<GetCampsitesOutput>> {
+fn get_actor_campsites_from_list(
+    campsite_ids: Vec<String>,
+) -> Result<Json<Vec<CampsiteViewBasic>>> {
     let mut conn = establish_connection().unwrap();
 
     let campsites = if campsite_ids.is_empty() {
@@ -70,5 +72,5 @@ fn get_actor_campsites_from_list(campsite_ids: Vec<String>) -> Result<Json<GetCa
             .collect::<Vec<CampsiteViewBasic>>()
     };
 
-    return Ok(Json(GetCampsitesOutput { campsites }));
+    return Ok(Json(campsites));
 }

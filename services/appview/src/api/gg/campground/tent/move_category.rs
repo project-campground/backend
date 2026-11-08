@@ -1,5 +1,5 @@
 use appview_schema::{models::appview::TentCategory, schema::appview};
-use campground_lexicon::gg::campground::tent::TentCategoryView;
+use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -12,7 +12,10 @@ use crate::{
     expect_permission,
     helpers::{
         api::handle_all_db_errors,
-        permissions::{GeneralPermissionConsts, has_leveled_perms_or_owner},
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
         ws::event_next_category,
     },
     make_room_for_items,
@@ -39,16 +42,19 @@ pub async fn move_category(
     event_subject: &State<ReactiveSubject>,
     category_id: &str,
     body: Json<MoveTentBody>,
-) -> Result<Json<TentCategoryView>> {
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &auth.category.bonfire_id,
-        Some(auth.category.id),
-        None,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_TENTS,
-        0
-    ));
+) -> Result<Json<TentCategoryViewDetailed>> {
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.category.bonfire_id,
+                Some(&auth.category.id),
+                None
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
+    );
 
     match body.into_inner() {
         MoveTentBody::ToBonfire {
@@ -65,7 +71,7 @@ fn handle_moved_categories(
     auth: &CategoryInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     result: (Vec<TentCategory>, Vec<(Uuid, i32)>),
-) -> Result<Json<TentCategoryView>, XRPCError> {
+) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     let category = result.0.first().unwrap();
 
     let view = tent_category_view(category);
@@ -78,7 +84,7 @@ async fn move_tent_to_pos(
     auth: CategoryInfo<'_>,
     event_subject: &State<ReactiveSubject>,
     position: i32,
-) -> Result<Json<TentCategoryView>, XRPCError> {
+) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     // Maybe a client had failed checked
     if auth.category.priority == position {
         return Ok(Json(tent_category_view(&auth.category)));
@@ -97,7 +103,7 @@ async fn move_tent_to_bonfire(
     event_subject: &State<ReactiveSubject>,
     bonfire_id: String,
     position: i32,
-) -> Result<Json<TentCategoryView>, XRPCError> {
+) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     // Maybe a client had failed checked
     if bonfire_id == auth.category.bonfire_id {
         return Ok(Json(tent_category_view(&auth.category)));

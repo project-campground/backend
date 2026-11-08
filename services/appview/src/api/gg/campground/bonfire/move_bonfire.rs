@@ -16,7 +16,8 @@ use crate::{
     helpers::{
         api::handle_all_db_errors,
         permissions::{
-            ContentPermissionConsts, GeneralPermissionConsts, has_leveled_perms_or_owner,
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
         },
         ws::event_next_bonfire,
     },
@@ -47,15 +48,18 @@ pub async fn move_bonfire(
         return Ok(Json(bonfire_view_basic(&auth.bonfire)));
     }
 
-    expect_permission!(has_leveled_perms_or_owner(
-        &auth.campsite,
-        &bonfire_id,
-        None,
-        None,
-        &auth.member,
-        GeneralPermissionConsts::MANAGE_BONFIRES,
-        ContentPermissionConsts::VIEW_CONTENT
-    ));
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_BONFIRES))?
+    );
 
     let mut conn = establish_connection().unwrap();
 
