@@ -24,7 +24,7 @@ pub async fn get_tent(auth: TentInfo<'_>, tent_id: &str) -> Result<Json<TentView
                 auth.tent.category_id.as_ref(),
                 Some(&auth.tent.id)
             )
-            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
+            .has_permissions(PermissionFlag::VIEW_CONTENT))?
     );
 
     return Ok(Json(tent_view_detailed(&auth.tent)));
