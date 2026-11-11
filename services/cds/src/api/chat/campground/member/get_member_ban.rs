@@ -4,7 +4,7 @@ use cds_schema::{
     schema::cds::{self, campsite_ban},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
-use rocket::{State, serde::json::Json};
+use rocket::serde::json::Json;
 
 use crate::{
     database::establish_connection,
@@ -15,40 +15,28 @@ use crate::{
             PermissionFlag,
             check::{PermissionCheck, PermissionCheckTestable},
         },
-        ws::event_next_campsite,
     },
-    realtime::data::ReactiveSubject,
     views::members::member_ban_view,
-    xrpc::{
-        campsite::CampsiteInfo,
-        error::{Result, XRPCError},
-    },
+    xrpc::{campsite::CampsiteInfo, error::Result},
 };
 
-#[post("/xrpc/chat.campgroundnd.membership.deleteMemberBan?<campsite_id>&<actor>")]
-pub async fn delete_member_ban(
+#[get("/xrpc/chat.campgroundnd.member.getMemberBan?<campsite_id>&<actor>")]
+pub async fn get_member_ban(
     auth: CampsiteInfo<'_>,
-    event_subject: &State<ReactiveSubject>,
     campsite_id: &str,
     actor: &str,
 ) -> Result<Json<MemberBanView>> {
-    if actor == auth.actor.did {
-        return Err(XRPCError::Forbidden(
-            "Member cannot delete ban from themselves".to_string(),
-        ));
-    }
-
     expect_permission!(
         PermissionCheck::member(&auth.member)
             .is_owner(&auth.campsite)
             .skip_if_owner(|permission| permission
                 .fetch_roles()
-                .has_permissions(PermissionFlag::CREATE_INVITES))?
+                .has_permissions(PermissionFlag::BAN_MEMBERS))?
     );
 
     let mut conn = establish_connection().unwrap();
 
-    let (member_ban, profile, target_actor) = campsite_ban::table
+    let member_ban = campsite_ban::table
         .filter(
             campsite_ban::campsiteid
                 .eq(campsite_id)
@@ -59,24 +47,9 @@ pub async fn delete_member_ban(
         .first::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    diesel::delete(campsite_ban::table)
-        .filter(
-            campsite_ban::campsiteid
-                .eq(campsite_id)
-                .and(campsite_ban::userid.eq(actor)),
-        )
-        .execute(&mut conn)
-        .map_err(handle_select_first_error)?;
-
-    let view = member_ban_view(&member_ban, profile.as_ref(), &target_actor);
-
-    event_next_campsite(
-        event_subject,
-        &auth.campsite.id,
-        PermissionFlag::BAN_MEMBERS,
-        "MemberBanDeleted",
-        &view,
-    );
-
-    Ok(Json(view))
+    Ok(Json(member_ban_view(
+        &member_ban.0,
+        member_ban.1.as_ref(),
+        &member_ban.2,
+    )))
 }

@@ -41,7 +41,7 @@ pub struct CreateBanBody<'a> {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.membership.banMember?<campsite_id>&<actor>",
+    "/xrpc/chat.campgroundnd.member.banMember?<campsite_id>&<actor>",
     data = "<body>"
 )]
 pub async fn ban_member<'a>(

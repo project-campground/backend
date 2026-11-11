@@ -18,7 +18,7 @@ use crate::{
 };
 
 #[get(
-    "/xrpc/chat.campgroundnd.membership.getMembers?<campsite_id>&<limit>&<offset>",
+    "/xrpc/chat.campgroundnd.member.getMembers?<campsite_id>&<limit>&<offset>",
     rank = 1
 )]
 pub async fn get_members_any(

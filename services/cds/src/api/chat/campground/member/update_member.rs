@@ -1,8 +1,8 @@
+use campground_lexicon::gg::campground::membership::MemberViewDetailed;
 use cds_schema::{
     models::cds::{Actor, CampsiteMember, Profile},
     schema::cds::{campsite_member, profile},
 };
-use campground_lexicon::gg::campground::membership::MemberViewDetailed;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 use serde::Deserialize;
@@ -28,7 +28,7 @@ pub struct UpdateMemberBody {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.membership.updateMember?<campsite_id>&<actor>",
+    "/xrpc/chat.campgroundnd.member.updateMember?<campsite_id>&<actor>",
     data = "<body>"
 )]
 pub async fn update_member(

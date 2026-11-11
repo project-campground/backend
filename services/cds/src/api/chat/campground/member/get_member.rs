@@ -13,7 +13,7 @@ use crate::{
     xrpc::{campsite::CampsiteInfoBasic, error::Result},
 };
 
-#[get("/xrpc/chat.campgroundnd.membership.getMember?<campsite_id>&<actor>")]
+#[get("/xrpc/chat.campgroundnd.member.getMember?<campsite_id>&<actor>")]
 pub async fn get_member(
     _auth: CampsiteInfoBasic<'_>,
     campsite_id: &str,
