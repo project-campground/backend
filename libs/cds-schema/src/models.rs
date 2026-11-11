@@ -3,7 +3,7 @@
 #![allow(unused)]
 #![allow(clippy::all)]
 
-pub mod appview {
+pub mod cds {
     use chrono::NaiveDateTime;
     use serde_json::Value;
     use uuid::Uuid;

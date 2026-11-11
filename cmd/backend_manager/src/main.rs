@@ -44,19 +44,24 @@ use std::io;
 use anyhow::Result;
 use lazy_static::lazy_static;
 
-use crate::{actions::{create_keys::create_keys, setup_actor::setup_actor}, util::prompt::read_stdin};
+use crate::{
+    actions::{create_keys::create_keys, setup_actor::setup_actor},
+    util::prompt::read_stdin,
+};
 
 lazy_static! {
     static ref HTTP_CLIENT: reqwest::Client = reqwest::Client::new();
 }
 
 async fn menu(database_url: &str, pds_port: u16) -> Result<(), String> {
-    println!("\
+    println!(
+        "\
         =======================\n\
         0. Exit\n\
         1. Setup actor/account\n\
         2. Create secp256k1 private and public keys\
-    ");
+    "
+    );
 
     let mut stdin = io::stdin();
     let mut input = String::new();
@@ -65,13 +70,13 @@ async fn menu(database_url: &str, pds_port: u16) -> Result<(), String> {
     match input.as_str() {
         "0" => {
             return Ok(());
-        },
+        }
         "1" => {
             setup_actor(&HTTP_CLIENT, database_url, pds_port).await?;
-        },
+        }
         "2" => {
             create_keys();
-        },
+        }
         _ => {
             println!("Unknown option {:?}", input);
         }
@@ -89,21 +94,26 @@ async fn main() {
     read_stdin(&mut stdin, &mut database_url, "PostgreSQL database URL (likely from Rocket.toml in services/appview that you have edited)")
         .expect("Error reading STDIN");
     let mut pds_port = String::new();
-    read_stdin(&mut stdin, &mut pds_port, "port for the PDS (default 2583 in Rocket.toml config)")
-        .expect("Error reading STDIN");
-    let pds_port: u16 = pds_port.parse().expect("Expected an unsigned integer as a PDS port");
+    read_stdin(
+        &mut stdin,
+        &mut pds_port,
+        "port for the PDS (default 2583 in Rocket.toml config)",
+    )
+    .expect("Error reading STDIN");
+    let pds_port: u16 = pds_port
+        .parse()
+        .expect("Expected an unsigned integer as a PDS port");
 
     println!("PDS port: {}, Database URL: {:?}", pds_port, database_url);
     // let mut conn = establish_connection().unwrap();
-    let result = menu(database_url.as_str(), pds_port)
-        .await;
+    let result = menu(database_url.as_str(), pds_port).await;
 
     if let Err(err) = result {
         println!("Error: {}", err);
     }
 }
 
-mod database;
 mod actions;
+mod database;
 mod util;
-pub use appview_schema::schema;
+pub use cds_schema::schema;

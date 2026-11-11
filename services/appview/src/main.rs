@@ -153,6 +153,6 @@ mod realtime;
 mod util;
 mod views;
 mod xrpc;
-pub use appview_schema::schema;
+pub use cds_schema::schema;
 
 use crate::realtime::data::ReactiveSubject;

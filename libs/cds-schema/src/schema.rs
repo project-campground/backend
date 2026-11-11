@@ -1,8 +1,8 @@
 // @generated automatically by Diesel CLI.
 
-pub mod appview {
+pub mod cds {
     diesel::table! {
-        appview.actor (did) {
+        cds.actor (did) {
             did -> Varchar,
             handle -> Nullable<Varchar>,
             indexedat -> Varchar,
@@ -11,7 +11,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.bonfire (id) {
+        cds.bonfire (id) {
             id -> Varchar,
             campsiteid -> Varchar,
             name -> Varchar,
@@ -28,7 +28,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.campsite (id) {
+        cds.campsite (id) {
             id -> Varchar,
             name -> Varchar,
             vanityurl -> Nullable<Varchar>,
@@ -46,7 +46,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.campsite_ban (campsiteid, userid) {
+        cds.campsite_ban (campsiteid, userid) {
             campsiteid -> Varchar,
             userid -> Varchar,
             reason -> Nullable<Varchar>,
@@ -58,7 +58,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.campsite_invite (id) {
+        cds.campsite_invite (id) {
             id -> Uuid,
             campsiteid -> Varchar,
             allowedamount -> Nullable<Int4>,
@@ -70,7 +70,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.campsite_member (userid, campsiteid) {
+        cds.campsite_member (userid, campsiteid) {
             userid -> Varchar,
             campsiteid -> Varchar,
             joinedat -> Timestamp,
@@ -81,7 +81,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.campsite_permission (id) {
+        cds.campsite_permission (id) {
             id -> Uuid,
             campsiteid -> Varchar,
             roleid -> Nullable<Uuid>,
@@ -98,7 +98,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.campsite_role (id) {
+        cds.campsite_role (id) {
             id -> Uuid,
             campsiteid -> Varchar,
             name -> Varchar,
@@ -118,7 +118,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.profile (uri) {
+        cds.profile (uri) {
             uri -> Varchar,
             cid -> Varchar,
             creator -> Varchar,
@@ -135,7 +135,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.profile_post (uri) {
+        cds.profile_post (uri) {
             uri -> Varchar,
             cid -> Varchar,
             author -> Varchar,
@@ -149,14 +149,14 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.setting (name) {
+        cds.setting (name) {
             name -> Varchar,
             value -> Nullable<Varchar>,
         }
     }
 
     diesel::table! {
-        appview.tent (id) {
+        cds.tent (id) {
             id -> Uuid,
             campsiteid -> Varchar,
             bonfireid -> Varchar,
@@ -175,7 +175,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.tent_category (id) {
+        cds.tent_category (id) {
             id -> Uuid,
             campsiteid -> Varchar,
             bonfireid -> Varchar,
@@ -190,7 +190,7 @@ pub mod appview {
     }
 
     diesel::table! {
-        appview.tent_message (id) {
+        cds.tent_message (id) {
             id -> Uuid,
             campsiteid -> Varchar,
             tentid -> Uuid,

@@ -2,7 +2,7 @@
 members = [
     "./services/discovery",
     "./libs/campground-lexicon",
-    "./libs/appview-schema",
+    "./libs/cds-schema",
     "./libs/discovery-schema",
     "./libs/common",
     "./services/appview",

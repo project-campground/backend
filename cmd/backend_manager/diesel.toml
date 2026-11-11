@@ -2,9 +2,9 @@
 # see https://diesel.rs/guides/configuring-diesel-cli
 
 [print_schema]
-file = "../../libs/appview-schema/src/schema.rs"
+file = "../../libs/cds-schema/src/schema.rs"
 custom_type_derives = ["diesel::query_builder::QueryId", "Clone"]
-schema = "appview"
+schema = "cds"
 
 [migrations_directory]
 dir = "migrations"
