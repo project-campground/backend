@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-#[post("/xrpc/chat.campgroundnd.campsite.deleteCampsite?<campsite_id>")]
+#[post("/xrpc/chat.campground.campsite.deleteCampsite?<campsite_id>")]
 pub async fn delete_campsite(
     auth: CampsiteInfo<'_>,
     event_subject: &State<ReactiveSubject>,

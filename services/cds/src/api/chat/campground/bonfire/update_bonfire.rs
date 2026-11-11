@@ -36,7 +36,7 @@ pub struct UpdateBonfireBody<'a> {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.bonfire.updateBonfire?<bonfire_id>",
+    "/xrpc/chat.campground.bonfire.updateBonfire?<bonfire_id>",
     data = "<body>"
 )]
 pub async fn update_bonfire<'a>(

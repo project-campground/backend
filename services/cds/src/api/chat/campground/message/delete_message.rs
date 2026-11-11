@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-#[post("/xrpc/chat.campgroundnd.message.deleteMessage?<tent_id>&<message_id>")]
+#[post("/xrpc/chat.campground.message.deleteMessage?<tent_id>&<message_id>")]
 pub async fn delete_message(
     auth: TentInfo<'_>,
     event_subject: &State<ReactiveSubject>,

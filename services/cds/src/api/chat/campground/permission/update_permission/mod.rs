@@ -40,7 +40,7 @@ pub struct UpdatePermissionsQuery {
 
 #[allow(unused_variables)]
 #[post(
-    "/xrpc/chat.campgroundnd.permission.updatePermission?<query..>",
+    "/xrpc/chat.campground.permission.updatePermission?<query..>",
     data = "<body>",
     rank = 1
 )]

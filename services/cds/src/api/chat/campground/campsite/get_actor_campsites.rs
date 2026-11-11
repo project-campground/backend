@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-#[get("/xrpc/chat.campgroundnd.campsite.getActorCampsites", rank = 1)]
+#[get("/xrpc/chat.campground.campsite.getActorCampsites", rank = 1)]
 pub async fn get_actor_campsites(
     auth: Authorization<'_>,
     client: &State<Client>,
@@ -31,7 +31,7 @@ pub async fn get_actor_campsites(
     return get_actor_campsites_from_list(campsite_ids_filtered);
 }
 
-#[get(chat.campground
+#[get(
     "/xrpc/chat.campground.campsite.getActorCampsites?<campsites>",
     rank = 2
 )]

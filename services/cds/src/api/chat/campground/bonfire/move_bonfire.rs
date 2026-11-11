@@ -33,7 +33,7 @@ pub struct MoveBonfireBody {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.bonfire.moveBonfire?<bonfire_id>",
+    "/xrpc/chat.campground.bonfire.moveBonfire?<bonfire_id>",
     data = "<body>"
 )]
 pub async fn move_bonfire(

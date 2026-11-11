@@ -1,9 +1,9 @@
+use atproto_identity::storage_lru::LruDidDocumentStorage;
+use campground_lexicon::gg::campground::campsite::CreateCampsiteOutput;
 use cds_schema::{
     models::cds::{Bonfire, Campsite, CampsiteMember, CampsiteRole, Tent},
     schema::cds::actor,
 };
-use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::campsite::CreateCampsiteOutput;
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, QueryDsl, QueryResult, RunQueryDsl};
 use reqwest::Client;
@@ -40,7 +40,7 @@ pub struct CreateCampsiteBody<'a> {
     banner_uri: Option<&'a str>,
 }
 
-#[post("/xrpc/chat.campgroundnd.campsite.createCampsite", data = "<body>")]
+#[post("/xrpc/chat.campground.campsite.createCampsite", data = "<body>")]
 pub async fn create_campsite(
     auth: Authorization<'_>,
     event_subject: &State<ReactiveSubject>,

@@ -35,7 +35,7 @@ pub struct CreateMessageBody {
     replies: Option<Vec<String>>,
 }
 
-#[post("/xrpc/chat.campgroundnd.message.createMessage?<tent_id>", data = "<body>")]
+#[post("/xrpc/chat.campground.message.createMessage?<tent_id>", data = "<body>")]
 pub async fn create_message<'a>(
     auth: TentInfo<'_>,
     event_subject: &State<ReactiveSubject>,

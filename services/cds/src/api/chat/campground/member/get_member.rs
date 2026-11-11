@@ -1,8 +1,8 @@
+use campground_lexicon::gg::campground::membership::MemberViewDetailed;
 use cds_schema::{
     models::cds::{Actor, CampsiteMember, Profile},
     schema::cds::{campsite_member, profile},
 };
-use campground_lexicon::gg::campground::membership::MemberViewDetailed;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
@@ -13,7 +13,7 @@ use crate::{
     xrpc::{campsite::CampsiteInfoBasic, error::Result},
 };
 
-#[get("/xrpc/chat.campgroundnd.member.getMember?<campsite_id>&<actor>")]
+#[get("/xrpc/chat.campground.member.getMember?<campsite_id>&<actor>")]
 pub async fn get_member(
     _auth: CampsiteInfoBasic<'_>,
     campsite_id: &str,

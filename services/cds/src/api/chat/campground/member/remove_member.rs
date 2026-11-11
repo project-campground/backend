@@ -29,7 +29,7 @@ use crate::{
     },
 };
 
-#[post("/xrpc/chat.campgroundnd.member.removeMember?<campsite_id>&<actor>")]
+#[post("/xrpc/chat.campground.member.removeMember?<campsite_id>&<actor>")]
 pub async fn remove_member(
     auth: CampsiteInfo<'_>,
     event_subject: &State<ReactiveSubject>,
@@ -102,7 +102,7 @@ pub async fn remove_member(
     Ok(())
 }
 
-#[post("/xrpc/chat.campgroundnd.member.removeMember?<campsite_id>")]
+#[post("/xrpc/chat.campground.member.removeMember?<campsite_id>")]
 pub async fn remove_self(
     auth: CampsiteInfo<'_>,
     event_subject: &State<ReactiveSubject>,

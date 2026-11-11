@@ -34,7 +34,7 @@ pub struct UpdateMessageBody {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.message.updateMessage?<tent_id>&<message_id>",
+    "/xrpc/chat.campground.message.updateMessage?<tent_id>&<message_id>",
     data = "<body>"
 )]
 pub async fn update_message(

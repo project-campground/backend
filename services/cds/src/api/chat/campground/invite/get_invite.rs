@@ -14,7 +14,7 @@ use crate::{
     xrpc::error::{Result, XRPCError},
 };
 
-#[get("/xrpc/chat.campgroundnd.invite.getInvite?<invite_id>")]
+#[get("/xrpc/chat.campground.invite.getInvite?<invite_id>")]
 pub async fn get_invite(invite_id: &str) -> Result<Json<CampsiteInviteViewGlobal>> {
     let mut conn = establish_connection().unwrap();
 

@@ -1,5 +1,5 @@
-use cds_schema::models::cds::{Campsite, CampsiteRole};
 use campground_lexicon::gg::campground::{campsite::CampsiteViewDetailed, role::RoleViewBasic};
+use cds_schema::models::cds::{Campsite, CampsiteRole};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
@@ -12,7 +12,7 @@ use crate::{
     xrpc::{campsite::CampsiteInfoBasic, error::Result},
 };
 
-#[get("/xrpc/chat.campgroundnd.campsite.getCampsite?<campsite_id>")]
+#[get("/xrpc/chat.campground.campsite.getCampsite?<campsite_id>")]
 pub async fn get_campsite(
     auth: CampsiteInfoBasic<'_>,
     campsite_id: &str,

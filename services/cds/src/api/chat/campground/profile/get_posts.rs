@@ -21,7 +21,7 @@ use crate::{
     },
 };
 
-#[get("/xrpc/chat.campgroundnd.profile.getPosts?<actor>&<limit>&<offset>&<replies>")]
+#[get("/xrpc/chat.campground.profile.getPosts?<actor>&<limit>&<offset>&<replies>")]
 pub async fn get_posts(
     _auth: OptionalAuthorization<'_>,
     client: &State<Client>,
@@ -46,7 +46,7 @@ pub async fn get_posts(
     }
 
     let conn = establish_connection().unwrap();
-    let uri_format = format!("at://{}/chat.campgroundnd.profile.post/%", actor);
+    let uri_format = format!("at://{}/chat.campground.profile.post/%", actor);
 
     if replies {
         get_posts_with_replies(

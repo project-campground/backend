@@ -27,7 +27,7 @@ use crate::{
     },
 };
 
-#[get("/xrpc/chat.campgroundnd.message.getMessages?<tent_id>&<limit>&<offset>")]
+#[get("/xrpc/chat.campground.message.getMessages?<tent_id>&<limit>&<offset>")]
 pub async fn get_messages(
     auth: TentInfo<'_>,
     tent_id: &str,

@@ -115,7 +115,7 @@ macro_rules! get_scoped_permissions {
 }
 
 #[get(
-    "/xrpc/chat.campgroundnd.permission.getPermissions?<query..>",
+    "/xrpc/chat.campground.permission.getPermissions?<query..>",
     rank = 1
 )]
 pub async fn get_permissions(

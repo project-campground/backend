@@ -20,7 +20,7 @@ use crate::{
     xrpc::{campsite::CampsiteInfo, error::Result},
 };
 
-#[get("/xrpc/chat.campgroundnd.member.getMemberBan?<campsite_id>&<actor>")]
+#[get("/xrpc/chat.campground.member.getMemberBan?<campsite_id>&<actor>")]
 pub async fn get_member_ban(
     auth: CampsiteInfo<'_>,
     campsite_id: &str,

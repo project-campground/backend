@@ -4,7 +4,7 @@ pub fn routes() -> Vec<rocket::Route> {
         bonfire::routes(),
         campsite::routes(),
         invite::routes(),
-        membership::routes(),
+        member::routes(),
         message::routes(),
         permission::routes(),
         profile::routes(),
@@ -17,7 +17,7 @@ mod actor;
 mod bonfire;
 mod campsite;
 mod invite;
-mod membership;
+mod member;
 mod message;
 mod permission;
 mod profile;

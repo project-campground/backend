@@ -25,7 +25,7 @@ use crate::{
     },
 };
 
-#[post("/xrpc/chat.campgroundnd.member.deleteMemberBan?<campsite_id>&<actor>")]
+#[post("/xrpc/chat.campground.member.deleteMemberBan?<campsite_id>&<actor>")]
 pub async fn delete_member_ban(
     auth: CampsiteInfo<'_>,
     event_subject: &State<ReactiveSubject>,

@@ -28,7 +28,7 @@ pub struct UpdateMemberBody {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.member.updateMember?<campsite_id>&<actor>",
+    "/xrpc/chat.campground.member.updateMember?<campsite_id>&<actor>",
     data = "<body>"
 )]
 pub async fn update_member(

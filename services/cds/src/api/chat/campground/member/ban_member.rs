@@ -13,7 +13,7 @@ use rocket::{State, serde::json::Json};
 use serde::Deserialize;
 
 use crate::{
-    api::chat::campground::membership::remove_member::{
+    api::chat::campground::member::remove_member::{
         ensure_user_isnt_higher, remove_campsite_member,
     },
     database::{actors::get_actor, establish_connection},
@@ -41,7 +41,7 @@ pub struct CreateBanBody<'a> {
 }
 
 #[post(
-    "/xrpc/chat.campgroundnd.member.banMember?<campsite_id>&<actor>",
+    "/xrpc/chat.campground.member.banMember?<campsite_id>&<actor>",
     data = "<body>"
 )]
 pub async fn ban_member<'a>(
