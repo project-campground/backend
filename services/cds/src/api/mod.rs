@@ -20,7 +20,7 @@ async fn robots() -> &'static str {
 
 #[get("/")]
 async fn index() -> &'static str {
-    "This is an AT Protocol Application View (AppView) for the \"campground.gg\" application.\n\nMost API routes are under /xrpc/\n\nCode: https://github.com/Project-Campground/backend\nProtocol: https://atproto.com"
+    "This service is official implementation of Campsite Data Server by Team Campground.\n\nMost API routes are under /xrpc/\n\nCode: https://github.com/Project-Campground/backend\nProtocols:\n- ATProtocol: https://atproto.com\n- Campground: https://github.com/Project-Campground"
 }
 
 #[get("/oauth/client-metadata.json")]
@@ -39,23 +39,20 @@ async fn did() -> String {
         //     "https://w3id.org/security/multikey/v1".to_string(),
         //     "https://w3id.org/security/suites/secp256k1-2019/v1".to_string()
         // ]),
-        verification_method: Some(vec![
-            VerificationMethod {
-                id: format!("{}#atproto", CORE_CONFIG.did()),
-                r#type: "Multikey".to_string(),
-                controller: CORE_CONFIG.did(),
-                public_key_multibase: Some(
-                    encode_did_key(&CORE_CONFIG.verification_keypair().public_key()).replace("did:key:", "")
-                )
-            }
-        ]),
-        service: Some(vec![
-            Service {
-                id: "#campground_appview".to_string(),
-                r#type: "CampgroundAppview".to_string(),
-                service_endpoint: CORE_CONFIG.public_url()
-            }
-        ])
+        verification_method: Some(vec![VerificationMethod {
+            id: format!("{}#atproto", CORE_CONFIG.did()),
+            r#type: "Multikey".to_string(),
+            controller: CORE_CONFIG.did(),
+            public_key_multibase: Some(
+                encode_did_key(&CORE_CONFIG.verification_keypair().public_key())
+                    .replace("did:key:", ""),
+            ),
+        }]),
+        service: Some(vec![Service {
+            id: "#campground_cds".to_string(),
+            r#type: "CampgroundCommunityDataServer".to_string(),
+            service_endpoint: CORE_CONFIG.public_url(),
+        }]),
     };
 
     serde_json::to_string(&doc).unwrap()
@@ -65,12 +62,7 @@ pub fn routes() -> Vec<rocket::Route> {
     merge_routes!(
         gg::routes(),
         ws::routes(),
-        rocket::routes![
-            robots,
-            index,
-            oauth_client_metadata,
-            did
-        ]
+        rocket::routes![robots, index, oauth_client_metadata, did]
     )
 }
 

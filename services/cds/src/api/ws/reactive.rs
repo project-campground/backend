@@ -58,7 +58,7 @@ lazy_static! {
     };
 }
 
-/// Handles any type of the message provided from the client's WebSocket or by AppView's Reactive Subject/Observer (see reactive programming).
+/// Handles any type of the message provided from the client's WebSocket or by cds's Reactive Subject/Observer (see reactive programming).
 pub async fn on_rocket_message(
     msg: Message,
     ws_actor: Option<&String>,
@@ -150,7 +150,7 @@ pub async fn on_rocket_message(
     }
 }
 
-/// When the WebSocket message is correct, this method properly handles actual events in Campground AppView or WebSocket events.
+/// When the WebSocket message is correct, this method properly handles actual events in Campground cds or WebSocket events.
 pub async fn on_reactive_data(
     omsg: ReactiveSubjectData,
     ws_actor: Option<&String>,

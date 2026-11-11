@@ -71,9 +71,9 @@ pub async fn fill_profile_posts_with_records(
         did_document_storage,
         &DNS_RESOLVER,
     )
-        .await
-        .inspect_err(|err| println!("Failed to fetch post records: {:?}", err))
-        .map_err(|_| XRPCError::InternalServerError)?;
+    .await
+    .inspect_err(|err| println!("Failed to fetch post records: {:?}", err))
+    .map_err(|_| XRPCError::InternalServerError)?;
 
     match post_records {
         ResponseResult::Error { error, message } => {
@@ -163,15 +163,13 @@ pub async fn get_single_profile_post<T>(
             match post_record {
                 ResponseResult::Ok(post_record) => {
                     let profile_post = insert_post_into_db(&post_record, author_did).await?;
-        
+
                     Ok((author_actor.clone(), _fn(profile_post)))
-                },
-                ResponseResult::Error { error, message: _ } => {
-                    match error.as_str() {
-                        "InvalidRequest" | "RecordNotFound" => Err(XRPCError::NotFound),
-                        _ => Err(XRPCError::InternalServerError),
-                    }
                 }
+                ResponseResult::Error { error, message: _ } => match error.as_str() {
+                    "InvalidRequest" | "RecordNotFound" => Err(XRPCError::NotFound),
+                    _ => Err(XRPCError::InternalServerError),
+                },
             }
         }
         Err(_) => Err(XRPCError::InternalServerError),
@@ -269,7 +267,7 @@ async fn insert_post_list_into_db(posts: Vec<ProfilePost>) -> Result<(), XRPCErr
     let reply_update_sql =
         sql("(SELECT array_agg(split_part(unnest, ';', 1)) FROM ( SELECT unnest(")
             .bind::<Array<VarChar>, _>(parents.clone())
-            .sql(") ) WHERE split_part(unnest, ';', 2) = \"appview\".\"profile_post\".\"uri\")");
+            .sql(") ) WHERE split_part(unnest, ';', 2) = \"cds\".\"profile_post\".\"uri\")");
 
     diesel::update(profile_post::table)
         .filter(
@@ -332,7 +330,7 @@ async fn update_post_list_in_db(posts: Vec<ProfilePost>) -> Result<(), XRPCError
     // Basically a complicated way of fetching specific list of replies for each parent instead of individually updating and spamming queries
     let content_update_sql = sql("(SELECT ((array_agg(array_to_string((string_to_array(unnest, ';'))[2:], ';')))[1]) FROM ( SELECT unnest(")
         .bind::<Array<VarChar>, _>(update_tuple_string.clone())
-        .sql(") ) WHERE split_part(unnest, ';', 1) = \"appview\".\"profile_post\".\"uri\")");
+        .sql(") ) WHERE split_part(unnest, ';', 1) = \"cds\".\"profile_post\".\"uri\")");
 
     diesel::update(profile_post::table)
         .filter(

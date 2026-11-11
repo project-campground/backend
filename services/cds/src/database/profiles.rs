@@ -17,7 +17,7 @@ use crate::database::actors::{actor_index_error_to_xrpc_error, index_and_save_ac
 use crate::database::{establish_connection, models::cds::Profile};
 use crate::helpers::api::{handle_all_db_errors, handle_unknown_errors};
 use crate::identity::indexing::{get_actor_did_doc, index_actor};
-use crate::util::string::AppviewStringExtension;
+use crate::util::string::CdsStringExtension;
 use crate::xrpc::error::XRPCError;
 use diesel::prelude::*;
 

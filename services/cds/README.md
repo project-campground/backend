@@ -1,6 +1,10 @@
-# Campground Registry
+# Campground's Community Data Server
 
-This service is an [ATProto][] Appview implemented in rust.
+This service is official implementation of CGround protocol Community Data Server by Team Campground implemented in Rust.
+
+## Intent
+
+The intent of this service is to provide an API and a database for storing and managing campsites (also known as communities and guilds on other platforms) on Campground protocol.
 
 ## Dependencies
 
