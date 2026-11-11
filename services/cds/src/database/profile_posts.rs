@@ -31,15 +31,15 @@ pub fn resolve_post_uri(uri: &str) -> Result<(String, String, Option<String>), &
         return Err("Invalid author DID");
     }
 
-    // at://did:.../gg.campground.profile.posts/...
+    // at://did:.../chat.campground.profile.posts/...
     let uri_formatted = match split_uri[..] {
-        [_, _, did, "gg.campground.profile.post", post_tid] => format!(
-            "at://{did}/gg.campground.profile.post/{post_tid}",
+        [_, _, did, "chat.campground.profile.post", post_tid] => format!(
+            "at://{did}/chat.campground.profile.post/{post_tid}",
             did = did,
             post_tid = post_tid
         ),
-        [_, _, did, "gg.campground.profile.post"] => {
-            format!("at://{did}/gg.campground.profile.post/%", did = did)
+        [_, _, did, "chat.campground.profile.post"] => {
+            format!("at://{did}/chat.campground.profile.post/%", did = did)
         }
         _ => return Err("Invalid URI format"),
     };
@@ -66,7 +66,7 @@ pub async fn fill_profile_posts_with_records(
     // TODO: Firehose auto-update?
     let post_records = fetch_record_list::<ProfilePostRecord>(
         author_did,
-        "gg.campground.profile.post",
+        "chat.campground.profile.post",
         client,
         did_document_storage,
         &DNS_RESOLVER,
@@ -150,7 +150,7 @@ pub async fn get_single_profile_post<T>(
         Err(NotFound) => {
             let post_record = fetch_record::<ProfilePostRecord>(
                 author_did,
-                "gg.campground.profile.post",
+                "chat.campground.profile.post",
                 post_tid,
                 client,
                 did_document_storage,

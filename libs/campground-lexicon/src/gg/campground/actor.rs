@@ -25,7 +25,7 @@ pub struct ProfileStatus {
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "$type")]
-#[serde(rename = "gg.campground.actor.profile")]
+#[serde(rename = "chat.campground.actor.profile")]
 #[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub display_name: Option<String>,

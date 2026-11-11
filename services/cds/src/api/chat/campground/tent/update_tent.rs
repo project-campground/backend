@@ -1,0 +1,187 @@
+#![allow(unused_variables)]
+
+use campground_lexicon::gg::campground::{
+    content::{ContentComponent, SystemMessage},
+    tent::TentViewBasic,
+};
+use cds_schema::{
+    models::cds::{Actor, Campsite, CampsiteMember, Profile, Tent, TentMessage},
+    schema::cds,
+};
+use chrono::{NaiveDateTime, Utc};
+use diesel::{ExpressionMethods, RunQueryDsl};
+use rocket::{State, serde::json::Json};
+use serde::Deserialize;
+
+use crate::{
+    database::{establish_connection, messages::system_message, profiles::get_profile_from_actor},
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
+        ws::{event_next_campsite, event_next_tent},
+    },
+    realtime::data::ReactiveSubject,
+    views::{messages::message_view_basic, tents::tent_view_basic},
+    xrpc::{
+        campsite::TentInfo,
+        error::{Result, XRPCError},
+    },
+};
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "camelCase")]
+pub struct UpdateTentBody<'a> {
+    name: Option<&'a str>,
+    description: Option<&'a str>,
+    view_type: Option<i16>,
+}
+
+#[post("/xrpc/chat.campground.tent.updateTent?<tent_id>", data = "<body>")]
+pub async fn update_tent<'a>(
+    auth: TentInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    tent_id: &str,
+    body: Json<UpdateTentBody<'a>>,
+) -> Result<Json<TentViewBasic>> {
+    let inner_body = &body.into_inner();
+    if inner_body.name.is_none()
+        && inner_body.description.is_none()
+        && inner_body.view_type.is_none()
+    {
+        return Err(XRPCError::BadRequest(
+            "Expected at least one property in the body".to_string(),
+        ));
+    } else if inner_body
+        .name
+        .clone()
+        .map_or(false, |x| x.len() < 3 || x.len() > 48)
+    {
+        return Err(XRPCError::BadRequest(
+            "Expected 'name' property to have a string of length 3 to 48 characters".to_string(),
+        ));
+    } else if inner_body
+        .description
+        .clone()
+        .map_or(false, |x| x.len() > 200)
+    {
+        return Err(XRPCError::BadRequest(
+            "Expected 'description' property to have a string of up to 200 characters".to_string(),
+        ));
+    } else if inner_body.view_type.clone().map_or(false, |x| x != 0) {
+        return Err(XRPCError::BadRequest(
+            "Expected 'view_type' property to be 0".to_string(),
+        ));
+    }
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.tent.bonfire_id,
+                auth.tent.category_id.as_ref(),
+                Some(&auth.tent.id)
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
+    );
+
+    let (actor, profile) =
+        get_profile_from_actor(auth.auth.client, auth.auth.did_document_storage, auth.actor)
+            .await
+            .map_err(|_| XRPCError::Unauthorized)?;
+
+    let mut conn = establish_connection().unwrap();
+
+    let current_date = Utc::now().naive_utc();
+
+    let updated_tents = diesel::update(crate::schema::cds::tent::table)
+        .filter(cds::tent::id.eq(auth.tent.id.clone()))
+        .set((
+            // All the new settings
+            cds::tent::name.eq(inner_body.name.clone().unwrap_or(&auth.tent.name)),
+            cds::tent::description.eq(inner_body
+                .description
+                .clone()
+                .unwrap_or(&auth.tent.description)),
+            cds::tent::viewtype.eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
+            // Mandatory
+            cds::tent::updatedat.eq(current_date),
+            cds::tent::updatedby.eq(&actor.did),
+        ))
+        .load::<Tent>(&mut conn)
+        .expect("Error updating tent");
+
+    let updated_tent = updated_tents.first().unwrap();
+
+    let view = tent_view_basic(&updated_tent);
+    event_next_tent(event_subject, &updated_tent, false, "TentUpdated", &view);
+
+    // Add rename message
+    if let Some(new_tent_name) = inner_body.name
+        && new_tent_name != auth.tent.name
+    {
+        create_tent_name_update_message(
+            &auth.campsite,
+            &auth.tent,
+            auth.member,
+            event_subject,
+            updated_tent,
+            new_tent_name,
+            current_date,
+            actor,
+            profile,
+        )
+        .await?;
+    }
+
+    return Ok(Json(view));
+}
+
+async fn create_tent_name_update_message(
+    auth_campsite: &Campsite,
+    auth_tent: &Tent,
+    auth_member: CampsiteMember,
+    event_subject: &State<ReactiveSubject>,
+    updated_tent: &Tent,
+    new_name: &str,
+    current_date: NaiveDateTime,
+    actor: Actor,
+    profile: Option<Profile>,
+) -> Result<()> {
+    let mut conn = establish_connection().unwrap();
+
+    let update_message = &diesel::insert_into(crate::schema::cds::tent_message::table)
+        .values(system_message(
+            &auth_tent.campsite_id,
+            &updated_tent.id,
+            &actor.did,
+            current_date,
+            ContentComponent::System(SystemMessage::TentNameUpdated {
+                previous_name: auth_tent.name.clone(),
+                new_name: new_name.to_string(),
+            }),
+        ))
+        .load::<TentMessage>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    let update_message = update_message.first().unwrap();
+    event_next_campsite(
+        event_subject,
+        &auth_campsite.id,
+        0,
+        "MessageCreated",
+        &message_view_basic(
+            &updated_tent,
+            &update_message,
+            Some(&actor),
+            profile.as_ref(),
+            Some(&auth_member),
+        ),
+    );
+
+    Ok(())
+}

@@ -181,7 +181,7 @@ pub fn profile_record_to_db_profile(
     Profile {
         cid: cid.to_string(),
         creator: actor.did.clone(),
-        uri: format!("at://{}/gg.campground.actor.profile/self", &actor.did),
+        uri: format!("at://{}/chat.campground.actor.profile/self", &actor.did),
         display_name: profile_record
             .display_name
             .clone()
@@ -295,7 +295,7 @@ pub async fn get_profile_from_pds(
         &Auth::None,
         pds_domain,
         did,
-        "gg.campground.actor.profile",
+        "chat.campground.actor.profile",
         "self",
         None,
     )

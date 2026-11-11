@@ -28,12 +28,12 @@ pub struct ActivityAssets {
 #[serde(tag = "$type")]
 #[non_exhaustive]
 pub enum Activity {
-    #[serde(rename = "gg.campground.activity#custom")]
+    #[serde(rename = "chat.campground.activity#custom")]
     Custom {
         emoji: Option<String>,
         state: Option<String>,
     },
-    #[serde(rename = "gg.campground.activity#playing")]
+    #[serde(rename = "chat.campground.activity#playing")]
     #[serde(rename_all = "camelCase")]
     Playing {
         name: String,
@@ -45,7 +45,7 @@ pub enum Activity {
         party: Option<ActivityParty>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.activity#streaming")]
+    #[serde(rename = "chat.campground.activity#streaming")]
     #[serde(rename_all = "camelCase")]
     Streaming {
         name: String,
@@ -54,7 +54,7 @@ pub enum Activity {
         details: Option<String>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.activity#listening")]
+    #[serde(rename = "chat.campground.activity#listening")]
     #[serde(rename_all = "camelCase")]
     Listening {
         name: String,
@@ -66,7 +66,7 @@ pub enum Activity {
         party: Option<ActivityParty>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.activity#watching")]
+    #[serde(rename = "chat.campground.activity#watching")]
     #[serde(rename_all = "camelCase")]
     Watching {
         name: String,
@@ -78,7 +78,7 @@ pub enum Activity {
         party: Option<ActivityParty>,
         assets: Option<ActivityAssets>,
     },
-    #[serde(rename = "gg.campground.activity#competing")]
+    #[serde(rename = "chat.campground.activity#competing")]
     #[serde(rename_all = "camelCase")]
     Competing {
         name: String,

@@ -1,0 +1,122 @@
+use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
+use cds_schema::{models::cds::Bonfire, schema::cds};
+use chrono::Utc;
+use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
+use rocket::{State, serde::json::Json};
+use serde::Deserialize;
+
+use crate::{
+    database::establish_connection,
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
+        ws::event_next_bonfire,
+    },
+    realtime::data::ReactiveSubject,
+    util::params::{OptionValidity, ensure_valid_modified_uri},
+    views::bonfires::bonfire_view_basic,
+    xrpc::{
+        campsite::BonfireInfo,
+        error::{Result, XRPCError},
+    },
+};
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "camelCase")]
+pub struct UpdateBonfireBody<'a> {
+    name: Option<String>,
+    description: Option<String>,
+    position: Option<i32>,
+    avatar_uri: Option<&'a str>,
+    banner_uri: Option<&'a str>,
+}
+
+#[post(
+    "/xrpc/chat.campgroundnd.bonfire.updateBonfire?<bonfire_id>",
+    data = "<body>"
+)]
+pub async fn update_bonfire<'a>(
+    auth: BonfireInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    bonfire_id: &str,
+    body: Json<UpdateBonfireBody<'a>>,
+) -> Result<Json<BonfireViewBasic>> {
+    let UpdateBonfireBody {
+        name,
+        description,
+        position,
+        avatar_uri,
+        banner_uri,
+    } = &body.into_inner();
+    let name = &name
+        .clone()
+        .ensure_validity(|x| x.len() >= 3 && x.len() <= 48)
+        .map_err(|_| {
+            XRPCError::BadRequest(
+                "Expected 'name' property to have a string of length 3 to 48 characters"
+                    .to_string(),
+            )
+        })?;
+    let description = &description
+        .clone()
+        .ensure_validity(|x| x.len() <= 200)
+        .map_err(|_| {
+            XRPCError::BadRequest(
+                "Expected 'description' property to have a string of up to 200 characters"
+                    .to_string(),
+            )
+        })?;
+    let avatar_uri = &ensure_valid_modified_uri(avatar_uri)
+        .map_err(|x| XRPCError::BadRequest(x.to_string()))?
+        .map_passed(|x| x.to_string());
+    let banner_uri = &ensure_valid_modified_uri(banner_uri)
+        .map_err(|x| XRPCError::BadRequest(x.to_string()))?
+        .map_passed(|x| x.to_string());
+
+    let mut conn = establish_connection().unwrap();
+
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                bonfire_id,
+                None,
+                None
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_BONFIRES))?
+    );
+
+    let current_date = Utc::now().naive_utc();
+
+    let bonfire = diesel::update(cds::bonfire::table)
+        .filter(
+            cds::bonfire::campsiteid
+                .eq(&auth.bonfire.campsite_id)
+                .and(cds::bonfire::id.eq(bonfire_id)),
+        )
+        .set((
+            cds::bonfire::name.eq(name.clone().unwrap_or(auth.bonfire.name)),
+            cds::bonfire::description.eq(description.clone().unwrap_or(auth.bonfire.description)),
+            cds::bonfire::priority.eq(position.clone().unwrap_or(auth.bonfire.priority)),
+            cds::bonfire::avataruri.eq(avatar_uri.clone().with_fallback(auth.bonfire.avatar_uri)),
+            cds::bonfire::banneruri.eq(banner_uri.clone().with_fallback(auth.bonfire.banner_uri)),
+            cds::bonfire::updatedby.eq(&auth.actor.did),
+            cds::bonfire::updatedat.eq(current_date),
+        ))
+        .load::<Bonfire>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    let bonfire = bonfire.first().unwrap();
+
+    let view = bonfire_view_basic(&bonfire);
+
+    event_next_bonfire(event_subject, &bonfire, false, "BonfireUpdated", &view);
+
+    return Ok(Json(view));
+}

@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "$type")]
-#[serde(rename = "gg.campground.profile.post")]
+#[serde(rename = "chat.campground.profile.post")]
 #[serde(rename_all = "camelCase")]
 pub struct ProfilePost {
     pub content: Option<String>,

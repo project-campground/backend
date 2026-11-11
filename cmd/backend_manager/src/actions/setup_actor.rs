@@ -168,7 +168,7 @@ pub async fn setup_actor(
     put_record_in_pds(
         client,
         &pds_localhost_xrpc,
-        "gg.campground.actor.profile",
+        "chat.campground.actor.profile",
         did,
         access_jwt,
         ProfileRecord {
@@ -202,7 +202,7 @@ pub async fn setup_actor(
 
     diesel::insert_into(cds::profile::table)
         .values(Profile {
-            uri: format!("at://{}/gg.campground.actor.profile/self", did),
+            uri: format!("at://{}/chat.campground.actor.profile/self", did),
             creator: did.clone(),
             cid: "".to_string(),
             avatar_cid: None,

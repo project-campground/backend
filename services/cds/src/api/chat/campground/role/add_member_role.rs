@@ -1,0 +1,128 @@
+use campground_lexicon::gg::campground::membership::ModifyMemberRolesOutput;
+use cds_schema::{
+    models::cds::{CampsiteMember, CampsiteRole},
+    schema::cds::{campsite_member, campsite_role},
+};
+use diesel::dsl::not;
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl,
+};
+use rocket::{State, serde::json::Json};
+use serde::Deserialize;
+use uuid::Uuid;
+
+use crate::{
+    database::establish_connection,
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
+        ws::event_next,
+    },
+    realtime::data::{ReactiveSubject, ReactiveSubjectData},
+    views::roles::{ensure_no_higher_role, role_view_basic},
+    xrpc::{
+        campsite::CampsiteInfo,
+        error::{Result, XRPCError},
+    },
+};
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "camelCase")]
+pub struct AddMemberRoleBody {
+    member_ids: Vec<String>,
+}
+
+#[post(
+    "/xrpc/chat.campground.role.addMemberRoles?<campsite_id>&<role_id>",
+    data = "<body>"
+)]
+pub async fn add_member_role(
+    auth: CampsiteInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    campsite_id: &str,
+    role_id: &str,
+    body: Json<AddMemberRoleBody>,
+) -> Result<Json<ModifyMemberRolesOutput>> {
+    let inner_body = &body.into_inner();
+    let member_ids_length = inner_body.member_ids.len();
+    if member_ids_length < 1 || member_ids_length > 100 {
+        return Err(XRPCError::BadRequest(
+            "Expected 'member_ids' property to have an array of length 1 to 100".to_string(),
+        ));
+    }
+
+    let mut conn = establish_connection().unwrap();
+    // Can be given invalid UUID; Be descriptive
+    let role_id_uuid = Uuid::try_parse(role_id).map_err(|_| {
+        XRPCError::BadRequest("Expected 'role_id' query to be a valid UUID".to_string())
+    })?;
+
+    // Make sure the role exists
+    let all_roles = campsite_role::table
+        .filter(campsite_role::campsiteid.eq(campsite_id))
+        .load::<CampsiteRole>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    let given_role = all_roles.iter().find(|x| x.id == role_id_uuid);
+    if given_role.is_none() {
+        return Err(XRPCError::NotFound);
+    }
+
+    let given_role = given_role.unwrap();
+
+    ensure_no_higher_role(
+        auth.campsite.owner == auth.actor.did,
+        &mut all_roles.clone(),
+        given_role.priority,
+        auth.member.roles.clone(),
+    )?;
+
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionFlag::GIVE_ROLES))?
+    );
+
+    let updated_members = diesel::update(campsite_member::table)
+        .filter(
+            campsite_member::campsiteid
+                .eq(campsite_id)
+                .and(campsite_member::userid.eq_any(inner_body.member_ids.clone()))
+                .and(not(campsite_member::roles.contains(vec![given_role.id]))),
+        )
+        .set((
+            // Stuff changed
+            campsite_member::roles.eq(campsite_member::roles.concat(vec![role_id_uuid])),
+        ))
+        .load::<CampsiteMember>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    let member_ids = updated_members
+        .iter()
+        .map(|x| x.user_id.clone())
+        .collect::<Vec<String>>();
+    let role_view = role_view_basic(given_role);
+    let output = ModifyMemberRolesOutput {
+        role: role_view.clone(),
+        members: member_ids.clone(),
+    };
+
+    event_next(event_subject, "MemberRolesAdded", &output, |payload| {
+        ReactiveSubjectData::MemberRolesModified {
+            campsite_id: campsite_id.to_string(),
+            actors: member_ids.clone(),
+            role_id: given_role.id,
+            permissions_are_empty: given_role.permissions == 0,
+            removed: false,
+            binary: payload,
+        }
+    });
+
+    return Ok(Json(output));
+}
