@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Actor, Bonfire, Campsite, CampsiteMember, Tent, TentCategory},
-    schema::appview::{campsite, campsite_member},
+use cds_schema::{
+    models::cds::{Actor, Bonfire, Campsite, CampsiteMember, Tent, TentCategory},
+    schema::cds::{campsite, campsite_member},
 };
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
@@ -240,8 +240,8 @@ where
         let mut conn = establish_connection().unwrap();
 
         let tent = try_outcome!(
-            crate::schema::appview::tent::table
-                .filter(crate::schema::appview::tent::id.eq(tent_id))
+            crate::schema::cds::tent::table
+                .filter(crate::schema::cds::tent::id.eq(tent_id))
                 .first::<Tent>(&mut conn)
                 .outcome(|err| match err {
                     NotFound => Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),
@@ -300,8 +300,8 @@ where
         let mut conn = establish_connection().unwrap();
 
         let category = try_outcome!(
-            crate::schema::appview::tent_category::table
-                .filter(crate::schema::appview::tent_category::id.eq(category_id))
+            crate::schema::cds::tent_category::table
+                .filter(crate::schema::cds::tent_category::id.eq(category_id))
                 .first::<TentCategory>(&mut conn)
                 .outcome(|err| match err {
                     NotFound => Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),
@@ -371,8 +371,8 @@ where
         let mut conn = establish_connection().unwrap();
 
         let bonfire = try_outcome!(
-            crate::schema::appview::bonfire::table
-                .filter(crate::schema::appview::bonfire::id.eq(bonfire_id))
+            crate::schema::cds::bonfire::table
+                .filter(crate::schema::cds::bonfire::id.eq(bonfire_id))
                 .first::<Bonfire>(&mut conn)
                 .outcome(|err| match err {
                     NotFound => Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),

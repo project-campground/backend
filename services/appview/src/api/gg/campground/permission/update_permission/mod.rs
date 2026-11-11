@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::CampsitePermission, schema::appview::campsite_permission};
+use cds_schema::{models::cds::CampsitePermission, schema::cds::campsite_permission};
 use campground_lexicon::gg::campground::permission::PermissionViewEmbedded;
 use chrono::Utc;
 use diesel::{

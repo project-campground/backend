@@ -1,6 +1,6 @@
-use appview_schema::models::appview::Campsite;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::{actor::GetMeOutput, campsite::CampsiteViewBasic};
+use cds_schema::models::cds::Campsite;
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
@@ -33,8 +33,8 @@ pub async fn get_me(
     let campsites = if actor.campsites.is_empty() {
         vec![]
     } else {
-        crate::schema::appview::campsite::table
-            .filter(crate::schema::appview::campsite::id.eq_any(campsite_ids_filtered))
+        crate::schema::cds::campsite::table
+            .filter(crate::schema::cds::campsite::id.eq_any(campsite_ids_filtered))
             .load::<Campsite>(&mut conn)
             .map_err(handle_all_db_errors)?
             .iter()

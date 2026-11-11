@@ -1,12 +1,12 @@
 #![allow(unused_variables)]
 
-use appview_schema::{
-    models::appview::{Actor, Campsite, CampsiteMember, Profile, Tent, TentMessage},
-    schema::appview,
-};
 use campground_lexicon::gg::campground::{
     content::{ContentComponent, SystemMessage},
     tent::TentViewBasic,
+};
+use cds_schema::{
+    models::cds::{Actor, Campsite, CampsiteMember, Profile, Tent, TentMessage},
+    schema::cds,
 };
 use chrono::{NaiveDateTime, Utc};
 use diesel::{ExpressionMethods, RunQueryDsl};
@@ -98,19 +98,19 @@ pub async fn update_tent<'a>(
 
     let current_date = Utc::now().naive_utc();
 
-    let updated_tents = diesel::update(crate::schema::appview::tent::table)
-        .filter(appview::tent::id.eq(auth.tent.id.clone()))
+    let updated_tents = diesel::update(crate::schema::cds::tent::table)
+        .filter(cds::tent::id.eq(auth.tent.id.clone()))
         .set((
             // All the new settings
-            appview::tent::name.eq(inner_body.name.clone().unwrap_or(&auth.tent.name)),
-            appview::tent::description.eq(inner_body
+            cds::tent::name.eq(inner_body.name.clone().unwrap_or(&auth.tent.name)),
+            cds::tent::description.eq(inner_body
                 .description
                 .clone()
                 .unwrap_or(&auth.tent.description)),
-            appview::tent::viewtype.eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
+            cds::tent::viewtype.eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
             // Mandatory
-            appview::tent::updatedat.eq(current_date),
-            appview::tent::updatedby.eq(&actor.did),
+            cds::tent::updatedat.eq(current_date),
+            cds::tent::updatedby.eq(&actor.did),
         ))
         .load::<Tent>(&mut conn)
         .expect("Error updating tent");
@@ -154,7 +154,7 @@ async fn create_tent_name_update_message(
 ) -> Result<()> {
     let mut conn = establish_connection().unwrap();
 
-    let update_message = &diesel::insert_into(crate::schema::appview::tent_message::table)
+    let update_message = &diesel::insert_into(crate::schema::cds::tent_message::table)
         .values(system_message(
             &auth_tent.campsite_id,
             &updated_tent.id,

@@ -1,4 +1,4 @@
-use appview_schema::schema::appview::campsite_role;
+use cds_schema::schema::cds::campsite_role;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 

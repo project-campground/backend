@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Campsite, CampsiteMember, CampsiteRole},
-    schema::appview::campsite_role,
+use cds_schema::{
+    models::cds::{Campsite, CampsiteMember, CampsiteRole},
+    schema::cds::campsite_role,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;

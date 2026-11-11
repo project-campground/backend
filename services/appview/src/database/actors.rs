@@ -1,13 +1,13 @@
 use anyhow::Result;
-use appview_schema::schema::appview;
 use atproto_identity::model::Document;
 use atproto_identity::resolve::resolve_subject;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
+use cds_schema::schema::cds;
 use diesel::result::Error::NotFound;
 use reqwest::Client;
 
 use crate::DNS_RESOLVER;
-use crate::database::{establish_connection, models::appview::Actor};
+use crate::database::{establish_connection, models::cds::Actor};
 use crate::helpers::api::{handle_all_db_errors, handle_unknown_errors};
 use crate::identity::indexing::{DidDocIndexingError, index_actor};
 use crate::xrpc::error::XRPCError;
@@ -26,8 +26,8 @@ pub async fn get_actors(
 ) -> Result<Vec<Actor>, XRPCError> {
     let mut conn = establish_connection().unwrap();
 
-    let mut all_actors = crate::schema::appview::actor::table
-        .filter(crate::schema::appview::actor::did.eq_any(&actors))
+    let mut all_actors = crate::schema::cds::actor::table
+        .filter(crate::schema::cds::actor::did.eq_any(&actors))
         .load::<Actor>(&mut conn)
         .map_err(handle_all_db_errors)?;
 
@@ -50,9 +50,9 @@ pub async fn get_actors(
         .await
         .map_err(actor_index_error_to_xrpc_error)?;
 
-    diesel::insert_into(appview::actor::table)
+    diesel::insert_into(cds::actor::table)
         .values(&newly_indexed_actors)
-        .on_conflict(appview::actor::handle)
+        .on_conflict(cds::actor::handle)
         .do_nothing()
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
@@ -94,9 +94,9 @@ pub async fn index_and_save_actor(
         .await
         .map_err(handle_unknown_errors)?;
 
-    let res = diesel::insert_into(crate::schema::appview::actor::table)
+    let res = diesel::insert_into(crate::schema::cds::actor::table)
         .values(&actor)
-        .on_conflict(appview::actor::handle)
+        .on_conflict(cds::actor::handle)
         .do_nothing()
         .returning(Actor::as_returning())
         .get_result(&mut conn)
@@ -108,11 +108,11 @@ pub async fn index_and_save_actor(
 pub fn get_actor_from_db(actor: &str) -> Result<Actor, diesel::result::Error> {
     let mut conn = establish_connection().unwrap();
 
-    crate::schema::appview::actor::table
+    crate::schema::cds::actor::table
         .filter(
-            crate::schema::appview::actor::did
+            crate::schema::cds::actor::did
                 .eq(actor)
-                .or(crate::schema::appview::actor::handle.eq(actor)),
+                .or(crate::schema::cds::actor::handle.eq(actor)),
         )
         .first::<Actor>(&mut conn)
 }

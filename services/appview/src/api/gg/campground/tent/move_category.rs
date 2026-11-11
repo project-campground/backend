@@ -1,5 +1,5 @@
-use appview_schema::{models::appview::TentCategory, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
+use cds_schema::{models::cds::TentCategory, schema::cds};
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -130,15 +130,15 @@ fn set_category_position_unchecked(
         let current_date = Utc::now().naive_utc();
 
         Ok((
-            diesel::update(crate::schema::appview::tent_category::table)
-                .filter(appview::tent_category::id.eq(auth.category.id.clone()))
+            diesel::update(crate::schema::cds::tent_category::table)
+                .filter(cds::tent_category::id.eq(auth.category.id.clone()))
                 .set((
                     // All the new settings
-                    appview::tent_category::priority.eq(position),
-                    appview::tent_category::bonfireid.eq(bonfire_id),
+                    cds::tent_category::priority.eq(position),
+                    cds::tent_category::bonfireid.eq(bonfire_id),
                     // Mandatory
-                    appview::tent_category::updatedat.eq(current_date),
-                    appview::tent_category::updatedby.eq(&auth.actor.did),
+                    cds::tent_category::updatedat.eq(current_date),
+                    cds::tent_category::updatedby.eq(&auth.actor.did),
                 ))
                 .load::<TentCategory>(conn)?,
             moved_categories,
@@ -158,10 +158,10 @@ fn make_room_for_category(
     use std::ops::Add;
 
     make_room_for_items!(
-        crate::schema::appview::tent_category::table,
-        crate::schema::appview::tent_category::id,
-        crate::schema::appview::tent_category::priority,
-        appview::tent_category::bonfireid
+        crate::schema::cds::tent_category::table,
+        crate::schema::cds::tent_category::id,
+        crate::schema::cds::tent_category::priority,
+        cds::tent_category::bonfireid
             .eq(bonfire_id);
         conn,
         position

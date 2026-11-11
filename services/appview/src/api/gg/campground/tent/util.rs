@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Bonfire, Campsite, CampsiteMember, TentCategory};
+use cds_schema::models::cds::{Bonfire, Campsite, CampsiteMember, TentCategory};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
@@ -21,11 +21,11 @@ pub fn check_bonfire_existence(
     member: &CampsiteMember,
     moved_bonfire_id: &str,
 ) -> Result<(), XRPCError> {
-    let bonfires = &crate::schema::appview::bonfire::table
+    let bonfires = &crate::schema::cds::bonfire::table
         .filter(
-            crate::schema::appview::bonfire::id
+            crate::schema::cds::bonfire::id
                 .eq(moved_bonfire_id)
-                .and(crate::schema::appview::bonfire::campsiteid.eq(&campsite.id)),
+                .and(crate::schema::cds::bonfire::campsiteid.eq(&campsite.id)),
         )
         .load::<Bonfire>(conn)
         .map_err(handle_select_first_error)?;
@@ -58,8 +58,8 @@ pub fn check_category_existence(
     member: &CampsiteMember,
     category_id: Uuid,
 ) -> Result<String, XRPCError> {
-    let tent_categories = &crate::schema::appview::tent_category::table
-        .filter(crate::schema::appview::tent_category::id.eq(category_id))
+    let tent_categories = &crate::schema::cds::tent_category::table
+        .filter(crate::schema::cds::tent_category::id.eq(category_id))
         .load::<TentCategory>(conn)
         .map_err(handle_select_first_error)?;
 

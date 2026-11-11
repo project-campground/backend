@@ -1,6 +1,6 @@
 use crate::database::{establish_connection, profile_posts};
-use crate::schema::appview::profile_post;
-use appview_schema::models::appview::ProfilePost;
+use crate::schema::cds::profile_post;
+use cds_schema::models::cds::ProfilePost;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::profile::{
     GetProfilePostRepliesOutput, ProfilePostViewBasic,

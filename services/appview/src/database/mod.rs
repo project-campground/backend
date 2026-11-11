@@ -32,5 +32,5 @@ pub mod actors;
 pub mod campsites;
 pub mod profile_posts;
 pub mod profiles;
-pub use appview_schema::models;
+pub use cds_schema::models;
 pub mod messages;

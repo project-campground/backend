@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Actor, CampsiteBan, CampsiteMember, Profile};
+use cds_schema::models::cds::{Actor, CampsiteBan, CampsiteMember, Profile};
 use campground_lexicon::gg::campground::{
     actor::ProfileViewBasic,
     membership::{MemberBanView, MemberViewAuthor, MemberViewBasic, MemberViewDetailed},

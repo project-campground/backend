@@ -1,4 +1,4 @@
-use appview_schema::models::appview::Bonfire;
+use cds_schema::models::cds::Bonfire;
 use campground_lexicon::gg::campground::bonfire::BonfireViewDetailed;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
@@ -17,11 +17,11 @@ pub async fn get_bonfire(
 ) -> Result<Json<BonfireViewDetailed>> {
     let mut conn = establish_connection().unwrap();
 
-    let bonfire = &crate::schema::appview::bonfire::table
+    let bonfire = &crate::schema::cds::bonfire::table
         .filter(
-            crate::schema::appview::bonfire::campsiteid
+            crate::schema::cds::bonfire::campsiteid
                 .eq(campsite_id)
-                .and(crate::schema::appview::bonfire::id.eq(bonfire_id)),
+                .and(crate::schema::cds::bonfire::id.eq(bonfire_id)),
         )
         .first::<Bonfire>(&mut conn)
         .expect("Error loading campsite's bonfire");

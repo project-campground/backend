@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Actor, CampsiteMember};
+use cds_schema::models::cds::{Actor, CampsiteMember};
 use tokio_stream::StreamExt;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use reqwest::Client;

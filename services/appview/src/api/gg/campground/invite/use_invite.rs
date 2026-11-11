@@ -1,10 +1,8 @@
-use appview_schema::{
-    models::appview::{Campsite, CampsiteInvite, CampsiteMember, CampsiteRole},
-    schema::appview::{
-        self, campsite, campsite_ban, campsite_invite, campsite_member, campsite_role,
-    },
-};
 use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
+use cds_schema::{
+    models::cds::{Campsite, CampsiteInvite, CampsiteMember, CampsiteRole},
+    schema::cds::{self, campsite, campsite_ban, campsite_invite, campsite_member, campsite_role},
+};
 use chrono::Utc;
 use diesel::{
     BoolExpressionMethods, Connection, ExpressionMethods, JoinOnDsl, PgArrayExpressionMethods,
@@ -44,9 +42,7 @@ pub async fn use_invite(
 
     let (invite, campsite) = campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
-        .inner_join(
-            appview::campsite::table.on(appview::campsite::id.eq(campsite_invite::campsiteid)),
-        )
+        .inner_join(cds::campsite::table.on(cds::campsite::id.eq(campsite_invite::campsiteid)))
         .first::<(CampsiteInvite, Campsite)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
@@ -108,11 +104,11 @@ pub async fn use_invite(
                 .set(campsite_invite::used.eq(invite.used + 1))
                 .execute(conn)?;
 
-            diesel::update(appview::actor::table)
-                .filter(appview::actor::did.eq(auth.actor_did.clone()))
+            diesel::update(cds::actor::table)
+                .filter(cds::actor::did.eq(auth.actor_did.clone()))
                 .set(
-                    appview::actor::campsites
-                        .eq(appview::actor::campsites.concat(vec![invite.campsite_id.clone()])),
+                    cds::actor::campsites
+                        .eq(cds::actor::campsites.concat(vec![invite.campsite_id.clone()])),
                 )
                 .execute(conn)?;
 

@@ -1,5 +1,5 @@
-use appview_schema::{models::appview::Bonfire, schema::appview};
 use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
+use cds_schema::{models::cds::Bonfire, schema::cds};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -94,23 +94,20 @@ pub async fn update_bonfire<'a>(
 
     let current_date = Utc::now().naive_utc();
 
-    let bonfire = diesel::update(appview::bonfire::table)
+    let bonfire = diesel::update(cds::bonfire::table)
         .filter(
-            appview::bonfire::campsiteid
+            cds::bonfire::campsiteid
                 .eq(&auth.bonfire.campsite_id)
-                .and(appview::bonfire::id.eq(bonfire_id)),
+                .and(cds::bonfire::id.eq(bonfire_id)),
         )
         .set((
-            appview::bonfire::name.eq(name.clone().unwrap_or(auth.bonfire.name)),
-            appview::bonfire::description
-                .eq(description.clone().unwrap_or(auth.bonfire.description)),
-            appview::bonfire::priority.eq(position.clone().unwrap_or(auth.bonfire.priority)),
-            appview::bonfire::avataruri
-                .eq(avatar_uri.clone().with_fallback(auth.bonfire.avatar_uri)),
-            appview::bonfire::banneruri
-                .eq(banner_uri.clone().with_fallback(auth.bonfire.banner_uri)),
-            appview::bonfire::updatedby.eq(&auth.actor.did),
-            appview::bonfire::updatedat.eq(current_date),
+            cds::bonfire::name.eq(name.clone().unwrap_or(auth.bonfire.name)),
+            cds::bonfire::description.eq(description.clone().unwrap_or(auth.bonfire.description)),
+            cds::bonfire::priority.eq(position.clone().unwrap_or(auth.bonfire.priority)),
+            cds::bonfire::avataruri.eq(avatar_uri.clone().with_fallback(auth.bonfire.avatar_uri)),
+            cds::bonfire::banneruri.eq(banner_uri.clone().with_fallback(auth.bonfire.banner_uri)),
+            cds::bonfire::updatedby.eq(&auth.actor.did),
+            cds::bonfire::updatedat.eq(current_date),
         ))
         .load::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;

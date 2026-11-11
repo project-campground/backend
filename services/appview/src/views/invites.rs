@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Actor, Campsite, CampsiteInvite, Profile};
+use cds_schema::models::cds::{Actor, Campsite, CampsiteInvite, Profile};
 use campground_lexicon::gg::campground::invite::{
     CampsiteInviteViewCampsite, CampsiteInviteViewGlobal,
 };

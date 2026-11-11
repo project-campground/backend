@@ -1,8 +1,8 @@
 use std::{collections::HashMap, hash::Hash};
 
-use appview_schema::{
-    models::appview::{CampsiteMember, CampsitePermission, CampsiteRole},
-    schema::appview::campsite_permission,
+use cds_schema::{
+    models::cds::{CampsiteMember, CampsitePermission, CampsiteRole},
+    schema::cds::campsite_permission,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use multimap::MultiMap;

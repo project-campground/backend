@@ -1,4 +1,4 @@
-use appview_schema::models::appview::Actor;
+use cds_schema::models::cds::Actor;
 use atproto_identity::{
     model::Document, plc, storage::DidDocumentStorage, storage_lru::LruDidDocumentStorage, web,
 };

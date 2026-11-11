@@ -1,5 +1,5 @@
-use appview_schema::{models::appview::Campsite, schema::appview};
 use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
+use cds_schema::{models::cds::Campsite, schema::cds};
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -107,24 +107,24 @@ pub async fn update_campsite(
 
     let current_date = Utc::now().naive_utc();
 
-    let campsite = diesel::update(appview::campsite::table)
-        .filter(appview::campsite::id.eq(campsite_id))
+    let campsite = diesel::update(cds::campsite::table)
+        .filter(cds::campsite::id.eq(campsite_id))
         .set((
-            appview::campsite::name.eq(name.unwrap_or(auth.campsite.name.as_str())),
-            appview::campsite::description
+            cds::campsite::name.eq(name.unwrap_or(auth.campsite.name.as_str())),
+            cds::campsite::description
                 .eq(description.unwrap_or(auth.campsite.description.as_str())),
-            appview::campsite::tags.eq(tags.clone().unwrap_or(auth.campsite.tags)),
-            appview::campsite::vanityurl.eq(vanity_url
+            cds::campsite::tags.eq(tags.clone().unwrap_or(auth.campsite.tags)),
+            cds::campsite::vanityurl.eq(vanity_url
                 .clone()
                 .with_fallback(auth.campsite.vanity_url.as_deref())),
-            appview::campsite::avataruri.eq(avatar_uri
+            cds::campsite::avataruri.eq(avatar_uri
                 .clone()
                 .with_fallback(auth.campsite.avatar_uri.as_ref().map(|x| x.as_str()))),
-            appview::campsite::banneruri.eq(banner_uri
+            cds::campsite::banneruri.eq(banner_uri
                 .clone()
                 .with_fallback(auth.campsite.banner_uri.as_ref().map(|x| x.as_str()))),
-            appview::campsite::updatedby.eq(&auth.actor.did),
-            appview::campsite::updatedat.eq(current_date),
+            cds::campsite::updatedby.eq(&auth.actor.did),
+            cds::campsite::updatedat.eq(current_date),
         ))
         .get_result::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;

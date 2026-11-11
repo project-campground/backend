@@ -2,8 +2,8 @@
 
 use std::str::FromStr;
 
-use appview_schema::models::appview::Actor;
-use appview_schema::models::appview::Profile as SchemaProfile;
+use cds_schema::models::cds::Actor;
+use cds_schema::models::cds::Profile as SchemaProfile;
 use campground_lexicon::gg::campground::actor::ProfileViewDetailed;
 use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic};
 use common::get_blob_ref;

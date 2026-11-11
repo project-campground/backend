@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{CampsiteMember, CampsiteRole},
-    schema::appview::{campsite_member, campsite_role},
+use cds_schema::{
+    models::cds::{CampsiteMember, CampsiteRole},
+    schema::cds::{campsite_member, campsite_role},
 };
 use campground_lexicon::gg::campground::membership::ModifyMemberRolesOutput;
 use diesel::dsl::not;

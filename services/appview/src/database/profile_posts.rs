@@ -8,8 +8,8 @@ use diesel::sql_types::{Array, VarChar};
 use reqwest::Client;
 
 use crate::DNS_RESOLVER;
-use crate::database::{establish_connection, models::appview::Actor, models::appview::ProfilePost};
-use crate::schema::appview::profile_post;
+use crate::database::{establish_connection, models::cds::Actor, models::cds::ProfilePost};
+use crate::schema::cds::profile_post;
 use crate::{
     database::actors::get_actor, helpers::api::handle_all_db_errors, xrpc::error::XRPCError,
 };
@@ -246,7 +246,7 @@ fn db_post_from_record(
 async fn insert_post_list_into_db(posts: Vec<ProfilePost>) -> Result<(), XRPCError> {
     let mut conn = establish_connection().unwrap();
 
-    diesel::insert_into(crate::schema::appview::profile_post::table)
+    diesel::insert_into(crate::schema::cds::profile_post::table)
         .values(posts.clone())
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
@@ -293,7 +293,7 @@ async fn insert_post_into_db(
     let mut conn = establish_connection().unwrap();
     let profile_post = db_post_from_record(post_record, author_did);
 
-    diesel::insert_into(crate::schema::appview::profile_post::table)
+    diesel::insert_into(crate::schema::cds::profile_post::table)
         .values(&profile_post)
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;

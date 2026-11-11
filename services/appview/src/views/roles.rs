@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use appview_schema::models::appview::CampsiteRole;
+use cds_schema::models::cds::CampsiteRole;
 use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
 use uuid::Uuid;
 

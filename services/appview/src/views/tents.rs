@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Tent, TentCategory};
+use cds_schema::models::cds::{Tent, TentCategory};
 use campground_lexicon::gg::campground::tent::{
     TentCategoryViewDetailed, TentType, TentViewBasic, TentViewDetailed,
 };

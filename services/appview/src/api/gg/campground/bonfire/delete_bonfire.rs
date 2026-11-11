@@ -1,5 +1,5 @@
-use appview_schema::schema::appview;
 use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
+use cds_schema::schema::cds;
 use diesel::{BoolExpressionMethods, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
@@ -46,11 +46,11 @@ pub async fn delete_bonfire(
             .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_BONFIRES))?
     );
 
-    diesel::delete(appview::bonfire::table)
+    diesel::delete(cds::bonfire::table)
         .filter(
-            appview::bonfire::campsiteid
+            cds::bonfire::campsiteid
                 .eq(&auth.bonfire.campsite_id)
-                .and(appview::bonfire::id.eq(bonfire_id)),
+                .and(cds::bonfire::id.eq(bonfire_id)),
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;

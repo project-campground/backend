@@ -1,5 +1,5 @@
-use appview_schema::schema::appview;
 use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
+use cds_schema::schema::cds;
 use diesel::{Connection, ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
@@ -28,14 +28,14 @@ pub async fn delete_campsite(
     let mut conn = establish_connection().unwrap();
 
     conn.transaction(|conn| {
-        diesel::delete(appview::campsite::table)
-            .filter(appview::campsite::id.eq(campsite_id))
+        diesel::delete(cds::campsite::table)
+            .filter(cds::campsite::id.eq(campsite_id))
             .execute(conn)?;
 
-        diesel::update(appview::actor::table)
-            .filter(appview::actor::campsites.contains(vec![campsite_id]))
-            .set(appview::actor::campsites.eq(diesel::dsl::array_remove(
-                appview::actor::campsites,
+        diesel::update(cds::actor::table)
+            .filter(cds::actor::campsites.contains(vec![campsite_id]))
+            .set(cds::actor::campsites.eq(diesel::dsl::array_remove(
+                cds::actor::campsites,
                 campsite_id,
             )))
             .execute(conn)

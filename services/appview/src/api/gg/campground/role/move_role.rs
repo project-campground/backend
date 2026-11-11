@@ -1,8 +1,8 @@
-use appview_schema::{
-    models::appview::CampsiteRole,
-    schema::appview::{self, campsite_role},
-};
 use campground_lexicon::gg::campground::role::RoleViewBasic;
+use cds_schema::{
+    models::cds::CampsiteRole,
+    schema::cds::{self, campsite_role},
+};
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -137,10 +137,10 @@ fn make_room_for_role(
     use std::ops::Add;
 
     make_room_for_items!(
-        crate::schema::appview::campsite_role::table,
-        crate::schema::appview::campsite_role::id,
-        crate::schema::appview::campsite_role::priority,
-        appview::campsite_role::campsiteid
+        crate::schema::cds::campsite_role::table,
+        crate::schema::cds::campsite_role::id,
+        crate::schema::cds::campsite_role::priority,
+        cds::campsite_role::campsiteid
             .eq(campsite_id);
         conn,
         position

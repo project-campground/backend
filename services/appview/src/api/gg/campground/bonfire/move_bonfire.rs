@@ -1,7 +1,7 @@
 use std::ops::Add;
 
-use appview_schema::{models::appview::Bonfire, schema::appview};
 use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
+use cds_schema::{models::cds::Bonfire, schema::cds};
 use chrono::Utc;
 use diesel::{
     BoolExpressionMethods, Connection, ExpressionMethods, QueryDsl, QueryResult, RunQueryDsl,
@@ -69,16 +69,16 @@ pub async fn move_bonfire(
 
             let current_date = Utc::now().naive_utc();
 
-            let bonfires = diesel::update(appview::bonfire::table)
+            let bonfires = diesel::update(cds::bonfire::table)
                 .filter(
-                    appview::bonfire::campsiteid
+                    cds::bonfire::campsiteid
                         .eq(&auth.bonfire.campsite_id)
-                        .and(appview::bonfire::id.eq(bonfire_id)),
+                        .and(cds::bonfire::id.eq(bonfire_id)),
                 )
                 .set((
-                    appview::bonfire::priority.eq(position),
-                    appview::bonfire::updatedby.eq(&auth.actor.did),
-                    appview::bonfire::updatedat.eq(current_date),
+                    cds::bonfire::priority.eq(position),
+                    cds::bonfire::updatedby.eq(&auth.actor.did),
+                    cds::bonfire::updatedat.eq(current_date),
                 ))
                 .load::<Bonfire>(conn)?;
 
@@ -99,11 +99,11 @@ fn make_room_for_bonfire(
     campsite_id: &str,
     position: i32,
 ) -> Result<(), diesel::result::Error> {
-    let bonfire_exists_there = appview::bonfire::table
+    let bonfire_exists_there = cds::bonfire::table
         .filter(
-            appview::bonfire::campsiteid
+            cds::bonfire::campsiteid
                 .eq(campsite_id)
-                .and(appview::bonfire::priority.eq(position)),
+                .and(cds::bonfire::priority.eq(position)),
         )
         .count()
         .first::<i64>(conn)?;
@@ -113,19 +113,19 @@ fn make_room_for_bonfire(
     }
 
     // Make other bonfires go below it (since client is expected to add 1 when putting below a bonfire already)
-    diesel::update(crate::schema::appview::bonfire::table)
+    diesel::update(crate::schema::cds::bonfire::table)
         .filter(
-            appview::bonfire::campsiteid
+            cds::bonfire::campsiteid
                 .eq(campsite_id)
                 // Update only bonfires at that position and below
-                .and(appview::bonfire::priority.ge(position))
+                .and(cds::bonfire::priority.ge(position))
                 // Make sure it can even go down
-                .and(not(appview::bonfire::priority
+                .and(not(cds::bonfire::priority
                     .cast::<BigInt>()
                     .add(1)
                     .gt(i32::MAX as i64))),
         )
-        .set((appview::bonfire::priority.eq(appview::bonfire::priority + 1),))
+        .set((cds::bonfire::priority.eq(cds::bonfire::priority + 1),))
         .load::<Bonfire>(conn)?;
 
     Ok(())

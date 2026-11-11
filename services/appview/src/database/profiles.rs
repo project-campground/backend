@@ -1,12 +1,12 @@
 use anyhow::Result;
-use appview_schema::models::appview::Actor;
-use appview_schema::schema::appview;
 use atproto_client::client::Auth;
 use atproto_client::com::atproto::repo::{GetRecordResponse, get_record};
 use atproto_identity::model::Document;
 use atproto_identity::resolve::resolve_subject;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::actor::Profile as ProfileRecord;
+use cds_schema::models::cds::Actor;
+use cds_schema::schema::cds;
 use chrono::Utc;
 use reqwest::Client;
 use rsky_lexicon::com::atproto::repo::Blob;
@@ -14,7 +14,7 @@ use serde_json::from_value;
 
 use crate::DNS_RESOLVER;
 use crate::database::actors::{actor_index_error_to_xrpc_error, index_and_save_actor};
-use crate::database::{establish_connection, models::appview::Profile};
+use crate::database::{establish_connection, models::cds::Profile};
 use crate::helpers::api::{handle_all_db_errors, handle_unknown_errors};
 use crate::identity::indexing::{get_actor_did_doc, index_actor};
 use crate::util::string::AppviewStringExtension;
@@ -28,8 +28,8 @@ pub async fn get_profile_from_actor(
 ) -> Result<(Actor, Option<Profile>), XRPCError> {
     let mut conn = establish_connection().unwrap();
 
-    let profile = appview::profile::table
-        .filter(appview::profile::creator.eq(&actor.did))
+    let profile = cds::profile::table
+        .filter(cds::profile::creator.eq(&actor.did))
         .first::<Profile>(&mut conn);
 
     match profile {
@@ -84,9 +84,9 @@ pub async fn get_profiles(
 ) -> Result<Vec<(Actor, Option<Profile>)>, XRPCError> {
     let mut conn = establish_connection().unwrap();
 
-    let mut actors_profiles = appview::actor::table
-        .filter(appview::actor::did.eq_any(&did_list))
-        .left_join(appview::profile::table.on(appview::profile::creator.eq(appview::actor::did)))
+    let mut actors_profiles = cds::actor::table
+        .filter(cds::actor::did.eq_any(&did_list))
+        .left_join(cds::profile::table.on(cds::profile::creator.eq(cds::actor::did)))
         .load::<(Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_all_db_errors)?;
 
@@ -115,9 +115,9 @@ pub async fn get_profiles(
         .map(|(actor, _)| actor.clone())
         .collect();
 
-    diesel::insert_into(appview::actor::table)
+    diesel::insert_into(cds::actor::table)
         .values(db_actors)
-        .on_conflict(appview::actor::handle)
+        .on_conflict(cds::actor::handle)
         .do_nothing()
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
@@ -160,7 +160,7 @@ pub async fn get_profiles(
         .filter_map(|(_, profile)| profile.as_ref())
         .collect();
 
-    diesel::insert_into(appview::profile::table)
+    diesel::insert_into(cds::profile::table)
         .values(profiles_to_insert)
         .execute(&mut conn)
         .map_err(handle_all_db_errors)?;
@@ -263,7 +263,7 @@ pub async fn index_and_save_profile(
 
             let mut conn = establish_connection().unwrap();
 
-            diesel::insert_into(appview::profile::table)
+            diesel::insert_into(cds::profile::table)
                 .values(&db_profile)
                 .on_conflict_do_nothing()
                 .execute(&mut conn)
@@ -279,13 +279,9 @@ pub fn get_profile_and_actor_from_db(
 ) -> Result<(Actor, Option<Profile>), diesel::result::Error> {
     let mut conn = establish_connection().unwrap();
 
-    appview::actor::table
-        .filter(
-            appview::actor::did
-                .eq(actor)
-                .or(appview::actor::handle.eq(actor)),
-        )
-        .left_join(appview::profile::table.on(appview::profile::creator.eq(appview::actor::did)))
+    cds::actor::table
+        .filter(cds::actor::did.eq(actor).or(cds::actor::handle.eq(actor)))
+        .left_join(cds::profile::table.on(cds::profile::creator.eq(cds::actor::did)))
         .first::<(Actor, Option<Profile>)>(&mut conn)
 }
 

@@ -1,5 +1,5 @@
-use appview_schema::{models::appview::TentCategory, schema::appview};
 use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
+use cds_schema::{models::cds::TentCategory, schema::cds};
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -77,21 +77,21 @@ pub async fn update_category(
 
     let current_date = Utc::now().naive_utc();
 
-    let updated_category = diesel::update(crate::schema::appview::tent_category::table)
-        .filter(appview::tent_category::id.eq(auth.category.id))
+    let updated_category = diesel::update(crate::schema::cds::tent_category::table)
+        .filter(cds::tent_category::id.eq(auth.category.id))
         .set((
             // All the new settings
-            appview::tent_category::name.eq(inner_body
+            cds::tent_category::name.eq(inner_body
                 .name
                 .clone()
                 .unwrap_or(auth.category.name.clone())),
-            appview::tent_category::description.eq(inner_body
+            cds::tent_category::description.eq(inner_body
                 .description
                 .clone()
                 .unwrap_or(auth.category.description.clone())),
             // Mandatory
-            appview::tent_category::updatedat.eq(current_date),
-            appview::tent_category::updatedby.eq(&auth.actor.did),
+            cds::tent_category::updatedat.eq(current_date),
+            cds::tent_category::updatedby.eq(&auth.actor.did),
         ))
         .load::<TentCategory>(&mut conn)
         .map_err(handle_select_first_error)?;

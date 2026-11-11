@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{CampsitePermission, Tent, TentCategory},
-    schema::appview::{campsite_permission, campsite_role, tent, tent_category},
+use cds_schema::{
+    models::cds::{CampsitePermission, Tent, TentCategory},
+    schema::cds::{campsite_permission, campsite_role, tent, tent_category},
 };
 use campground_lexicon::gg::campground::tent::{
     GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,

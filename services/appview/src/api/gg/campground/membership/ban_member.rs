@@ -1,9 +1,9 @@
-use appview_schema::{
-    models::appview::{Actor, Campsite, CampsiteBan, CampsiteMember, CampsiteRole, Profile},
-    schema::appview::{self, campsite_member, campsite_role, profile},
-};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::membership::MemberBanView;
+use cds_schema::{
+    models::cds::{Actor, Campsite, CampsiteBan, CampsiteMember, CampsiteRole, Profile},
+    schema::cds::{self, campsite_member, campsite_role, profile},
+};
 use chrono::Utc;
 use diesel::{
     BoolExpressionMethods, Connection, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl,
@@ -153,7 +153,7 @@ fn add_ban<'a>(
     let mut conn = establish_connection().unwrap();
 
     let current_date = Utc::now().naive_utc();
-    let ban = &diesel::insert_into(appview::campsite_ban::table)
+    let ban = &diesel::insert_into(cds::campsite_ban::table)
         .values(CampsiteBan {
             user_id: actor.did.clone(),
             campsite_id: campsite.id.clone(),

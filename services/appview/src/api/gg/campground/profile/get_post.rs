@@ -1,5 +1,5 @@
-use appview_schema::models::appview::ProfilePost;
-use appview_schema::schema::appview::profile_post;
+use cds_schema::models::cds::ProfilePost;
+use cds_schema::schema::cds::profile_post;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::profile::ProfilePostViewDetailed;
 use diesel::{

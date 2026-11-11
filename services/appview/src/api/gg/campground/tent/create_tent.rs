@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Bonfire, Tent, TentMessage};
+use cds_schema::models::cds::{Bonfire, Tent, TentMessage};
 use campground_lexicon::gg::campground::{
     content::{ContentComponent, SystemMessage},
     tent::TentViewBasic,
@@ -82,17 +82,17 @@ pub async fn create_tent(
 
     let mut conn = establish_connection().unwrap();
 
-    crate::schema::appview::bonfire::table
+    crate::schema::cds::bonfire::table
         .filter(
-            crate::schema::appview::bonfire::id
+            crate::schema::cds::bonfire::id
                 .eq(bonfire_id)
-                .and(crate::schema::appview::bonfire::campsiteid.eq(campsite_id)),
+                .and(crate::schema::cds::bonfire::campsiteid.eq(campsite_id)),
         )
         .first::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    let existing_tent_count = crate::schema::appview::tent::table
-        .filter(crate::schema::appview::tent::campsiteid.eq(campsite_id))
+    let existing_tent_count = crate::schema::cds::tent::table
+        .filter(crate::schema::cds::tent::campsiteid.eq(campsite_id))
         .count()
         .first::<i64>(&mut conn)
         .expect("Error loading bonfires");
@@ -118,7 +118,7 @@ pub async fn create_tent(
 
     let current_date = Utc::now().naive_utc();
 
-    let tents = &diesel::insert_into(crate::schema::appview::tent::table)
+    let tents = &diesel::insert_into(crate::schema::cds::tent::table)
         .values(Tent {
             id: Uuid::new_v4(),
             campsite_id: campsite_id.to_string(),
@@ -139,7 +139,7 @@ pub async fn create_tent(
 
     let first_tent = tents.first().unwrap();
 
-    let first_message = &diesel::insert_into(crate::schema::appview::tent_message::table)
+    let first_message = &diesel::insert_into(crate::schema::cds::tent_message::table)
         .values(system_message(
             campsite_id,
             &first_tent.id,

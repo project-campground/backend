@@ -1,4 +1,4 @@
-use appview_schema::models::appview::Bonfire;
+use cds_schema::models::cds::Bonfire;
 use campground_lexicon::gg::campground::bonfire::{BonfireViewBasic, BonfireViewDetailed};
 
 use crate::views::util::serialize_datetime;

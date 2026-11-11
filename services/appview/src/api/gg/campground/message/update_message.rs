@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use appview_schema::{models::appview::TentMessage, schema::appview::tent_message};
+use cds_schema::{models::cds::TentMessage, schema::cds::tent_message};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::message::{MessageType, MessageViewBasic};
 use chrono::Utc;

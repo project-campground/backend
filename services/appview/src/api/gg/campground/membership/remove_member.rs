@@ -1,9 +1,9 @@
-use appview_schema::{
-    models::appview::{Actor, CampsiteMember, CampsiteRole, Profile},
-    schema::appview::{self, campsite_member, campsite_role, profile},
-};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
+use cds_schema::{
+    models::cds::{Actor, CampsiteMember, CampsiteRole, Profile},
+    schema::cds::{self, campsite_member, campsite_role, profile},
+};
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use diesel::{Connection, pg::expression::dsl::array_remove};
 use reqwest::Client;
@@ -72,8 +72,8 @@ pub async fn remove_member(
                 .and(campsite_member::userid.eq(&auth.actor.did)),
         )
         .inner_join(
-            crate::schema::appview::actor::table
-                .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
+            crate::schema::cds::actor::table
+                .on(crate::schema::cds::actor::did.eq(campsite_member::userid)),
         )
         .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
@@ -155,14 +155,14 @@ pub fn remove_campsite_member(
         )
         .execute(conn)?;
 
-    diesel::update(appview::actor::table)
-        .filter(appview::actor::did.eq(actor))
-        .set(appview::actor::campsites.eq(array_remove(appview::actor::campsites, campsite_id)))
+    diesel::update(cds::actor::table)
+        .filter(cds::actor::did.eq(actor))
+        .set(cds::actor::campsites.eq(array_remove(cds::actor::campsites, campsite_id)))
         .execute(conn)?;
 
-    diesel::update(appview::campsite::table)
-        .filter(appview::campsite::id.eq(campsite_id))
-        .set(appview::campsite::memberdids.eq(array_remove(appview::campsite::memberdids, actor)))
+    diesel::update(cds::campsite::table)
+        .filter(cds::campsite::id.eq(campsite_id))
+        .set(cds::campsite::memberdids.eq(array_remove(cds::campsite::memberdids, actor)))
         .execute(conn)?;
 
     event_next_campsite(

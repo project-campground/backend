@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use appview_schema::models::appview::{Actor, Profile, ProfilePost};
+use cds_schema::models::cds::{Actor, Profile, ProfilePost};
 use campground_lexicon::gg::campground::profile::{
     ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented,
 };

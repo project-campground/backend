@@ -22,7 +22,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(name))]
-    #[diesel(table_name = crate::schema::appview::setting)]
+    #[diesel(table_name = crate::schema::cds::setting)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct Setting {
@@ -44,7 +44,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(did))]
-    #[diesel(table_name = crate::schema::appview::actor)]
+    #[diesel(table_name = crate::schema::cds::actor)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct Actor {
@@ -70,7 +70,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(uri))]
-    #[diesel(table_name = crate::schema::appview::profile)]
+    #[diesel(table_name = crate::schema::cds::profile)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct Profile {
@@ -111,7 +111,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(uri))]
-    #[diesel(table_name = crate::schema::appview::profile_post)]
+    #[diesel(table_name = crate::schema::cds::profile_post)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct ProfilePost {
@@ -146,7 +146,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::campsite)]
+    #[diesel(table_name = crate::schema::cds::campsite)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct Campsite {
@@ -191,7 +191,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(userid, campsiteid))]
-    #[diesel(table_name = crate::schema::appview::campsite_member)]
+    #[diesel(table_name = crate::schema::cds::campsite_member)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteMember {
@@ -225,7 +225,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(userid, campsiteid))]
-    #[diesel(table_name = crate::schema::appview::campsite_ban)]
+    #[diesel(table_name = crate::schema::cds::campsite_ban)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteBan {
@@ -260,7 +260,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::campsite_invite)]
+    #[diesel(table_name = crate::schema::cds::campsite_invite)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteInvite {
@@ -295,7 +295,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::campsite_role)]
+    #[diesel(table_name = crate::schema::cds::campsite_role)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteRole {
@@ -345,7 +345,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::campsite_permission)]
+    #[diesel(table_name = crate::schema::cds::campsite_permission)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsitePermission {
@@ -392,7 +392,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::bonfire)]
+    #[diesel(table_name = crate::schema::cds::bonfire)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct Bonfire {
@@ -436,7 +436,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::tent_category)]
+    #[diesel(table_name = crate::schema::cds::tent_category)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct TentCategory {
@@ -476,7 +476,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::tent)]
+    #[diesel(table_name = crate::schema::cds::tent)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct Tent {
@@ -522,7 +522,7 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::appview::tent_message)]
+    #[diesel(table_name = crate::schema::cds::tent_message)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct TentMessage {

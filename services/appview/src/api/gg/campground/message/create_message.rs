@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use appview_schema::{models::appview::TentMessage, schema::appview::tent_message};
+use cds_schema::{models::cds::TentMessage, schema::cds::tent_message};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::message::{MessageType, MessageViewBasic};
 use chrono::Utc;
@@ -94,9 +94,9 @@ pub async fn create_message<'a>(
     );
     let replies_query: Vec<TentMessage> = tent_message::table
         .filter(
-            crate::schema::appview::tent_message::tentid
+            crate::schema::cds::tent_message::tentid
                 .eq(auth.tent.id)
-                .and(crate::schema::appview::tent_message::id.eq_any(uuids.clone())),
+                .and(crate::schema::cds::tent_message::id.eq_any(uuids.clone())),
         )
         .load::<TentMessage>(&mut conn)
         .expect("Error loading tent messages");

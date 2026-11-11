@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Actor, CampsiteInvite, Profile},
-    schema::appview::{campsite_invite, profile},
+use cds_schema::{
+    models::cds::{Actor, CampsiteInvite, Profile},
+    schema::cds::{campsite_invite, profile},
 };
 use campground_lexicon::gg::campground::invite::{
     CampsiteInviteViewCampsite, GetCampsiteInvitesOutput,
@@ -56,8 +56,8 @@ pub async fn get_invites(
         .limit(limit)
         .offset(offset)
         .inner_join(
-            crate::schema::appview::actor::table
-                .on(crate::schema::appview::actor::did.eq(campsite_invite::createdby)),
+            crate::schema::cds::actor::table
+                .on(crate::schema::cds::actor::did.eq(campsite_invite::createdby)),
         )
         .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
         .load::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)

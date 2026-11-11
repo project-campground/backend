@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Actor, CampsiteInvite, Profile},
-    schema::appview::{campsite_invite, profile},
+use cds_schema::{
+    models::cds::{Actor, CampsiteInvite, Profile},
+    schema::cds::{campsite_invite, profile},
 };
 use campground_lexicon::gg::campground::invite::CampsiteInviteViewCampsite;
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -50,8 +50,8 @@ pub async fn delete_invite(
     let invite = &campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
         .inner_join(
-            crate::schema::appview::actor::table
-                .on(crate::schema::appview::actor::did.eq(campsite_invite::createdby)),
+            crate::schema::cds::actor::table
+                .on(crate::schema::cds::actor::did.eq(campsite_invite::createdby)),
         )
         .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
         .first::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)

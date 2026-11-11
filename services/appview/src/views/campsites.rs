@@ -1,4 +1,4 @@
-use appview_schema::models::appview::Campsite;
+use cds_schema::models::cds::Campsite;
 use campground_lexicon::gg::campground::{
     campsite::{CampsiteViewBasic, CampsiteViewDetailed},
     membership::MemberViewBasic,

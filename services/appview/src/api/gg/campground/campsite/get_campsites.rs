@@ -1,4 +1,4 @@
-use appview_schema::models::appview::Campsite;
+use cds_schema::models::cds::Campsite;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
@@ -32,8 +32,8 @@ pub async fn get_campsites(
         ));
     }
 
-    let campsites = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::id.eq_any(campsite_ids))
+    let campsites = crate::schema::cds::campsite::table
+        .filter(crate::schema::cds::campsite::id.eq_any(campsite_ids))
         .load::<Campsite>(&mut conn)
         .expect("Error loading campsites")
         .iter()

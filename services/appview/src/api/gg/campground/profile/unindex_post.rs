@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::ProfilePost, schema::appview::profile_post};
+use cds_schema::{models::cds::ProfilePost, schema::cds::profile_post};
 use campground_lexicon::gg::campground::profile::ProfilePostViewBasic;
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
 use rocket::serde::json::Json;

@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::CampsiteInvite, schema::appview::campsite_invite};
+use cds_schema::{models::cds::CampsiteInvite, schema::cds::campsite_invite};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::invite::CampsiteInviteViewCampsite;
 use chrono::{NaiveDateTime, Utc};

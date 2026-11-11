@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{
+use cds_schema::models::cds::{
     Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile,
 };
 use campground_lexicon::gg::campground::permission::{

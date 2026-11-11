@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Campsite, CampsiteRole};
+use cds_schema::models::cds::{Campsite, CampsiteRole};
 use campground_lexicon::gg::campground::{campsite::CampsiteViewDetailed, role::RoleViewBasic};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
@@ -20,12 +20,12 @@ pub async fn get_campsite(
     let mut conn = establish_connection().unwrap();
 
     // Outdated-ish data doesn't matter that much here
-    let campsite = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::id.eq(campsite_id))
+    let campsite = crate::schema::cds::campsite::table
+        .filter(crate::schema::cds::campsite::id.eq(campsite_id))
         .first::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
-    let roles = crate::schema::appview::campsite_role::table
-        .filter(crate::schema::appview::campsite_role::campsiteid.eq(campsite_id))
+    let roles = crate::schema::cds::campsite_role::table
+        .filter(crate::schema::cds::campsite_role::campsiteid.eq(campsite_id))
         .load::<CampsiteRole>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()

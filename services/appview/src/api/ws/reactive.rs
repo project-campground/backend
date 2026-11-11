@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use appview_schema::{models::appview::CampsiteMember, schema::appview::campsite_permission};
+use cds_schema::{models::cds::CampsiteMember, schema::cds::campsite_permission};
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl,
     WindowExpressionMethods, dsl::count,

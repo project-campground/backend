@@ -1,5 +1,5 @@
-use appview_schema::schema::appview::{campsite_permission, tent, tent_category};
 use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
+use cds_schema::schema::cds::{campsite_permission, tent, tent_category};
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;

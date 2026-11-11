@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use appview_schema::models::appview::{Bonfire, Tent, TentCategory};
+use cds_schema::models::cds::{Bonfire, Tent, TentCategory};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use reqwest::Client;
 use rocket::State;

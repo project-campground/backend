@@ -1,5 +1,5 @@
-use appview_schema::{models::appview::Tent, schema::appview};
 use campground_lexicon::gg::campground::tent::TentViewBasic;
+use cds_schema::{models::cds::Tent, schema::cds};
 use chrono::Utc;
 use diesel::QueryDsl;
 use diesel::{BoolExpressionMethods, Connection, ExpressionMethods, RunQueryDsl, sql_types::Bool};
@@ -188,16 +188,16 @@ fn set_tent_pos_unchecked(
         let current_date = Utc::now().naive_utc();
 
         Ok((
-            diesel::update(crate::schema::appview::tent::table)
-                .filter(appview::tent::id.eq(auth.tent.id))
+            diesel::update(crate::schema::cds::tent::table)
+                .filter(cds::tent::id.eq(auth.tent.id))
                 .set((
                     // All the new settings
-                    appview::tent::priority.eq(position),
-                    appview::tent::categoryid.eq(category_id),
-                    appview::tent::bonfireid.eq(bonfire_id),
+                    cds::tent::priority.eq(position),
+                    cds::tent::categoryid.eq(category_id),
+                    cds::tent::bonfireid.eq(bonfire_id),
                     // Mandatory
-                    appview::tent::updatedat.eq(current_date),
-                    appview::tent::updatedby.eq(&auth.actor.did),
+                    cds::tent::updatedat.eq(current_date),
+                    cds::tent::updatedby.eq(&auth.actor.did),
                 ))
                 .load::<Tent>(conn)?,
             also_moved,
@@ -216,18 +216,18 @@ fn make_room_for_tent(
     use std::ops::Add;
 
     make_room_for_items!(
-        crate::schema::appview::tent::table,
-        crate::schema::appview::tent::id,
-        crate::schema::appview::tent::priority,
-        appview::tent::bonfireid
+        crate::schema::cds::tent::table,
+        crate::schema::cds::tent::id,
+        crate::schema::cds::tent::priority,
+        cds::tent::bonfireid
             .eq(bonfire_id)
             // Only see if there are tents in the same position AND category
             // It doesn't affect how it appears if it's in different category
             .and(
-                appview::tent::categoryid
+                cds::tent::categoryid
                     .is_null()
                     .and::<bool, Bool>(category_id == None)
-                    .or(appview::tent::categoryid.eq(category_id)),
+                    .or(cds::tent::categoryid.eq(category_id)),
             );
         conn,
         position

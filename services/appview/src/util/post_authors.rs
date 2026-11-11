@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::database::{
-    models::appview::Actor, models::appview::Profile, models::appview::ProfilePost,
+    models::cds::Actor, models::cds::Profile, models::cds::ProfilePost,
 };
 
 pub fn get_authors_from_posts(

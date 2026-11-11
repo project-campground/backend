@@ -1,10 +1,10 @@
 #![allow(unused_variables)]
-use appview_schema::{
-    models::appview::{Actor, CampsiteMember, Profile, TentMessage},
-    schema::appview::{self, campsite_member, profile, tent_message},
-};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::message::MessageViewBasic;
+use cds_schema::{
+    models::cds::{Actor, CampsiteMember, Profile, TentMessage},
+    schema::cds::{self, campsite_member, profile, tent_message},
+};
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
@@ -54,7 +54,7 @@ pub async fn delete_message(
                 .eq(msg_id_uuid)
                 .and(tent_message::tentid.eq(auth.tent.id)),
         )
-        .left_join(appview::actor::table.on(tent_message::createdby.eq(appview::actor::did)))
+        .left_join(cds::actor::table.on(tent_message::createdby.eq(cds::actor::did)))
         .left_join(profile::table.on(tent_message::createdby.eq(profile::creator)))
         .left_join(
             campsite_member::table.on(tent_message::createdby

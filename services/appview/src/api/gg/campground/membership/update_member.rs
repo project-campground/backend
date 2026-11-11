@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Actor, CampsiteMember, Profile},
-    schema::appview::{campsite_member, profile},
+use cds_schema::{
+    models::cds::{Actor, CampsiteMember, Profile},
+    schema::cds::{campsite_member, profile},
 };
 use campground_lexicon::gg::campground::membership::MemberViewDetailed;
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
@@ -53,15 +53,15 @@ pub async fn update_member(
                 .has_permissions(required_permission))?
     );
 
-    let (member, actor_db, profile) = crate::schema::appview::campsite_member::table
+    let (member, actor_db, profile) = crate::schema::cds::campsite_member::table
         .filter(
-            crate::schema::appview::campsite_member::campsiteid
+            crate::schema::cds::campsite_member::campsiteid
                 .eq(campsite_id)
-                .and(crate::schema::appview::campsite_member::userid.eq(actor)),
+                .and(crate::schema::cds::campsite_member::userid.eq(actor)),
         )
         .inner_join(
-            crate::schema::appview::actor::table
-                .on(crate::schema::appview::actor::did.eq(campsite_member::userid)),
+            crate::schema::cds::actor::table
+                .on(crate::schema::cds::actor::did.eq(campsite_member::userid)),
         )
         .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
         .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)

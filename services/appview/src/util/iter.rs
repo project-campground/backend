@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{CampsitePermission, CampsiteRole};
+use cds_schema::models::cds::{CampsitePermission, CampsiteRole};
 use uuid::Uuid;
 
 pub trait HasPermissionOverrides {

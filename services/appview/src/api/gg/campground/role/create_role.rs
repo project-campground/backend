@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Campsite, CampsiteMember, CampsiteRole};
+use cds_schema::models::cds::{Campsite, CampsiteMember, CampsiteRole};
 use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
 use chrono::Utc;
 use diesel::RunQueryDsl;
@@ -81,7 +81,7 @@ pub async fn create_role(
 
     let current_date = Utc::now().naive_utc();
 
-    let role = &diesel::insert_into(crate::schema::appview::campsite_role::table)
+    let role = &diesel::insert_into(crate::schema::cds::campsite_role::table)
         .values(CampsiteRole {
             id: Uuid::new_v4(),
             campsite_id: campsite_id.to_string(),

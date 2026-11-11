@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::Bonfire, schema::appview::campsite_permission};
+use cds_schema::{models::cds::Bonfire, schema::cds::campsite_permission};
 use campground_lexicon::gg::campground::{
     bonfire::BonfireViewInList, permission::PermissionViewEmbedded,
 };
@@ -69,16 +69,16 @@ pub async fn get_bonfires(
                 .unwrap_or_else(|| vec![]);
 
             Ok((
-                crate::schema::appview::bonfire::table
+                crate::schema::cds::bonfire::table
                     .filter(
                         // Scoping
-                        crate::schema::appview::bonfire::campsiteid
+                        crate::schema::cds::bonfire::campsiteid
                             .eq(campsite_id)
                             .and(
                                 // Home always displayed
-                                crate::schema::appview::bonfire::home.or(
+                                crate::schema::cds::bonfire::home.or(
                                     get_allowed_or_inherited!(
-                                        id: crate::schema::appview::bonfire::id,
+                                        id: crate::schema::cds::bonfire::id,
                                         allowed: allowed_bonfires,
                                         denied: denied_bonfires,
                                         inherit: role_allows
@@ -128,8 +128,8 @@ pub async fn get_bonfires(
 async fn get_bonfire_no_checks(campsite_id: &str) -> Result<Json<Vec<BonfireViewInList>>> {
     let mut conn = establish_connection().unwrap();
 
-    let bonfires = crate::schema::appview::bonfire::table
-        .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
+    let bonfires = crate::schema::cds::bonfire::table
+        .filter(crate::schema::cds::bonfire::campsiteid.eq(campsite_id))
         .load::<Bonfire>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()

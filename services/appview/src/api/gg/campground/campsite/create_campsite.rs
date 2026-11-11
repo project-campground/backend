@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Bonfire, Campsite, CampsiteMember, CampsiteRole, Tent},
-    schema::appview::actor,
+use cds_schema::{
+    models::cds::{Bonfire, Campsite, CampsiteMember, CampsiteRole, Tent},
+    schema::cds::actor,
 };
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::campsite::CreateCampsiteOutput;
@@ -96,8 +96,8 @@ pub async fn create_campsite(
     let mut conn = establish_connection().unwrap();
     let (actor, profile) = &get_profile(client, did_document_storage, &auth.actor_did).await?;
 
-    let existing_campsite_count = crate::schema::appview::campsite::table
-        .filter(crate::schema::appview::campsite::owner.eq(&actor.did))
+    let existing_campsite_count = crate::schema::cds::campsite::table
+        .filter(crate::schema::cds::campsite::owner.eq(&actor.did))
         .count()
         .first::<i64>(&mut conn)
         .expect("Error loading owner's campsites");
@@ -109,8 +109,8 @@ pub async fn create_campsite(
     }
 
     if vanity_url.clone().map_or(false, |x| {
-        let existing_vanity_count = crate::schema::appview::campsite::table
-            .filter(crate::schema::appview::campsite::vanityurl.eq(x))
+        let existing_vanity_count = crate::schema::cds::campsite::table
+            .filter(crate::schema::cds::campsite::vanityurl.eq(x))
             .count()
             .first::<i64>(&mut conn)
             .expect("Error loading other campsites");
@@ -127,7 +127,7 @@ pub async fn create_campsite(
             let current_date = Utc::now().naive_utc();
             let campsite_id = ticker.next(None);
 
-            let campsite = &diesel::insert_into(crate::schema::appview::campsite::table)
+            let campsite = &diesel::insert_into(crate::schema::cds::campsite::table)
                 .values(Campsite {
                     id: campsite_id.to_string(),
                     name: name.clone(),
@@ -144,7 +144,7 @@ pub async fn create_campsite(
                     updated_at: current_date,
                 })
                 .get_result::<Campsite>(conn)?;
-            let default_role = &diesel::insert_into(crate::schema::appview::campsite_role::table)
+            let default_role = &diesel::insert_into(crate::schema::cds::campsite_role::table)
                 .values(CampsiteRole {
                     id: Uuid::new_v4(),
                     campsite_id: campsite.id.clone(),
@@ -164,7 +164,7 @@ pub async fn create_campsite(
                     members: vec![Some(actor.did.clone())],
                 })
                 .get_result::<CampsiteRole>(conn)?;
-            let owner_member = &diesel::insert_into(crate::schema::appview::campsite_member::table)
+            let owner_member = &diesel::insert_into(crate::schema::cds::campsite_member::table)
                 .values(CampsiteMember {
                     user_id: actor.did.clone(),
                     campsite_id: campsite_id.to_string(),
@@ -185,7 +185,7 @@ pub async fn create_campsite(
                 .set(actor::campsites.eq(new_campsite_list))
                 .execute(conn)?;
 
-            let home_bonfire = &diesel::insert_into(crate::schema::appview::bonfire::table)
+            let home_bonfire = &diesel::insert_into(crate::schema::cds::bonfire::table)
                 .values(Bonfire {
                     id: ticker.next(Some(campsite_id.clone())).to_string(),
                     campsite_id: campsite_id.to_string(),
@@ -201,7 +201,7 @@ pub async fn create_campsite(
                     updated_at: current_date,
                 })
                 .get_result::<Bonfire>(conn)?;
-            let general_tent = diesel::insert_into(crate::schema::appview::tent::table)
+            let general_tent = diesel::insert_into(crate::schema::cds::tent::table)
                 .values(Tent {
                     id: Uuid::new_v4(),
                     campsite_id: campsite.id.clone(),

@@ -1,6 +1,6 @@
-use appview_schema::{
-    models::appview::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile},
-    schema::appview::{actor, campsite_member, campsite_permission, campsite_role, profile},
+use cds_schema::{
+    models::cds::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile},
+    schema::cds::{actor, campsite_member, campsite_permission, campsite_role, profile},
 };
 use campground_lexicon::gg::campground::permission::PermissionViewDetailed;
 use diesel::{

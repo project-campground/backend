@@ -1,8 +1,8 @@
-use appview_schema::{
-    models::appview::{Actor, CampsiteBan, Profile},
-    schema::appview::{self, campsite_ban},
-};
 use campground_lexicon::gg::campground::membership::MemberBanView;
+use cds_schema::{
+    models::cds::{Actor, CampsiteBan, Profile},
+    schema::cds::{self, campsite_ban},
+};
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
@@ -42,8 +42,8 @@ pub async fn get_member_ban(
                 .eq(campsite_id)
                 .and(campsite_ban::userid.eq(actor)),
         )
-        .left_join(appview::profile::table.on(appview::profile::creator.eq(campsite_ban::userid)))
-        .inner_join(appview::actor::table.on(appview::actor::did.eq(campsite_ban::userid)))
+        .left_join(cds::profile::table.on(cds::profile::creator.eq(campsite_ban::userid)))
+        .inner_join(cds::actor::table.on(cds::actor::did.eq(campsite_ban::userid)))
         .first::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 

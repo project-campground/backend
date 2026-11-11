@@ -1,10 +1,10 @@
 #![allow(unused_variables)]
-use appview_schema::{
-    models::appview::{Actor, CampsiteMember, Profile, TentMessage},
-    schema::appview::{self, campsite_member, profile, tent_message},
-};
 use campground_lexicon::gg::campground::message::{
     GetMessagesOutput, MessageViewBasic, MessageViewWithReplies,
+};
+use cds_schema::{
+    models::cds::{Actor, CampsiteMember, Profile, TentMessage},
+    schema::cds::{self, campsite_member, profile, tent_message},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
@@ -73,14 +73,14 @@ pub async fn get_messages(
         .order_by(tent_message::createdat.desc())
         .limit(limit)
         .offset(offset)
-        .left_join(appview::actor::table.on(tent_message::createdby.eq(appview::actor::did)))
+        .left_join(cds::actor::table.on(tent_message::createdby.eq(cds::actor::did)))
         .left_join(profile::table.on(tent_message::createdby.eq(profile::creator)))
         .left_join(
             campsite_member::table.on(tent_message::createdby
                 .eq(campsite_member::userid)
                 .and(tent_message::campsiteid.eq(campsite_member::campsiteid))),
         )
-        .filter(crate::schema::appview::tent_message::tentid.eq(auth.tent.id))
+        .filter(crate::schema::cds::tent_message::tentid.eq(auth.tent.id))
         .load::<(
             TentMessage,
             Option<Actor>,
@@ -101,8 +101,8 @@ pub async fn get_messages(
         vec![]
     } else {
         tent_message::table
-            .filter(crate::schema::appview::tent_message::id.eq_any(additional_reply_ids))
-            .left_join(appview::actor::table.on(tent_message::createdby.eq(appview::actor::did)))
+            .filter(crate::schema::cds::tent_message::id.eq_any(additional_reply_ids))
+            .left_join(cds::actor::table.on(tent_message::createdby.eq(cds::actor::did)))
             .left_join(profile::table.on(tent_message::createdby.eq(profile::creator)))
             .left_join(
                 campsite_member::table.on(tent_message::createdby

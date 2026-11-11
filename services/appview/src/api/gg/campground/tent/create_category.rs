@@ -1,5 +1,5 @@
-use appview_schema::models::appview::TentCategory;
 use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
+use cds_schema::models::cds::TentCategory;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -56,8 +56,8 @@ pub async fn create_category(
 
     let mut conn = establish_connection().unwrap();
 
-    let existing_category_count = crate::schema::appview::tent_category::table
-        .filter(crate::schema::appview::tent_category::campsiteid.eq(&auth.campsite.id))
+    let existing_category_count = crate::schema::cds::tent_category::table
+        .filter(crate::schema::cds::tent_category::campsiteid.eq(&auth.campsite.id))
         .count()
         .first::<i64>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -83,7 +83,7 @@ pub async fn create_category(
 
     let current_date = Utc::now().naive_utc();
 
-    let category = &diesel::insert_into(crate::schema::appview::tent_category::table)
+    let category = &diesel::insert_into(crate::schema::cds::tent_category::table)
         .values(TentCategory {
             id: Uuid::new_v4(),
             campsite_id: auth.campsite.id.clone(),

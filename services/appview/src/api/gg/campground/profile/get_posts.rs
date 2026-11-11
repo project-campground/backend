@@ -1,4 +1,4 @@
-use appview_schema::models::appview::ProfilePost;
+use cds_schema::models::cds::ProfilePost;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::gg::campground::profile::{GetProfilePostsOutput, ProfilePostViewBasic};
 use diesel::{
@@ -12,7 +12,7 @@ use rocket::{State, serde::json::Json};
 use crate::{
     database::{DbConnection, establish_connection, profile_posts, profiles},
     helpers::api::handle_all_db_errors,
-    schema::appview::profile_post,
+    schema::cds::profile_post,
     util::post_authors,
     views::posts::{profile_post_view_basic, profile_post_view_parented},
     xrpc::{

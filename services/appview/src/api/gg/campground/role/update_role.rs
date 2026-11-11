@@ -1,4 +1,4 @@
-use appview_schema::{models::appview::CampsiteRole, schema::appview::campsite_role};
+use cds_schema::{models::cds::CampsiteRole, schema::cds::campsite_role};
 use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};

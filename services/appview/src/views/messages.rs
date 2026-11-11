@@ -1,4 +1,4 @@
-use appview_schema::models::appview::{Actor, CampsiteMember, Profile, Tent, TentMessage};
+use cds_schema::models::cds::{Actor, CampsiteMember, Profile, Tent, TentMessage};
 use campground_lexicon::gg::campground::{
     content::ContentComponent,
     message::{MessageViewBasic, MessageViewWithReplies},

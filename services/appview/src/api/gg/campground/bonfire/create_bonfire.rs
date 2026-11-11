@@ -1,4 +1,4 @@
-use appview_schema::models::appview::Bonfire;
+use cds_schema::models::cds::Bonfire;
 use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -81,8 +81,8 @@ pub async fn create_bonfire(
     let mut conn = establish_connection().unwrap();
 
     let bonfire = conn.transaction(|conn| {
-        let existing_bonfire_count = crate::schema::appview::bonfire::table
-            .filter(crate::schema::appview::bonfire::campsiteid.eq(campsite_id))
+        let existing_bonfire_count = crate::schema::cds::bonfire::table
+            .filter(crate::schema::cds::bonfire::campsiteid.eq(campsite_id))
             .count()
             .first::<i64>(conn)
             .map_err(handle_all_db_errors)?;
@@ -98,7 +98,7 @@ pub async fn create_bonfire(
         let mut ticker = Ticker::new();
         let bonfire_id = ticker.next(None);
 
-        let bonfire = diesel::insert_into(crate::schema::appview::bonfire::table)
+        let bonfire = diesel::insert_into(crate::schema::cds::bonfire::table)
             .values(Bonfire {
                 id: bonfire_id.to_string(),
                 campsite_id: campsite_id.to_string(),
