@@ -1,7 +1,7 @@
 use crate::database::{establish_connection, profile_posts};
 use crate::schema::cds::profile_post;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::profile::{
+use campground_lexicon::chat::campground::profile::{
     GetProfilePostRepliesOutput, ProfilePostViewBasic,
 };
 use cds_schema::models::cds::ProfilePost;

@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::{campsite::CampsiteViewDetailed, role::RoleViewBasic};
+use campground_lexicon::chat::campground::{campsite::CampsiteViewDetailed, role::RoleViewBasic};
 use cds_schema::models::cds::{Campsite, CampsiteRole};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;

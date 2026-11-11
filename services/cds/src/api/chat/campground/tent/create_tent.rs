@@ -1,8 +1,8 @@
-use cds_schema::models::cds::{Bonfire, Tent, TentMessage};
-use campground_lexicon::gg::campground::{
+use campground_lexicon::chat::campground::{
     content::{ContentComponent, SystemMessage},
     tent::TentViewBasic,
 };
+use cds_schema::models::cds::{Bonfire, Tent, TentMessage};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};

@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::actor::ProfileViewDetailed;
+use campground_lexicon::chat::campground::actor::ProfileViewDetailed;
 use reqwest::Client;
 use rocket::{State, serde::json::Json};
 

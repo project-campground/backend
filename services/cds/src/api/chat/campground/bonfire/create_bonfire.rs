@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::bonfire::BonfireViewBasic;
+use campground_lexicon::chat::campground::bonfire::BonfireViewBasic;
 use cds_schema::models::cds::Bonfire;
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, QueryDsl, RunQueryDsl};

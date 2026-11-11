@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::role::RoleViewBasic;
+use campground_lexicon::chat::campground::role::RoleViewBasic;
 use cds_schema::{
     models::cds::CampsiteRole,
     schema::cds::{self, campsite_role},

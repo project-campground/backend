@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{membership::MemberViewAuthor, role::RoleViewBasic};
+use crate::chat::campground::{member::MemberViewAuthor, role::RoleViewBasic};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

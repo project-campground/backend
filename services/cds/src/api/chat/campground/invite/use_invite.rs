@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
+use campground_lexicon::chat::campground::campsite::CampsiteViewBasic;
 use cds_schema::{
     models::cds::{Campsite, CampsiteInvite, CampsiteMember, CampsiteRole},
     schema::cds::{self, campsite, campsite_ban, campsite_invite, campsite_member, campsite_role},

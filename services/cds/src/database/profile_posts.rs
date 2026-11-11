@@ -13,7 +13,7 @@ use crate::schema::cds::profile_post;
 use crate::{
     database::actors::get_actor, helpers::api::handle_all_db_errors, xrpc::error::XRPCError,
 };
-use campground_lexicon::gg::campground::profile::ProfilePost as ProfilePostRecord;
+use campground_lexicon::chat::campground::profile::ProfilePost as ProfilePostRecord;
 use diesel::prelude::*;
 
 pub fn resolve_post_uri(uri: &str) -> Result<(String, String, Option<String>), &'static str> {

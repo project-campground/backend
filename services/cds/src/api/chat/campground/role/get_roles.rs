@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::role::{GetRolesOutput, RoleViewBasic};
+use campground_lexicon::chat::campground::role::{GetRolesOutput, RoleViewBasic};
 use cds_schema::models::cds::CampsiteRole;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;

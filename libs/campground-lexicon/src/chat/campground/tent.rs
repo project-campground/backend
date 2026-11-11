@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::permission::PermissionViewEmbedded;
+use crate::chat::campground::permission::PermissionViewEmbedded;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]

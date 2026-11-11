@@ -4,7 +4,7 @@ use atproto_client::com::atproto::repo::{GetRecordResponse, get_record};
 use atproto_identity::model::Document;
 use atproto_identity::resolve::resolve_subject;
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::actor::Profile as ProfileRecord;
+use campground_lexicon::chat::campground::actor::Profile as ProfileRecord;
 use cds_schema::models::cds::Actor;
 use cds_schema::schema::cds;
 use chrono::Utc;

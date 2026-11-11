@@ -1,6 +1,4 @@
-use crate::gg::campground::{
-    membership::MemberViewBasic, role::RoleViewBasic, tent::TentViewBasic,
-};
+use crate::chat::campground::{member::MemberViewBasic, role::RoleViewBasic, tent::TentViewBasic};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

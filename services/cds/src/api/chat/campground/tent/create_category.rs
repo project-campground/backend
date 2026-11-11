@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
+use campground_lexicon::chat::campground::tent::TentCategoryViewDetailed;
 use cds_schema::models::cds::TentCategory;
 use chrono::Utc;
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};

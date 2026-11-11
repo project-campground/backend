@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::tent::TentViewBasic;
+use campground_lexicon::chat::campground::tent::TentViewBasic;
 use cds_schema::{models::cds::Tent, schema::cds};
 use chrono::Utc;
 use diesel::QueryDsl;

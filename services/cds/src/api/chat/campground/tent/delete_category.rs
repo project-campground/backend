@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::tent::TentCategoryViewDetailed;
+use campground_lexicon::chat::campground::tent::TentCategoryViewDetailed;
 use cds_schema::schema::cds::{campsite_permission, tent, tent_category};
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};

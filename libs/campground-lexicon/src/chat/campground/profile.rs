@@ -1,4 +1,4 @@
-use crate::gg::campground::actor::ProfileViewBasic;
+use crate::chat::campground::actor::ProfileViewBasic;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

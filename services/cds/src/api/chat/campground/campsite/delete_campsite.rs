@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
+use campground_lexicon::chat::campground::member::CampsiteLeftOutput;
 use cds_schema::schema::cds;
 use diesel::{Connection, ExpressionMethods, PgArrayExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};

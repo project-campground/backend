@@ -1,5 +1,5 @@
 #![allow(unused_variables)]
-use campground_lexicon::gg::campground::message::{
+use campground_lexicon::chat::campground::message::{
     GetMessagesOutput, MessageViewBasic, MessageViewWithReplies,
 };
 use cds_schema::{

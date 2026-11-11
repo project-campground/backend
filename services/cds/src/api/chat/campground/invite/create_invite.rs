@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::invite::CampsiteInviteViewCampsite;
+use campground_lexicon::chat::campground::invite::CampsiteInviteViewCampsite;
 use cds_schema::{models::cds::CampsiteInvite, schema::cds::campsite_invite};
 use chrono::{NaiveDateTime, Utc};
 use diesel::RunQueryDsl;

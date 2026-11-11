@@ -1,5 +1,5 @@
 use cds_schema::models::cds::TentMessage;
-use campground_lexicon::gg::campground::{content::ContentComponent, message::MessageType};
+use campground_lexicon::chat::campground::{content::ContentComponent, message::MessageType};
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 

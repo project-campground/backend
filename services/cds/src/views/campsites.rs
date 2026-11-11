@@ -1,9 +1,9 @@
-use cds_schema::models::cds::Campsite;
-use campground_lexicon::gg::campground::{
+use campground_lexicon::chat::campground::{
     campsite::{CampsiteViewBasic, CampsiteViewDetailed},
-    membership::MemberViewBasic,
+    member::MemberViewBasic,
     role::RoleViewBasic,
 };
+use cds_schema::models::cds::Campsite;
 
 use crate::views::util::serialize_datetime;
 

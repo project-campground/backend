@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 
-use campground_lexicon::gg::campground::{
+use campground_lexicon::chat::campground::{
     content::{ContentComponent, SystemMessage},
     tent::TentViewBasic,
 };

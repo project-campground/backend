@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::membership::MemberBanView;
+use campground_lexicon::chat::campground::member::MemberBanView;
 use cds_schema::{
     models::cds::{Actor, CampsiteBan, Profile},
     schema::cds::{self, campsite_ban},

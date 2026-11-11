@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use cds_schema::models::cds::{Actor, Profile, ProfilePost};
-use campground_lexicon::gg::campground::profile::{
+use campground_lexicon::chat::campground::profile::{
     ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented,
 };
 use chrono::DateTime;

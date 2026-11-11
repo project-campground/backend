@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::campsite::CampsiteViewBasic;
+use campground_lexicon::chat::campground::campsite::CampsiteViewBasic;
 use cds_schema::models::cds::Campsite;
 use diesel::{ExpressionMethods, RunQueryDsl, query_dsl::methods::FilterDsl};
 use reqwest::Client;

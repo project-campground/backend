@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
-use cds_schema::{models::cds::TentMessage, schema::cds::tent_message};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::message::{MessageType, MessageViewBasic};
+use campground_lexicon::chat::campground::message::{MessageType, MessageViewBasic};
+use cds_schema::{models::cds::TentMessage, schema::cds::tent_message};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use reqwest::Client;

@@ -1,7 +1,7 @@
 #![allow(unused_variables)]
-use cds_schema::{models::cds::TentMessage, schema::cds::tent_message};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::message::{MessageType, MessageViewBasic};
+use campground_lexicon::chat::campground::message::{MessageType, MessageViewBasic};
+use cds_schema::{models::cds::TentMessage, schema::cds::tent_message};
 use chrono::Utc;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use reqwest::Client;
@@ -35,7 +35,10 @@ pub struct CreateMessageBody {
     replies: Option<Vec<String>>,
 }
 
-#[post("/xrpc/chat.campground.message.createMessage?<tent_id>", data = "<body>")]
+#[post(
+    "/xrpc/chat.campground.message.createMessage?<tent_id>",
+    data = "<body>"
+)]
 pub async fn create_message<'a>(
     auth: TentInfo<'_>,
     event_subject: &State<ReactiveSubject>,

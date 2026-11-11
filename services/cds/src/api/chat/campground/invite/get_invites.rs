@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::invite::{
+use campground_lexicon::chat::campground::invite::{
     CampsiteInviteViewCampsite, GetCampsiteInvitesOutput,
 };
 use cds_schema::{

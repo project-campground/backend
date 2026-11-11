@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::membership::ModifyMemberRolesOutput;
+use campground_lexicon::chat::campground::member::ModifyMemberRolesOutput;
 use cds_schema::{
     models::cds::{CampsiteMember, CampsiteRole},
     schema::cds::{campsite_member, campsite_role},

@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::membership::GetMemberBansOutput;
+use campground_lexicon::chat::campground::member::GetMemberBansOutput;
 use cds_schema::{
     models::cds::{Actor, CampsiteBan, Profile},
     schema::cds::{self, campsite_ban},
@@ -23,7 +23,7 @@ use crate::{
     },
 };
 
-#[get("/xrpc/chat.campground.membership.getMemberBans?<campsite_id>&<offset>&<limit>")]
+#[get("/xrpc/chat.campground.member.getMemberBans?<campsite_id>&<offset>&<limit>")]
 pub async fn get_member_bans(
     auth: CampsiteInfo<'_>,
     campsite_id: &str,

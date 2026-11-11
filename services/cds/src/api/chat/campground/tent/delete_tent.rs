@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
+use campground_lexicon::chat::campground::tent::TentViewBasic;
 use cds_schema::schema::cds::{campsite_permission, tent, tent_message};
-use campground_lexicon::gg::campground::tent::TentViewBasic;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 

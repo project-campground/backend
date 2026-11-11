@@ -1,5 +1,5 @@
 use cds_schema::models::cds::Bonfire;
-use campground_lexicon::gg::campground::bonfire::{BonfireViewBasic, BonfireViewDetailed};
+use campground_lexicon::chat::campground::bonfire::{BonfireViewBasic, BonfireViewDetailed};
 
 use crate::views::util::serialize_datetime;
 

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use cds_schema::models::cds::CampsiteRole;
-use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
+use campground_lexicon::chat::campground::role::{RoleMotion, RoleViewBasic};
 use uuid::Uuid;
 
 use crate::{views::util::serialize_datetime, xrpc::error::XRPCError};

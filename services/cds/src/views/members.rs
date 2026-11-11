@@ -1,8 +1,8 @@
-use cds_schema::models::cds::{Actor, CampsiteBan, CampsiteMember, Profile};
-use campground_lexicon::gg::campground::{
+use campground_lexicon::chat::campground::{
     actor::ProfileViewBasic,
-    membership::{MemberBanView, MemberViewAuthor, MemberViewBasic, MemberViewDetailed},
+    member::{MemberBanView, MemberViewAuthor, MemberViewBasic, MemberViewDetailed},
 };
+use cds_schema::models::cds::{Actor, CampsiteBan, CampsiteMember, Profile};
 use uuid::Uuid;
 
 use crate::views::{

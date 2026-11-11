@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::gg::campground::{content::ContentComponent, membership::MemberViewAuthor};
+use crate::chat::campground::{content::ContentComponent, member::MemberViewAuthor};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -22,10 +22,10 @@ pub struct MessageViewBasic {
     pub content: String,
     pub components: Option<Vec<ContentComponent>>,
     pub replying_to: Vec<Uuid>,
-    
+
     // pub created_by: String,
     pub created_by: MemberViewAuthor,
-    
+
     pub created_at: String,
     pub updated_at: Option<String>,
 }
@@ -37,13 +37,13 @@ pub struct MessageViewWithReplies {
     pub campsite_id: String,
     pub bonfire_id: String,
     pub tent_id: Uuid,
-    
+
     pub r#type: Option<MessageType>,
     pub content: String,
     pub replying_to: Vec<MessageViewBasic>,
     pub replying_to_count: usize,
     pub components: Option<Vec<ContentComponent>>,
-    
+
     // pub created_by: String,
     pub created_by: MemberViewAuthor,
     pub created_at: String,

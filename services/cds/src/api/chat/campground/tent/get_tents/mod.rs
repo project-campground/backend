@@ -1,9 +1,9 @@
+use campground_lexicon::chat::campground::tent::{
+    GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,
+};
 use cds_schema::{
     models::cds::{CampsitePermission, Tent, TentCategory},
     schema::cds::{campsite_permission, campsite_role, tent, tent_category},
-};
-use campground_lexicon::gg::campground::tent::{
-    GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,
 };
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, IntoSql, QueryDsl, RunQueryDsl, dsl::not,

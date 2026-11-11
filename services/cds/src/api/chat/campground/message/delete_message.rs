@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::message::MessageViewBasic;
+use campground_lexicon::chat::campground::message::MessageViewBasic;
 use cds_schema::{
     models::cds::{Actor, CampsiteMember, Profile, TentMessage},
     schema::cds::{self, campsite_member, profile, tent_message},

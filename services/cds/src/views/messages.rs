@@ -1,5 +1,5 @@
 use cds_schema::models::cds::{Actor, CampsiteMember, Profile, Tent, TentMessage};
-use campground_lexicon::gg::campground::{
+use campground_lexicon::chat::campground::{
     content::ContentComponent,
     message::{MessageViewBasic, MessageViewWithReplies},
 };
@@ -22,7 +22,7 @@ pub fn message_view_basic(
         tent_id: message.tent_id,
 
         r#type: match message.r#type {
-            1 => Some(campground_lexicon::gg::campground::message::MessageType::System),
+            1 => Some(campground_lexicon::chat::campground::message::MessageType::System),
             _ => None,
         },
         content: message.content.clone(),
@@ -68,7 +68,7 @@ pub fn message_view_with_replies(
         bonfire_id: tent.bonfire_id.clone(),
         tent_id: message.tent_id,
         r#type: match message.r#type {
-            1 => Some(campground_lexicon::gg::campground::message::MessageType::System),
+            1 => Some(campground_lexicon::chat::campground::message::MessageType::System),
             _ => None,
         },
         content: message.content.clone(),

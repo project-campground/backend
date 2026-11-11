@@ -1,5 +1,5 @@
 use cds_schema::models::cds::{Tent, TentCategory};
-use campground_lexicon::gg::campground::tent::{
+use campground_lexicon::chat::campground::tent::{
     TentCategoryViewDetailed, TentType, TentViewBasic, TentViewDetailed,
 };
 

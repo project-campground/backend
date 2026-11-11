@@ -1,9 +1,7 @@
-use cds_schema::models::cds::{
-    Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile,
-};
-use campground_lexicon::gg::campground::permission::{
+use campground_lexicon::chat::campground::permission::{
     PermissionViewDetailed, PermissionViewEmbedded,
 };
+use cds_schema::models::cds::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile};
 
 use crate::views::{
     members::member_view_author, profiles::profile_view_basic, roles::role_view_basic,

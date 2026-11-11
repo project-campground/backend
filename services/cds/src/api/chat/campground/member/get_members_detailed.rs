@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::membership::{GetMembersOutput, MemberViewDetailed};
+use campground_lexicon::chat::campground::member::{GetMembersOutput, MemberViewDetailed};
 use cds_schema::{
     models::cds::{Actor, CampsiteMember, Profile},
     schema::cds::{campsite_member, profile},

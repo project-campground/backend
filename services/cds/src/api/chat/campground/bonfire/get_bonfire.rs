@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::bonfire::BonfireViewDetailed;
+use campground_lexicon::chat::campground::bonfire::BonfireViewDetailed;
 use cds_schema::models::cds::Bonfire;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;

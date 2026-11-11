@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::gg::campground::{actor::ProfileViewBasic, campsite::CampsiteViewBasic};
+use crate::chat::campground::{actor::ProfileViewBasic, campsite::CampsiteViewBasic};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]

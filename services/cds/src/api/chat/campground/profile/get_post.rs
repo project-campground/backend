@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::profile::ProfilePostViewDetailed;
+use campground_lexicon::chat::campground::profile::ProfilePostViewDetailed;
 use cds_schema::models::cds::ProfilePost;
 use cds_schema::schema::cds::profile_post;
 use diesel::{

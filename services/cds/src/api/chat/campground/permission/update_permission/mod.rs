@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::permission::PermissionViewEmbedded;
+use campground_lexicon::chat::campground::permission::PermissionViewEmbedded;
 use cds_schema::{models::cds::CampsitePermission, schema::cds::campsite_permission};
 use chrono::Utc;
 use diesel::{

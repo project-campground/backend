@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::membership::CampsiteLeftOutput;
+use campground_lexicon::chat::campground::member::CampsiteLeftOutput;
 use cds_schema::{
     models::cds::{Actor, CampsiteMember, CampsiteRole, Profile},
     schema::cds::{self, campsite_member, campsite_role, profile},

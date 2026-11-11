@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::{
+use campground_lexicon::chat::campground::{
     bonfire::BonfireViewInList, permission::PermissionViewEmbedded,
 };
 use cds_schema::{models::cds::Bonfire, schema::cds::campsite_permission};

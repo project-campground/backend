@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::membership::MemberBanView;
+use campground_lexicon::chat::campground::member::MemberBanView;
 use cds_schema::{
     models::cds::{Actor, Campsite, CampsiteBan, CampsiteMember, CampsiteRole, Profile},
     schema::cds::{self, campsite_member, campsite_role, profile},

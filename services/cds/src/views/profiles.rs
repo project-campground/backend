@@ -4,8 +4,8 @@ use std::str::FromStr;
 
 use cds_schema::models::cds::Actor;
 use cds_schema::models::cds::Profile as SchemaProfile;
-use campground_lexicon::gg::campground::actor::ProfileViewDetailed;
-use campground_lexicon::gg::campground::actor::{Profile, ProfileView, ProfileViewBasic};
+use campground_lexicon::chat::campground::actor::ProfileViewDetailed;
+use campground_lexicon::chat::campground::actor::{Profile, ProfileView, ProfileViewBasic};
 use common::get_blob_ref;
 use lexicon_cid::CidGeneric;
 use rsky_lexicon::com::atproto::repo::Blob;

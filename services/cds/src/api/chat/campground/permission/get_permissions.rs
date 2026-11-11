@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::permission::PermissionViewDetailed;
+use campground_lexicon::chat::campground::permission::PermissionViewDetailed;
 use cds_schema::{
     models::cds::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile},
     schema::cds::{actor, campsite_member, campsite_permission, campsite_role, profile},
@@ -114,10 +114,7 @@ macro_rules! get_scoped_permissions {
     }};
 }
 
-#[get(
-    "/xrpc/chat.campground.permission.getPermissions?<query..>",
-    rank = 1
-)]
+#[get("/xrpc/chat.campground.permission.getPermissions?<query..>", rank = 1)]
 pub async fn get_permissions(
     auth: OneOfInfo<'_>,
     query: GetPermissionsQuery,

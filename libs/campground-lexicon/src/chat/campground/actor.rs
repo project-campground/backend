@@ -1,5 +1,5 @@
-use crate::gg::campground::activity::Activity;
-use crate::gg::campground::{campsite::CampsiteViewBasic, socials::SocialConnection};
+use crate::chat::campground::activity::Activity;
+use crate::chat::campground::{campsite::CampsiteViewBasic, socials::SocialConnection};
 use chrono::{DateTime, Utc};
 use rsky_lexicon::com::atproto::{
     label::{Label, SelfLabels},

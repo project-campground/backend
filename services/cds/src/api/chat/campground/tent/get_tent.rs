@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::tent::TentViewDetailed;
+use campground_lexicon::chat::campground::tent::TentViewDetailed;
 use rocket::serde::json::Json;
 
 use crate::{

@@ -1,5 +1,5 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
-use campground_lexicon::gg::campground::profile::{GetProfilePostsOutput, ProfilePostViewBasic};
+use campground_lexicon::chat::campground::profile::{GetProfilePostsOutput, ProfilePostViewBasic};
 use cds_schema::models::cds::ProfilePost;
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl,

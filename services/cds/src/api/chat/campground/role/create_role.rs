@@ -1,4 +1,4 @@
-use campground_lexicon::gg::campground::role::{RoleMotion, RoleViewBasic};
+use campground_lexicon::chat::campground::role::{RoleMotion, RoleViewBasic};
 use cds_schema::models::cds::{Campsite, CampsiteMember, CampsiteRole};
 use chrono::Utc;
 use diesel::RunQueryDsl;

@@ -1,5 +1,5 @@
 use cds_schema::models::cds::{Actor, Campsite, CampsiteInvite, Profile};
-use campground_lexicon::gg::campground::invite::{
+use campground_lexicon::chat::campground::invite::{
     CampsiteInviteViewCampsite, CampsiteInviteViewGlobal,
 };
 

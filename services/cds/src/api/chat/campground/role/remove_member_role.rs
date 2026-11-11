@@ -1,8 +1,8 @@
+use campground_lexicon::chat::campground::member::ModifyMemberRolesOutput;
 use cds_schema::{
     models::cds::{CampsiteMember, CampsiteRole},
     schema::cds::{campsite_member, campsite_role},
 };
-use campground_lexicon::gg::campground::membership::ModifyMemberRolesOutput;
 use diesel::pg::expression::dsl::array_remove;
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl,

@@ -1,7 +1,7 @@
-use cds_schema::models::cds::{Tent, TentCategory};
-use campground_lexicon::gg::campground::tent::{
+use campground_lexicon::chat::campground::tent::{
     GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,
 };
+use cds_schema::models::cds::{Tent, TentCategory};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
