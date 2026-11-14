@@ -2,10 +2,10 @@
 
 use std::str::FromStr;
 
-use cds_schema::models::cds::{Actor, Profile, ProfilePost};
 use campground_lexicon::chat::campground::profile::{
     ProfilePostViewBasic, ProfilePostViewDetailed, ProfilePostViewParented,
 };
+use cds_schema::models::cds::{Actor, Profile, ProfilePost};
 use chrono::DateTime;
 
 use crate::views::profiles::profile_view_basic;
@@ -19,7 +19,7 @@ pub fn profile_post_view_basic(
     return ProfilePostViewBasic {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
-        parent_uri: profile_post.parent_uri.clone(),
+        parent_uri: profile_post.parent.clone(),
         content: profile_post.content.clone(),
         author: profile_view_basic(actor, profile),
         reply_count: profile_post.replies.len(),
@@ -41,7 +41,7 @@ pub fn profile_post_view_parented(
     return ProfilePostViewParented {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
-        parent_uri: profile_post.parent_uri.clone(),
+        parent_uri: profile_post.parent.clone(),
         content: profile_post.content.clone(),
         author: profile_view_basic(actor, profile),
         reply_count: profile_post.replies.len(),
@@ -65,7 +65,7 @@ pub fn profile_post_view_detailed(
     return ProfilePostViewDetailed {
         cid: profile_post.cid.clone(),
         uri: profile_post.uri.clone(),
-        parent_uri: profile_post.parent_uri.clone(),
+        parent_uri: profile_post.parent.clone(),
         content: profile_post.content.clone(),
         author: profile_view_basic(actor, profile),
         replies: replies,

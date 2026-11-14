@@ -89,9 +89,9 @@ async fn get_posts_no_replies(
         .filter(
             profile_post::uri
                 .like(uri_format)
-                .and(profile_post::parenturi.is_null()),
+                .and(profile_post::parent.is_null()),
         )
-        .order_by(profile_post::indexedat.desc())
+        .order_by(profile_post::indexed_at.desc())
         .limit(limit)
         .offset(offset)
         .load::<ProfilePost>(&mut conn)
@@ -138,10 +138,10 @@ async fn get_posts_with_replies(
     // TODO: Left join, but while populating with authors from fetched profile posts?
     let posts_query: &Vec<(ProfilePost, Option<ProfilePost>)> = &pp1
         .filter(pp1.field(profile_post::uri).like(uri_format))
-        .order_by(pp1.field(profile_post::indexedat).desc())
+        .order_by(pp1.field(profile_post::indexed_at).desc())
         .left_join(
-            pp2.on(pp1.field(profile_post::parenturi).is_not_null().and(
-                pp1.field(profile_post::parenturi)
+            pp2.on(pp1.field(profile_post::parent).is_not_null().and(
+                pp1.field(profile_post::parent)
                     .assume_not_null()
                     .eq(pp2.field(profile_post::uri)),
             )),
@@ -160,7 +160,7 @@ async fn get_posts_with_replies(
                 "{}: {:?} ({:?}) with parent {:?}",
                 x.uri,
                 x.content,
-                x.parent_uri,
+                x.parent,
                 y.clone().map(|x| x.content),
             ))
             .collect::<Vec<String>>()
@@ -204,10 +204,10 @@ async fn get_posts_with_replies(
         .iter()
         .map(|x| {
             // If there is no parent, no point
-            let found_parent = if x.2.parent_uri.is_none() {
+            let found_parent = if x.2.parent.is_none() {
                 None
             } else {
-                let parent_uri = x.2.parent_uri.clone().unwrap();
+                let parent_uri = x.2.parent.clone().unwrap();
                 parents.iter().find(|y| y.uri == parent_uri)
             };
 

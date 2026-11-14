@@ -203,11 +203,11 @@ pub async fn setup_actor(
     diesel::insert_into(cds::profile::table)
         .values(Profile {
             uri: format!("at://{}/chat.campground.actor.profile/self", did),
-            creator: did.clone(),
+            actor: did.clone(),
             cid: "".to_string(),
-            avatar_cid: None,
-            banner_cid: None,
-            display_name: Some(display_name.clone()),
+            avatar: None,
+            banner: None,
+            name: Some(display_name.clone()),
             description: Some(description.clone()),
             location: Some(location.clone()),
             tagline: Some(tagline.clone()),

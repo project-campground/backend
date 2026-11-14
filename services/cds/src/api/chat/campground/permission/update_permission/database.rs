@@ -1,4 +1,4 @@
-use cds_schema::schema::cds::campsite_role;
+use cds_schema::schema::cds::role;
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
 
@@ -10,15 +10,15 @@ pub fn fetch_role_priorities(
     executor_roles: &Vec<Uuid>,
     target_roles: &Vec<Uuid>,
 ) -> Result<Vec<(Uuid, i32)>, diesel::result::Error> {
-    let mut roles = campsite_role::table
+    let mut roles = role::table
         .filter(
-            campsite_role::campsiteid.eq(campsite_id).and(
-                campsite_role::id
+            role::campsite.eq(campsite_id).and(
+                role::id
                     .eq_any(executor_roles)
-                    .or(campsite_role::id.eq_any(target_roles)),
+                    .or(role::id.eq_any(target_roles)),
             ),
         )
-        .select((campsite_role::id, campsite_role::priority))
+        .select((role::id, role::priority))
         .load::<(Uuid, i32)>(conn)?;
     roles.sort_by(|a, b| a.cmp(b));
 

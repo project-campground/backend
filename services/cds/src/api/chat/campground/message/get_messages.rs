@@ -48,8 +48,8 @@ pub async fn get_messages(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::VIEW_CONTENT))?
@@ -70,17 +70,17 @@ pub async fn get_messages(
         Option<Profile>,
         Option<CampsiteMember>,
     )> = tent_message::table
-        .order_by(tent_message::createdat.desc())
+        .order_by(tent_message::created_at.desc())
         .limit(limit)
         .offset(offset)
-        .left_join(cds::actor::table.on(tent_message::createdby.eq(cds::actor::did)))
-        .left_join(profile::table.on(tent_message::createdby.eq(profile::creator)))
+        .left_join(cds::actor::table.on(tent_message::created_by.eq(cds::actor::did)))
+        .left_join(profile::table.on(tent_message::created_by.eq(profile::actor)))
         .left_join(
-            campsite_member::table.on(tent_message::createdby
-                .eq(campsite_member::userid)
-                .and(tent_message::campsiteid.eq(campsite_member::campsiteid))),
+            campsite_member::table.on(tent_message::created_by
+                .eq(campsite_member::actor)
+                .and(tent_message::campsite.eq(campsite_member::campsite))),
         )
-        .filter(crate::schema::cds::tent_message::tentid.eq(auth.tent.id))
+        .filter(crate::schema::cds::tent_message::tent.eq(auth.tent.id))
         .load::<(
             TentMessage,
             Option<Actor>,
@@ -102,12 +102,12 @@ pub async fn get_messages(
     } else {
         tent_message::table
             .filter(crate::schema::cds::tent_message::id.eq_any(additional_reply_ids))
-            .left_join(cds::actor::table.on(tent_message::createdby.eq(cds::actor::did)))
-            .left_join(profile::table.on(tent_message::createdby.eq(profile::creator)))
+            .left_join(cds::actor::table.on(tent_message::created_by.eq(cds::actor::did)))
+            .left_join(profile::table.on(tent_message::created_by.eq(profile::actor)))
             .left_join(
-                campsite_member::table.on(tent_message::createdby
-                    .eq(campsite_member::userid)
-                    .and(tent_message::campsiteid.eq(campsite_member::campsiteid))),
+                campsite_member::table.on(tent_message::created_by
+                    .eq(campsite_member::actor)
+                    .and(tent_message::campsite.eq(campsite_member::campsite))),
             )
             .load::<(
                 TentMessage,

@@ -1,4 +1,4 @@
-use cds_schema::{models::cds::CampsitePermission, schema::cds::campsite_permission};
+use cds_schema::{models::cds::Permission, schema::cds::permission};
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl, sql_types::Bool};
 use uuid::Uuid;
 
@@ -8,21 +8,16 @@ use crate::{
     xrpc::error::XRPCError,
 };
 
-pub fn fetch_all_campsite_permissions(
-    campsite_id: &str,
-    actor: &str,
-) -> Result<Vec<CampsitePermission>, XRPCError> {
+pub fn fetch_all_permissions(campsite_id: &str, actor: &str) -> Result<Vec<Permission>, XRPCError> {
     let mut conn = establish_connection().unwrap();
 
-    campsite_permission::table
+    permission::table
         .filter(
-            campsite_permission::campsiteid.eq(campsite_id).and(
-                campsite_permission::userid
-                    .is_null()
-                    .or(campsite_permission::userid.eq(actor)),
-            ),
+            permission::campsite
+                .eq(campsite_id)
+                .and(permission::actor.is_null().or(permission::actor.eq(actor))),
         )
-        .load::<CampsitePermission>(&mut conn)
+        .load::<Permission>(&mut conn)
         .map_err(handle_all_db_errors)
 }
 /// ## Summary
@@ -42,35 +37,35 @@ pub fn fetch_leveled_permissions(
     role_ids: &Vec<Uuid>,
 ) -> Result<Vec<(Option<Uuid>, Option<Uuid>, i64)>, XRPCError> {
     let mut conn = establish_connection().unwrap();
-    campsite_permission::table
+    permission::table
         .filter(
-            campsite_permission::campsiteid
+            permission::campsite
                 .eq(campsite_id)
                 // Of who
                 .and(
-                    campsite_permission::roleid
+                    permission::role
                         .eq_any(role_ids)
-                        .or(campsite_permission::userid.eq(actor)),
+                        .or(permission::actor.eq(actor)),
                 )
                 // Where
                 .and(
-                    campsite_permission::bonfireid
+                    permission::bonfire
                         .eq(bonfire_id)
-                        .and(campsite_permission::tentid.is_null())
-                        .and(campsite_permission::categoryid.is_null())
-                        .or(campsite_permission::tentid
+                        .and(permission::tent.is_null())
+                        .and(permission::category.is_null())
+                        .or(permission::tent
                             .eq(tent_id)
                             .and::<bool, Bool>(tent_id.is_some())
-                            .or(campsite_permission::categoryid
+                            .or(permission::category
                                 .eq(category_id)
                                 .and::<bool, Bool>(category_id.is_some()))),
                 ),
         )
         // Reduce required parsing
         .select((
-            campsite_permission::categoryid,
-            campsite_permission::tentid,
-            campsite_permission::permissions,
+            permission::category,
+            permission::tent,
+            permission::permissions,
         ))
         .load::<(Option<Uuid>, Option<Uuid>, i64)>(&mut conn)
         .map_err(handle_select_first_error)
@@ -88,43 +83,43 @@ pub async fn fetch_only_specific_permissions(
     tent_id: Option<Uuid>,
     actor: &str,
     role_ids: &Vec<Uuid>,
-) -> Result<Vec<CampsitePermission>, XRPCError> {
+) -> Result<Vec<Permission>, XRPCError> {
     let mut conn = establish_connection().unwrap();
-    campsite_permission::table
+    permission::table
         .filter(
-            campsite_permission::campsiteid
+            permission::campsite
                 .eq(campsite_id)
                 // Of who
                 .and(
-                    campsite_permission::roleid
+                    permission::role
                         .eq_any(role_ids)
-                        .or(campsite_permission::userid.eq(actor)),
+                        .or(permission::actor.eq(actor)),
                 )
                 // Where
                 .and(
                     // Either bonfire
-                    campsite_permission::bonfireid
+                    permission::bonfire
                         .eq(bonfire_id)
                         .and(
-                            campsite_permission::tentid
+                            permission::tent
                                 .is_null()
                                 .and::<bool, Bool>(tent_id.is_none()),
                         )
                         .and(
-                            campsite_permission::categoryid
+                            permission::category
                                 .is_null()
                                 .and::<bool, Bool>(category_id.is_none()),
                         )
                         // Or tent if specified
-                        .or(campsite_permission::tentid
+                        .or(permission::tent
                             .is_not_null()
-                            .and(campsite_permission::tentid.eq(tent_id)))
+                            .and(permission::tent.eq(tent_id)))
                         // Or category if specified
-                        .or(campsite_permission::categoryid
+                        .or(permission::category
                             .is_not_null()
-                            .and(campsite_permission::categoryid.eq(category_id))),
+                            .and(permission::category.eq(category_id))),
                 ),
         )
-        .load::<CampsitePermission>(&mut conn)
+        .load::<Permission>(&mut conn)
         .map_err(handle_select_first_error)
 }

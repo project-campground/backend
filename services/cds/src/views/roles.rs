@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-use cds_schema::models::cds::CampsiteRole;
 use campground_lexicon::chat::campground::role::{RoleMotion, RoleViewBasic};
+use cds_schema::models::cds::Role;
 use uuid::Uuid;
 
 use crate::{views::util::serialize_datetime, xrpc::error::XRPCError};
@@ -10,13 +10,13 @@ impl CampsiteRoleFlag {
     pub const DEFAULT_ROLE: i32 = 0b1;
 }
 
-pub fn role_view_basic(role: &CampsiteRole) -> RoleViewBasic {
+pub fn role_view_basic(role: &Role) -> RoleViewBasic {
     return RoleViewBasic {
         id: role.id.clone(),
-        campsite_id: role.campsite_id.clone(),
+        campsite_id: role.campsite.clone(),
         name: role.name.clone(),
-        raised: role.display_separately.clone(),
-        pingable: role.mentionable.clone(),
+        raised: role.hoist.clone(),
+        pingable: role.pingable.clone(),
         colors: role
             .colors
             .iter()
@@ -53,7 +53,7 @@ pub fn from_role_motion(motion: RoleMotion) -> i16 {
 
 pub fn ensure_no_higher_role(
     is_owner: bool,
-    all_roles: &mut Vec<CampsiteRole>,
+    all_roles: &mut Vec<Role>,
     given_role_priority: i32,
     member_roles: Vec<Option<Uuid>>,
 ) -> Result<(), XRPCError> {

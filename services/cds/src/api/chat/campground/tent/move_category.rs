@@ -52,7 +52,7 @@ pub async fn move_category(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.category.bonfire_id,
+                &auth.category.bonfire,
                 Some(&auth.category.id),
                 None
             )
@@ -96,7 +96,7 @@ async fn move_tent_to_pos(
     let mut conn = establish_connection().unwrap();
 
     let result =
-        set_category_position_unchecked(&mut conn, &auth, &auth.category.bonfire_id, position)?;
+        set_category_position_unchecked(&mut conn, &auth, &auth.category.bonfire, position)?;
 
     handle_moved_categories(&auth, event_subject, result)
 }
@@ -108,7 +108,7 @@ async fn move_tent_to_bonfire(
     position: i32,
 ) -> Result<Json<TentCategoryViewDetailed>, XRPCError> {
     // Maybe a client had failed checked
-    if bonfire_id == auth.category.bonfire_id {
+    if bonfire_id == auth.category.bonfire {
         return Ok(Json(tent_category_view(&auth.category)));
     }
 
@@ -138,10 +138,10 @@ fn set_category_position_unchecked(
                 .set((
                     // All the new settings
                     cds::tent_category::priority.eq(position),
-                    cds::tent_category::bonfireid.eq(bonfire_id),
+                    cds::tent_category::bonfire.eq(bonfire_id),
                     // Mandatory
-                    cds::tent_category::updatedat.eq(current_date),
-                    cds::tent_category::updatedby.eq(&auth.actor.did),
+                    cds::tent_category::updated_at.eq(current_date),
+                    cds::tent_category::updated_by.eq(&auth.actor.did),
                 ))
                 .load::<TentCategory>(conn)?,
             moved_categories,
@@ -164,7 +164,7 @@ fn make_room_for_category(
         crate::schema::cds::tent_category::table,
         crate::schema::cds::tent_category::id,
         crate::schema::cds::tent_category::priority,
-        cds::tent_category::bonfireid
+        cds::tent_category::bonfire
             .eq(bonfire_id);
         conn,
         position

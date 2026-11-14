@@ -114,17 +114,17 @@ pub async fn update_campsite(
             cds::campsite::description
                 .eq(description.unwrap_or(auth.campsite.description.as_str())),
             cds::campsite::tags.eq(tags.clone().unwrap_or(auth.campsite.tags)),
-            cds::campsite::vanityurl.eq(vanity_url
+            cds::campsite::vanity_url.eq(vanity_url
                 .clone()
                 .with_fallback(auth.campsite.vanity_url.as_deref())),
-            cds::campsite::avataruri.eq(avatar_uri
+            cds::campsite::avatar.eq(avatar_uri
                 .clone()
-                .with_fallback(auth.campsite.avatar_uri.as_ref().map(|x| x.as_str()))),
-            cds::campsite::banneruri.eq(banner_uri
+                .with_fallback(auth.campsite.avatar.as_ref().map(|x| x.as_str()))),
+            cds::campsite::banner.eq(banner_uri
                 .clone()
-                .with_fallback(auth.campsite.banner_uri.as_ref().map(|x| x.as_str()))),
-            cds::campsite::updatedby.eq(&auth.actor.did),
-            cds::campsite::updatedat.eq(current_date),
+                .with_fallback(auth.campsite.banner.as_ref().map(|x| x.as_str()))),
+            cds::campsite::updated_by.eq(&auth.actor.did),
+            cds::campsite::updated_at.eq(current_date),
         ))
         .get_result::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;

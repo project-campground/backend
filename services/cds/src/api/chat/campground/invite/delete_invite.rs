@@ -51,13 +51,13 @@ pub async fn delete_invite(
         .filter(campsite_invite::id.eq(uuid))
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_invite::createdby)),
+                .on(crate::schema::cds::actor::did.eq(campsite_invite::created_by)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_invite::created_by)))
         .first::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    if invite.0.campsite_id != campsite_id {
+    if invite.0.campsite != campsite_id {
         return Err(XRPCError::NotFound);
     }
 

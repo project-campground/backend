@@ -222,7 +222,7 @@ fn db_post_from_record(
     ProfilePost {
         cid: post_record.cid.to_string(),
         uri: post_record.uri.to_string(),
-        parent_uri: post_record.value.parent_uri.clone(),
+        parent: post_record.value.parent_uri.clone(),
         content: match &post_record.value.content {
             None => "".to_string(),
             Some(x) => x.to_string(),
@@ -254,9 +254,9 @@ async fn insert_post_list_into_db(posts: Vec<ProfilePost>) -> Result<(), XRPCErr
         .clone()
         .iter()
         // Don't care about ones without parents
-        .filter(|x| x.parent_uri.is_some())
+        .filter(|x| x.parent.is_some())
         // Stringed tuple
-        .map(|x| format!("{};{}", x.uri.clone(), x.parent_uri.clone().unwrap()))
+        .map(|x| format!("{};{}", x.uri.clone(), x.parent.clone().unwrap()))
         .collect();
 
     if parents.len() < 1 {

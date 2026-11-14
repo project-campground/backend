@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::role::RoleViewBasic;
 use cds_schema::{
-    models::cds::{CampsiteMember, CampsiteRole},
-    schema::cds::{campsite_member, campsite_permission, campsite_role},
+    models::cds::{CampsiteMember, Role},
+    schema::cds::{campsite_member, permission, role},
 };
 use diesel::{Connection, ExpressionMethods, PgArrayExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -40,9 +40,9 @@ pub async fn delete_role(
         .map_err(|_| XRPCError::BadRequest("Expected 'id' query to be a valid UUID".to_string()))?;
 
     // Make sure the role exists
-    let all_roles = campsite_role::table
-        .filter(campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
+    let all_roles = role::table
+        .filter(role::campsite.eq(campsite_id))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let given_role = all_roles.iter().find(|x| x.id == role_id_uuid);
@@ -74,11 +74,11 @@ pub async fn delete_role(
     );
 
     conn.transaction(|conn| {
-        diesel::delete(campsite_role::table)
-            .filter(campsite_role::id.eq(given_role.id))
+        diesel::delete(role::table)
+            .filter(role::id.eq(given_role.id))
             .execute(conn)?;
-        diesel::delete(campsite_permission::table)
-            .filter(campsite_permission::roleid.eq(given_role.id))
+        diesel::delete(permission::table)
+            .filter(permission::role.eq(given_role.id))
             .execute(conn)?;
         diesel::update(campsite_member::table)
             .filter(campsite_member::roles.contains(vec![given_role.id]))

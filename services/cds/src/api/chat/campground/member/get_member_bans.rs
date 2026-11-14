@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::member::GetMemberBansOutput;
 use cds_schema::{
     models::cds::{Actor, CampsiteBan, Profile},
-    schema::cds::{self, campsite_ban},
+    schema::cds::{self, member_ban},
 };
 use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
@@ -47,10 +47,10 @@ pub async fn get_member_bans(
 
     let mut conn = establish_connection().unwrap();
 
-    let member_bans = campsite_ban::table
-        .filter(campsite_ban::campsiteid.eq(campsite_id))
-        .left_join(cds::profile::table.on(cds::profile::creator.eq(campsite_ban::userid)))
-        .inner_join(cds::actor::table.on(cds::actor::did.eq(campsite_ban::userid)))
+    let member_bans = member_ban::table
+        .filter(member_ban::campsite.eq(campsite_id))
+        .left_join(cds::profile::table.on(cds::profile::actor.eq(member_ban::target)))
+        .inner_join(cds::actor::table.on(cds::actor::did.eq(member_ban::target)))
         .load::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()

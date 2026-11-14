@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 use campground_lexicon::chat::campground::tent::TentViewBasic;
-use cds_schema::schema::cds::{campsite_permission, tent, tent_message};
+use cds_schema::schema::cds::{permission, tent, tent_message};
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 
@@ -32,8 +32,8 @@ pub async fn delete_tent(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
@@ -44,8 +44,8 @@ pub async fn delete_tent(
         diesel::delete(tent::table)
             .filter(tent::id.eq(auth.tent.id))
             .execute(conn)?;
-        diesel::delete(campsite_permission::table)
-            .filter(campsite_permission::tentid.eq(auth.tent.id))
+        diesel::delete(permission::table)
+            .filter(permission::tent.eq(auth.tent.id))
             .execute(conn)?;
         diesel::delete(tent_message::table)
             .filter(tent_message::id.eq(auth.tent.id))

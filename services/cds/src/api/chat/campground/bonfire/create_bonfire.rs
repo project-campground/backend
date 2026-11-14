@@ -82,7 +82,7 @@ pub async fn create_bonfire(
 
     let bonfire = conn.transaction(|conn| {
         let existing_bonfire_count = crate::schema::cds::bonfire::table
-            .filter(crate::schema::cds::bonfire::campsiteid.eq(campsite_id))
+            .filter(crate::schema::cds::bonfire::campsite.eq(campsite_id))
             .count()
             .first::<i64>(conn)
             .map_err(handle_all_db_errors)?;
@@ -101,11 +101,11 @@ pub async fn create_bonfire(
         let bonfire = diesel::insert_into(crate::schema::cds::bonfire::table)
             .values(Bonfire {
                 id: bonfire_id.to_string(),
-                campsite_id: campsite_id.to_string(),
+                campsite: campsite_id.to_string(),
                 name: name.clone(),
                 description: description.clone(),
-                avatar_uri: avatar_uri.clone(),
-                banner_uri: banner_uri.clone(),
+                avatar: avatar_uri.clone(),
+                banner: banner_uri.clone(),
                 home: false,
                 priority: *position,
                 created_by: auth.actor.did.clone(),

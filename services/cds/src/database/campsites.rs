@@ -1,6 +1,6 @@
 use cds_schema::{
-    models::cds::{Campsite, CampsiteMember, CampsiteRole, Profile},
-    schema::cds::{campsite, campsite_member, campsite_role, profile},
+    models::cds::{Campsite, CampsiteMember, Profile, Role},
+    schema::cds::{campsite, campsite_member, profile, role},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
@@ -19,9 +19,9 @@ pub fn get_campsite_and_member_from_db(
     let camp_member = campsite::table
         .filter(campsite::id.eq(campsite_id))
         .inner_join(
-            campsite_member::table.on(campsite_member::campsiteid
+            campsite_member::table.on(campsite_member::campsite
                 .eq(campsite::id)
-                .and(campsite_member::userid.eq(actor))),
+                .and(campsite_member::actor.eq(actor))),
         )
         .first::<(Campsite, CampsiteMember)>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -35,11 +35,11 @@ pub fn get_full_campsite_member(
     let mut conn = establish_connection().unwrap();
     let member = campsite_member::table
         .filter(
-            campsite_member::campsiteid
+            campsite_member::campsite
                 .eq(campsite_id)
-                .and(campsite_member::userid.eq(actor)),
+                .and(campsite_member::actor.eq(actor)),
         )
-        .left_outer_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .left_outer_join(profile::table.on(profile::actor.eq(campsite_member::actor)))
         .first::<(CampsiteMember, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
@@ -49,9 +49,9 @@ pub fn get_campsite_member(campsite_id: &str, actor: &str) -> Result<CampsiteMem
     let mut conn = establish_connection().unwrap();
     let member = campsite_member::table
         .filter(
-            campsite_member::campsiteid
+            campsite_member::campsite
                 .eq(campsite_id)
-                .and(campsite_member::userid.eq(actor)),
+                .and(campsite_member::actor.eq(actor)),
         )
         .first::<CampsiteMember>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -59,11 +59,11 @@ pub fn get_campsite_member(campsite_id: &str, actor: &str) -> Result<CampsiteMem
     Ok(member)
 }
 
-pub fn get_roles_from_db(campsite_id: &str) -> Result<Vec<CampsiteRole>, XRPCError> {
+pub fn get_roles_from_db(campsite_id: &str) -> Result<Vec<Role>, XRPCError> {
     let mut conn = establish_connection().unwrap();
-    campsite_role::table
-        .filter(campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
+    role::table
+        .filter(role::campsite.eq(campsite_id))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)
 }
 pub fn get_role_permissions_from_db(
@@ -71,13 +71,13 @@ pub fn get_role_permissions_from_db(
     campsite_id: &str,
     role_ids: &Vec<Uuid>,
 ) -> Result<u32, diesel::result::Error> {
-    Ok(campsite_role::table
+    Ok(role::table
         .filter(
-            campsite_role::campsiteid
+            role::campsite
                 .eq(campsite_id)
-                .and(campsite_role::id.eq_any(role_ids)),
+                .and(role::id.eq_any(role_ids)),
         )
-        .select(campsite_role::permissions)
+        .select(role::permissions)
         .load::<i32>(conn)?
         .iter()
         .fold(0u32, |initial, permission| initial | (*permission as u32)))

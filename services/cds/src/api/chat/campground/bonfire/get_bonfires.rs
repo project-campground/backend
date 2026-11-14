@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::{
     bonfire::BonfireViewInList, permission::PermissionViewEmbedded,
 };
-use cds_schema::{models::cds::Bonfire, schema::cds::campsite_permission};
+use cds_schema::{models::cds::Bonfire, schema::cds::permission};
 use diesel::{
     BoolExpressionMethods, Connection, ExpressionMethods, IntoSql, QueryDsl, RunQueryDsl, dsl::not,
     sql_types::Bool,
@@ -25,7 +25,7 @@ pub async fn get_bonfires(
     auth: CampsiteInfo<'_>,
     campsite_id: &str,
 ) -> Result<Json<Vec<BonfireViewInList>>> {
-    if auth.member.user_id == auth.campsite.owner {
+    if auth.member.actor == auth.campsite.owner {
         return get_bonfire_no_checks(campsite_id).await;
     }
 
@@ -45,7 +45,7 @@ pub async fn get_bonfires(
                 (role_permissions & PermissionFlag::VIEW_CONTENT) == PermissionFlag::VIEW_CONTENT;
 
             let fetched_permissions =
-                get_bonfire_perms(conn, campsite_id, &roles, &auth.member.user_id)?;
+                get_bonfire_perms(conn, campsite_id, &roles, &auth.member.actor)?;
 
             let bonfire_states = &get_allowed_and_denied_item_ids(
                 &mut fetched_permissions
@@ -72,7 +72,7 @@ pub async fn get_bonfires(
                 crate::schema::cds::bonfire::table
                     .filter(
                         // Scoping
-                        crate::schema::cds::bonfire::campsiteid.eq(campsite_id).and(
+                        crate::schema::cds::bonfire::campsite.eq(campsite_id).and(
                             // Home always displayed
                             crate::schema::cds::bonfire::home.or(get_allowed_or_inherited!(
                                 id: crate::schema::cds::bonfire::id,
@@ -109,8 +109,8 @@ pub async fn get_bonfires(
                 id: bonfire.id.clone(),
                 name: bonfire.name.clone(),
                 description: bonfire.description.clone(),
-                avatar_uri: bonfire.avatar_uri.clone(),
-                banner_uri: bonfire.banner_uri.clone(),
+                avatar_uri: bonfire.avatar.clone(),
+                banner_uri: bonfire.banner.clone(),
                 position: bonfire.priority,
                 home: bonfire.home,
                 permissions,
@@ -125,7 +125,7 @@ async fn get_bonfire_no_checks(campsite_id: &str) -> Result<Json<Vec<BonfireView
     let mut conn = establish_connection().unwrap();
 
     let bonfires = crate::schema::cds::bonfire::table
-        .filter(crate::schema::cds::bonfire::campsiteid.eq(campsite_id))
+        .filter(crate::schema::cds::bonfire::campsite.eq(campsite_id))
         .load::<Bonfire>(&mut conn)
         .map_err(handle_all_db_errors)?
         .iter()
@@ -133,8 +133,8 @@ async fn get_bonfire_no_checks(campsite_id: &str) -> Result<Json<Vec<BonfireView
             id: bonfire.id.clone(),
             name: bonfire.name.clone(),
             description: bonfire.description.clone(),
-            avatar_uri: bonfire.avatar_uri.clone(),
-            banner_uri: bonfire.banner_uri.clone(),
+            avatar_uri: bonfire.avatar.clone(),
+            banner_uri: bonfire.banner.clone(),
             position: bonfire.priority,
             home: bonfire.home,
             permissions: vec![],
@@ -150,29 +150,29 @@ fn get_bonfire_perms(
     actor_roles: &Vec<Uuid>,
     actor: &str,
 ) -> Result<Vec<(String, Option<Uuid>, Option<String>, i64)>, diesel::result::Error> {
-    campsite_permission::table
+    permission::table
         .filter(
-            campsite_permission::campsiteid
+            permission::campsite
                 .eq(campsite_id)
                 // Of who
                 .and(
-                    campsite_permission::roleid
+                    permission::role
                         .eq_any(actor_roles)
-                        .or(campsite_permission::userid.eq(actor)),
+                        .or(permission::actor.eq(actor)),
                 )
                 // Where
                 .and(
-                    campsite_permission::tentid
+                    permission::tent
                         .is_null()
-                        .and(campsite_permission::categoryid.is_null()),
+                        .and(permission::category.is_null()),
                 ),
         )
         // Reduce required parsing
         .select((
-            campsite_permission::bonfireid,
-            campsite_permission::roleid,
-            campsite_permission::userid,
-            campsite_permission::permissions,
+            permission::bonfire,
+            permission::role,
+            permission::actor,
+            permission::permissions,
         ))
         .load::<(String, Option<Uuid>, Option<String>, i64)>(conn)
 }

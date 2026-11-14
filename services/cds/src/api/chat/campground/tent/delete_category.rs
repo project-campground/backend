@@ -1,5 +1,5 @@
 use campground_lexicon::chat::campground::tent::TentCategoryViewDetailed;
-use cds_schema::schema::cds::{campsite_permission, tent, tent_category};
+use cds_schema::schema::cds::{permission, tent, tent_category};
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
 use uuid::Uuid;
@@ -33,7 +33,7 @@ pub async fn delete_category(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.category.bonfire_id,
+                &auth.category.bonfire,
                 Some(&auth.category.id),
                 None
             )
@@ -46,12 +46,12 @@ pub async fn delete_category(
         diesel::delete(tent_category::table)
             .filter(tent_category::id.eq(auth.category.id))
             .execute(conn)?;
-        diesel::delete(campsite_permission::table)
-            .filter(campsite_permission::categoryid.eq(auth.category.id))
+        diesel::delete(permission::table)
+            .filter(permission::category.eq(auth.category.id))
             .execute(conn)?;
         diesel::update(tent::table)
-            .filter(tent::categoryid.eq(auth.category.id))
-            .set(tent::categoryid.eq::<Option<Uuid>>(None))
+            .filter(tent::category.eq(auth.category.id))
+            .set(tent::category.eq::<Option<Uuid>>(None))
             .execute(conn)
     })
     .map_err(handle_all_db_errors)?;

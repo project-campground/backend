@@ -20,8 +20,8 @@ pub async fn get_tent(auth: TentInfo<'_>, tent_id: &str) -> Result<Json<TentView
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::VIEW_CONTENT))?

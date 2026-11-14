@@ -52,12 +52,12 @@ pub async fn get_post(
     let (author_actor, (main_post, parent_post)) = profile_posts::get_single_profile_post(
         client,
         did_document_storage,
-        pp1.order_by(pp1.field(profile_post::indexedat).desc())
+        pp1.order_by(pp1.field(profile_post::indexed_at).desc())
             .limit(limit)
             .offset(offset)
             .left_join(
                 pp2.on(pp1
-                    .field(profile_post::parenturi)
+                    .field(profile_post::parent)
                     .eq(pp2.field(profile_post::uri).nullable())),
             )
             .filter(pp1.field(profile_post::uri).like(&resolved_uri))
@@ -72,9 +72,9 @@ pub async fn get_post(
 
     // TODO: Left join, but while populating with authors from fetched profile posts?
     let mut replies = profile_post::table
-        .filter(profile_post::parenturi.eq(resolved_uri.clone()))
+        .filter(profile_post::parent.eq(resolved_uri.clone()))
         // .load(&mut conn)
-        .order_by(profile_post::indexedat.desc())
+        .order_by(profile_post::indexed_at.desc())
         .limit(limit)
         .offset(offset)
         .load::<ProfilePost>(&mut conn)

@@ -1,5 +1,5 @@
 use campground_lexicon::chat::campground::permission::PermissionViewEmbedded;
-use cds_schema::{models::cds::CampsitePermission, schema::cds::campsite_permission};
+use cds_schema::{models::cds::Permission, schema::cds::permission};
 use chrono::Utc;
 use diesel::{
     BoolExpressionMethods, Connection, ExpressionMethods, PgExpressionMethods, RunQueryDsl,
@@ -215,20 +215,20 @@ pub fn delete_permission(
     tent_id: Option<Uuid>,
     role_id: Option<Uuid>,
     user_id: Option<String>,
-) -> Result<Vec<CampsitePermission>, diesel::result::Error> {
-    diesel::delete(campsite_permission::table)
+) -> Result<Vec<Permission>, diesel::result::Error> {
+    diesel::delete(permission::table)
         .filter(
-            campsite_permission::campsiteid.eq(campsite_id).and(
-                campsite_permission::bonfireid
+            permission::campsite.eq(campsite_id).and(
+                permission::bonfire
                     .eq(bonfire_id)
-                    .and(campsite_permission::categoryid.is_not_distinct_from(category_id))
-                    .and(campsite_permission::tentid.is_not_distinct_from(tent_id))
-                    .and(campsite_permission::roleid.is_not_distinct_from(role_id))
-                    .and(campsite_permission::userid.is_not_distinct_from(user_id)),
+                    .and(permission::category.is_not_distinct_from(category_id))
+                    .and(permission::tent.is_not_distinct_from(tent_id))
+                    .and(permission::role.is_not_distinct_from(role_id))
+                    .and(permission::actor.is_not_distinct_from(user_id)),
             ),
         )
-        .returning(campsite_permission::all_columns)
-        .load::<CampsitePermission>(conn)
+        .returning(permission::all_columns)
+        .load::<Permission>(conn)
 }
 
 pub fn create_or_update_permission(
@@ -241,33 +241,33 @@ pub fn create_or_update_permission(
     role_id: Option<Uuid>,
     user_id: Option<String>,
     permissions: u64,
-) -> Result<Vec<CampsitePermission>, diesel::result::Error> {
+) -> Result<Vec<Permission>, diesel::result::Error> {
     let current_date = Utc::now().naive_utc();
 
-    diesel::insert_into(campsite_permission::table)
-        .values(CampsitePermission {
+    diesel::insert_into(permission::table)
+        .values(Permission {
             id: uuid::Uuid::new_v4(),
-            campsite_id,
-            role_id,
-            user_id,
-            category_id,
-            tent_id,
-            bonfire_id,
+            campsite: campsite_id,
+            role: role_id,
+            actor: user_id,
+            category: category_id,
+            tent: tent_id,
+            bonfire: bonfire_id,
             permissions: permissions as i64,
             created_by: created_by.clone(),
             created_at: current_date,
             updated_by: created_by.clone(),
             updated_at: current_date,
         })
-        .on_conflict(on_constraint("campsite_permission_unique_keys"))
+        .on_conflict(on_constraint("permission_unique_keys"))
         .do_update()
         .set((
-            campsite_permission::permissions.eq(permissions as i64),
-            campsite_permission::updatedby.eq(created_by.clone()),
-            campsite_permission::updatedat.eq(current_date),
+            permission::permissions.eq(permissions as i64),
+            permission::updated_by.eq(created_by.clone()),
+            permission::updated_at.eq(current_date),
         ))
-        .returning(campsite_permission::all_columns)
-        .load::<CampsitePermission>(conn)
+        .returning(permission::all_columns)
+        .load::<Permission>(conn)
 }
 
 pub mod database;

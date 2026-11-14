@@ -96,18 +96,18 @@ pub async fn update_bonfire<'a>(
 
     let bonfire = diesel::update(cds::bonfire::table)
         .filter(
-            cds::bonfire::campsiteid
-                .eq(&auth.bonfire.campsite_id)
+            cds::bonfire::campsite
+                .eq(&auth.bonfire.campsite)
                 .and(cds::bonfire::id.eq(bonfire_id)),
         )
         .set((
             cds::bonfire::name.eq(name.clone().unwrap_or(auth.bonfire.name)),
             cds::bonfire::description.eq(description.clone().unwrap_or(auth.bonfire.description)),
             cds::bonfire::priority.eq(position.clone().unwrap_or(auth.bonfire.priority)),
-            cds::bonfire::avataruri.eq(avatar_uri.clone().with_fallback(auth.bonfire.avatar_uri)),
-            cds::bonfire::banneruri.eq(banner_uri.clone().with_fallback(auth.bonfire.banner_uri)),
-            cds::bonfire::updatedby.eq(&auth.actor.did),
-            cds::bonfire::updatedat.eq(current_date),
+            cds::bonfire::avatar.eq(avatar_uri.clone().with_fallback(auth.bonfire.avatar)),
+            cds::bonfire::banner.eq(banner_uri.clone().with_fallback(auth.bonfire.banner)),
+            cds::bonfire::updated_by.eq(&auth.actor.did),
+            cds::bonfire::updated_at.eq(current_date),
         ))
         .load::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;

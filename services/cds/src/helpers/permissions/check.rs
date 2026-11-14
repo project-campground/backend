@@ -1,6 +1,6 @@
 use cds_schema::{
-    models::cds::{Campsite, CampsiteMember, CampsiteRole},
-    schema::cds::campsite_role,
+    models::cds::{Campsite, CampsiteMember, Role},
+    schema::cds::role,
 };
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use uuid::Uuid;
@@ -24,7 +24,7 @@ pub struct PermissionCheck {
 impl PermissionCheck {
     pub fn member(member: &CampsiteMember) -> PermissionCheck {
         PermissionCheck {
-            actor: member.user_id.clone(),
+            actor: member.actor.clone(),
             roles: member
                 .roles
                 .iter()
@@ -69,7 +69,7 @@ impl PermissionCheckWithOwner {
     pub fn fetch_roles(self) -> PermissionCheckWithRolesLazy {
         PermissionCheckWithRolesLazy { with_owner: self }
     }
-    pub fn with_roles(self, roles: &Vec<CampsiteRole>) -> PermissionCheckWithRolesEager {
+    pub fn with_roles(self, roles: &Vec<Role>) -> PermissionCheckWithRolesEager {
         let role_permissions = roles
             .iter()
             .filter(|x| self.basic.roles.contains(&x.id))
@@ -124,9 +124,9 @@ impl PermissionCheckTestable for PermissionCheckWithRolesLazy {
     fn get_common_permissions(&self, flags: u32) -> Result<u32, XRPCError> {
         let mut conn = establish_connection().unwrap();
 
-        let role_permissions = campsite_role::table
-            .filter(campsite_role::id.eq_any(&self.with_owner.basic.roles))
-            .select(campsite_role::permissions)
+        let role_permissions = role::table
+            .filter(role::id.eq_any(&self.with_owner.basic.roles))
+            .select(role::permissions)
             .load::<i32>(&mut conn)
             .map_err(handle_select_first_error)?
             .iter()
@@ -151,7 +151,7 @@ pub struct PermissionCheckScoped<T: PermissionCheckWithRoles> {
     pub tent: Option<Uuid>,
 }
 impl<T: PermissionCheckWithRoles> PermissionCheckScoped<T> {
-    fn get_campsite_permissions(&self, flags: u32) -> Result<PermissionState, XRPCError> {
+    fn get_permissions(&self, flags: u32) -> Result<PermissionState, XRPCError> {
         let perms_vec = fetch_leveled_permissions(
             &self.campsite,
             &self.bonfire,
@@ -185,7 +185,7 @@ impl<T: PermissionCheckWithRoles> PermissionCheckScoped<T> {
 }
 impl<T: PermissionCheckWithRoles> PermissionCheckTestable for PermissionCheckScoped<T> {
     fn get_common_permissions(&self, flags: u32) -> Result<u32, XRPCError> {
-        let state = self.get_campsite_permissions(flags)?;
+        let state = self.get_permissions(flags)?;
 
         match state {
             PermissionState::Allowed => Ok(flags),
@@ -194,7 +194,7 @@ impl<T: PermissionCheckWithRoles> PermissionCheckTestable for PermissionCheckSco
         }
     }
     fn has_permissions(&self, flags: u32) -> Result<bool, XRPCError> {
-        let state = self.get_campsite_permissions(flags)?;
+        let state = self.get_permissions(flags)?;
 
         match state {
             PermissionState::Allowed => Ok(true),
@@ -203,7 +203,7 @@ impl<T: PermissionCheckWithRoles> PermissionCheckTestable for PermissionCheckSco
         }
     }
     fn has_any_permissions(&self, flags: u32) -> Result<bool, XRPCError> {
-        let state = self.get_campsite_permissions(flags)?;
+        let state = self.get_permissions(flags)?;
 
         match state {
             PermissionState::Allowed => Ok(true),

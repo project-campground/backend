@@ -1,8 +1,8 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::chat::campground::member::CampsiteLeftOutput;
 use cds_schema::{
-    models::cds::{Actor, CampsiteMember, CampsiteRole, Profile},
-    schema::cds::{self, campsite_member, campsite_role, profile},
+    models::cds::{Actor, CampsiteMember, Profile, Role},
+    schema::cds::{self, campsite_member, profile, role},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use diesel::{Connection, pg::expression::dsl::array_remove};
@@ -60,22 +60,22 @@ pub async fn remove_member(
     let mut conn = establish_connection().unwrap();
 
     // Make sure the role exists
-    let all_roles = campsite_role::table
-        .filter(campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
+    let all_roles = role::table
+        .filter(role::campsite.eq(campsite_id))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let target = campsite_member::table
         .filter(
-            campsite_member::campsiteid
+            campsite_member::campsite
                 .eq(campsite_id)
-                .and(campsite_member::userid.eq(&auth.actor.did)),
+                .and(campsite_member::actor.eq(&auth.actor.did)),
         )
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_member::userid)),
+                .on(crate::schema::cds::actor::did.eq(campsite_member::actor)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_member::actor)))
         .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
@@ -149,9 +149,9 @@ pub fn remove_campsite_member(
 ) -> Result<(), diesel::result::Error> {
     diesel::delete(campsite_member::table)
         .filter(
-            campsite_member::campsiteid
+            campsite_member::campsite
                 .eq(campsite_id)
-                .and(campsite_member::userid.eq(actor)),
+                .and(campsite_member::actor.eq(actor)),
         )
         .execute(conn)?;
 
@@ -162,12 +162,12 @@ pub fn remove_campsite_member(
 
     diesel::update(cds::campsite::table)
         .filter(cds::campsite::id.eq(campsite_id))
-        .set(cds::campsite::memberdids.eq(array_remove(cds::campsite::memberdids, actor)))
+        .set(cds::campsite::members.eq(array_remove(cds::campsite::members, actor)))
         .execute(conn)?;
 
     event_next_campsite(
         event_subject,
-        &target_member.campsite_id,
+        &target_member.campsite,
         0,
         "MemberRemoved",
         &member_view_basic(target_member, target_profile, target_actor),
@@ -190,7 +190,7 @@ pub fn remove_campsite_member(
 
 pub fn ensure_user_isnt_higher(
     is_owner: bool,
-    all_roles: &mut Vec<CampsiteRole>,
+    all_roles: &mut Vec<Role>,
     target_roles: &Vec<Option<Uuid>>,
     executor_roles: Vec<Option<Uuid>>,
 ) -> Result<(), XRPCError> {

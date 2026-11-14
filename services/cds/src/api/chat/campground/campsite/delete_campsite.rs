@@ -19,7 +19,7 @@ pub async fn delete_campsite(
     event_subject: &State<ReactiveSubject>,
     campsite_id: &str,
 ) -> Result<Json<CampsiteLeftOutput>> {
-    if auth.campsite.owner != auth.member.user_id {
+    if auth.campsite.owner != auth.member.actor {
         return Err(XRPCError::Forbidden(
             "Actor is not the owner of the campsite".to_string(),
         ));

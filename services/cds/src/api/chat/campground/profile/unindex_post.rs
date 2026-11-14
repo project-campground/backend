@@ -56,7 +56,7 @@ pub async fn unindex_post(
         ));
     }
 
-    delete_post_record_from_db(&main_post.uri, main_post.parent_uri.clone())
+    delete_post_record_from_db(&main_post.uri, main_post.parent.clone())
         .await
         .map_err(|_| XRPCError::InternalServerError)?;
 

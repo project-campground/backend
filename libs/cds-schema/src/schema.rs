@@ -5,7 +5,7 @@ pub mod cds {
         cds.actor (did) {
             did -> Varchar,
             handle -> Nullable<Varchar>,
-            indexedat -> Varchar,
+            indexed_at -> Varchar,
             campsites -> Array<Nullable<Text>>,
         }
     }
@@ -13,16 +13,16 @@ pub mod cds {
     diesel::table! {
         cds.bonfire (id) {
             id -> Varchar,
-            campsiteid -> Varchar,
+            campsite -> Varchar,
             name -> Varchar,
             description -> Varchar,
-            avataruri -> Nullable<Varchar>,
-            banneruri -> Nullable<Varchar>,
+            avatar -> Nullable<Varchar>,
+            banner -> Nullable<Varchar>,
             priority -> Int4,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
             home -> Bool,
         }
     }
@@ -31,84 +31,114 @@ pub mod cds {
         cds.campsite (id) {
             id -> Varchar,
             name -> Varchar,
-            vanityurl -> Nullable<Varchar>,
+            vanity_url -> Nullable<Varchar>,
             description -> Varchar,
-            avataruri -> Nullable<Varchar>,
-            banneruri -> Nullable<Varchar>,
+            avatar -> Nullable<Varchar>,
+            banner -> Nullable<Varchar>,
             tags -> Array<Nullable<Text>>,
-            memberdids -> Array<Nullable<Text>>,
+            members -> Array<Nullable<Text>>,
             owner -> Varchar,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
-        }
-    }
-
-    diesel::table! {
-        cds.campsite_ban (campsiteid, userid) {
-            campsiteid -> Varchar,
-            userid -> Varchar,
-            reason -> Nullable<Varchar>,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
         }
     }
 
     diesel::table! {
         cds.campsite_invite (id) {
             id -> Uuid,
-            campsiteid -> Varchar,
-            allowedamount -> Nullable<Int4>,
-            expiresat -> Nullable<Timestamp>,
-            createdby -> Varchar,
-            createdat -> Timestamp,
+            campsite -> Varchar,
+            allowed_uses -> Nullable<Int4>,
+            expires_at -> Nullable<Timestamp>,
+            created_by -> Varchar,
+            created_at -> Timestamp,
             used -> Int4,
         }
     }
 
     diesel::table! {
-        cds.campsite_member (userid, campsiteid) {
-            userid -> Varchar,
-            campsiteid -> Varchar,
-            joinedat -> Timestamp,
-            usedinviteid -> Nullable<Uuid>,
+        cds.campsite_member (actor, campsite) {
+            actor -> Varchar,
+            campsite -> Varchar,
+            joined_at -> Timestamp,
+            used_invite -> Nullable<Uuid>,
             nickname -> Nullable<Varchar>,
             roles -> Array<Nullable<Uuid>>,
         }
     }
 
     diesel::table! {
-        cds.campsite_permission (id) {
+        cds.member_ban (campsite, target) {
+            campsite -> Varchar,
+            target -> Varchar,
+            reason -> Nullable<Varchar>,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
+        }
+    }
+
+    diesel::table! {
+        cds.permission (id) {
             id -> Uuid,
-            campsiteid -> Varchar,
-            roleid -> Nullable<Uuid>,
-            userid -> Nullable<Varchar>,
-            bonfireid -> Varchar,
-            categoryid -> Nullable<Uuid>,
-            tentid -> Nullable<Uuid>,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
+            campsite -> Varchar,
+            role -> Nullable<Uuid>,
+            actor -> Nullable<Varchar>,
+            bonfire -> Varchar,
+            category -> Nullable<Uuid>,
+            tent -> Nullable<Uuid>,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
             permissions -> Int8,
         }
     }
 
     diesel::table! {
-        cds.campsite_role (id) {
+        cds.profile (uri) {
+            uri -> Varchar,
+            cid -> Varchar,
+            actor -> Varchar,
+            name -> Nullable<Varchar>,
+            description -> Nullable<Varchar>,
+            avatar -> Nullable<Varchar>,
+            banner -> Nullable<Varchar>,
+            indexed_at -> Varchar,
+            location -> Nullable<Varchar>,
+            tagline -> Nullable<Varchar>,
+            created_at -> Nullable<Varchar>,
+        }
+    }
+
+    diesel::table! {
+        cds.profile_post (uri) {
+            uri -> Varchar,
+            cid -> Varchar,
+            author -> Varchar,
+            parent -> Nullable<Varchar>,
+            content -> Varchar,
+            replies -> Array<Nullable<Text>>,
+            indexed_at -> Varchar,
+            created_at -> Varchar,
+            updated_at -> Nullable<Varchar>,
+        }
+    }
+
+    diesel::table! {
+        cds.role (id) {
             id -> Uuid,
-            campsiteid -> Varchar,
+            campsite -> Varchar,
             name -> Varchar,
-            displayseparately -> Bool,
-            mentionable -> Bool,
+            hoist -> Bool,
+            pingable -> Bool,
             priority -> Int4,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
             members -> Array<Nullable<Text>>,
             flags -> Int4,
             colors -> Array<Nullable<Int4>>,
@@ -118,119 +148,80 @@ pub mod cds {
     }
 
     diesel::table! {
-        cds.profile (uri) {
-            uri -> Varchar,
-            cid -> Varchar,
-            creator -> Varchar,
-            displayname -> Nullable<Varchar>,
-            description -> Nullable<Varchar>,
-            avatarcid -> Nullable<Varchar>,
-            bannercid -> Nullable<Varchar>,
-            indexedat -> Varchar,
-            location -> Nullable<Varchar>,
-            tagline -> Nullable<Varchar>,
-            createdat -> Nullable<Varchar>,
-            firstseen -> Varchar,
-        }
-    }
-
-    diesel::table! {
-        cds.profile_post (uri) {
-            uri -> Varchar,
-            cid -> Varchar,
-            author -> Varchar,
-            parenturi -> Nullable<Varchar>,
-            content -> Varchar,
-            replies -> Array<Nullable<Text>>,
-            indexedat -> Varchar,
-            createdat -> Varchar,
-            updatedat -> Nullable<Varchar>,
-        }
-    }
-
-    diesel::table! {
-        cds.setting (name) {
-            name -> Varchar,
-            value -> Nullable<Varchar>,
-        }
-    }
-
-    diesel::table! {
         cds.tent (id) {
             id -> Uuid,
-            campsiteid -> Varchar,
-            bonfireid -> Varchar,
-            categoryid -> Nullable<Uuid>,
+            campsite -> Varchar,
+            bonfire -> Varchar,
+            category -> Nullable<Uuid>,
             name -> Varchar,
             #[sql_name = "type"]
             type_ -> Int2,
-            viewtype -> Int2,
+            view_type -> Int2,
             description -> Varchar,
             priority -> Int4,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
         }
     }
 
     diesel::table! {
         cds.tent_category (id) {
             id -> Uuid,
-            campsiteid -> Varchar,
-            bonfireid -> Varchar,
+            campsite -> Varchar,
+            bonfire -> Varchar,
             name -> Varchar,
             description -> Varchar,
             priority -> Int4,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedby -> Varchar,
-            updatedat -> Timestamp,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_by -> Varchar,
+            updated_at -> Timestamp,
         }
     }
 
     diesel::table! {
         cds.tent_message (id) {
             id -> Uuid,
-            campsiteid -> Varchar,
-            tentid -> Uuid,
+            campsite -> Varchar,
+            tent -> Uuid,
             content -> Varchar,
-            replyingto -> Array<Nullable<Uuid>>,
-            createdby -> Varchar,
-            createdat -> Timestamp,
-            updatedat -> Nullable<Timestamp>,
+            replying_to -> Array<Nullable<Uuid>>,
+            created_by -> Varchar,
+            created_at -> Timestamp,
+            updated_at -> Nullable<Timestamp>,
             components -> Array<Nullable<Jsonb>>,
             #[sql_name = "type"]
             type_ -> Int2,
         }
     }
 
-    diesel::joinable!(bonfire -> campsite (campsiteid));
-    diesel::joinable!(campsite_ban -> campsite (campsiteid));
-    diesel::joinable!(campsite_invite -> campsite (campsiteid));
-    diesel::joinable!(campsite_member -> campsite (campsiteid));
-    diesel::joinable!(campsite_permission -> bonfire (bonfireid));
-    diesel::joinable!(campsite_permission -> campsite (campsiteid));
-    diesel::joinable!(campsite_permission -> tent (tentid));
-    diesel::joinable!(campsite_permission -> tent_category (categoryid));
-    diesel::joinable!(campsite_role -> campsite (campsiteid));
-    diesel::joinable!(tent -> bonfire (bonfireid));
-    diesel::joinable!(tent -> campsite (campsiteid));
-    diesel::joinable!(tent_category -> campsite (campsiteid));
-    diesel::joinable!(tent_message -> tent (tentid));
+    diesel::joinable!(bonfire -> campsite (campsite));
+    diesel::joinable!(campsite_invite -> campsite (campsite));
+    diesel::joinable!(campsite_member -> campsite (campsite));
+    diesel::joinable!(member_ban -> campsite (campsite));
+    diesel::joinable!(permission -> bonfire (bonfire));
+    diesel::joinable!(permission -> campsite (campsite));
+    diesel::joinable!(permission -> tent (tent));
+    diesel::joinable!(permission -> tent_category (category));
+    diesel::joinable!(role -> campsite (campsite));
+    diesel::joinable!(tent -> bonfire (bonfire));
+    diesel::joinable!(tent -> campsite (campsite));
+    diesel::joinable!(tent_category -> campsite (campsite));
+    diesel::joinable!(tent_message -> tent (tent));
 
     diesel::allow_tables_to_appear_in_same_query!(
         actor,
         bonfire,
         campsite,
-        campsite_ban,
         campsite_invite,
         campsite_member,
-        campsite_permission,
-        campsite_role,
+        member_ban,
+        permission,
         profile,
         profile_post,
-        setting,
+        role,
         tent,
         tent_category,
         tent_message,

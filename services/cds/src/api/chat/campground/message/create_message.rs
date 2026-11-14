@@ -89,15 +89,15 @@ pub async fn create_message<'a>(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::CREATE_CONTENT | PermissionFlag::VIEW_CONTENT))?
     );
     let replies_query: Vec<TentMessage> = tent_message::table
         .filter(
-            crate::schema::cds::tent_message::tentid
+            crate::schema::cds::tent_message::tent
                 .eq(auth.tent.id)
                 .and(crate::schema::cds::tent_message::id.eq_any(uuids.clone())),
         )
@@ -113,10 +113,10 @@ pub async fn create_message<'a>(
     let messages = &diesel::insert_into(tent_message::table)
         .values(TentMessage {
             id: Uuid::new_v4(),
-            campsite_id: auth.tent.campsite_id.clone(),
+            campsite: auth.tent.campsite.clone(),
             r#type: MessageType::Default as i16,
             components: vec![],
-            tent_id: auth.tent.id.clone(),
+            tent: auth.tent.id.clone(),
             content: body.content.clone(),
             replying_to: uuids
                 .iter()

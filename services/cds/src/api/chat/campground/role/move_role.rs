@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::role::RoleViewBasic;
 use cds_schema::{
-    models::cds::CampsiteRole,
-    schema::cds::{self, campsite_role},
+    models::cds::Role,
+    schema::cds::{self, role},
 };
 use chrono::Utc;
 use diesel::{Connection, ExpressionMethods, RunQueryDsl};
@@ -73,7 +73,7 @@ pub async fn move_role(
     );
 
     ensure_no_higher_role(
-        auth.member.user_id == auth.campsite.owner,
+        auth.member.actor == auth.campsite.owner,
         &mut roles.clone(),
         given_role.priority,
         auth.member.roles.clone(),
@@ -86,13 +86,13 @@ pub async fn move_role(
         .map_or(i32::MAX, |role| role.priority);
     let role_pos = given_role.priority;
 
-    if auth.campsite.owner != auth.member.user_id && actor_max_priority <= *position {
+    if auth.campsite.owner != auth.member.actor && actor_max_priority <= *position {
         return Err(XRPCError::Forbidden(
             "The given position is lower than actor's minimum role position".to_string(),
         ));
     }
 
-    if auth.campsite.owner != auth.member.user_id && actor_max_priority <= role_pos {
+    if auth.campsite.owner != auth.member.actor && actor_max_priority <= role_pos {
         return Err(XRPCError::Forbidden(
             "The supplied role's position is lower than actor's minimum role position".to_string(),
         ));
@@ -104,16 +104,16 @@ pub async fn move_role(
 
             let current_date = Utc::now().naive_utc();
 
-            diesel::update(campsite_role::table)
-                .filter(campsite_role::id.eq(role_id_uuid))
+            diesel::update(role::table)
+                .filter(role::id.eq(role_id_uuid))
                 .set((
                     // Mandatory
-                    campsite_role::updatedby.eq(&auth.actor.did),
-                    campsite_role::updatedat.eq(current_date),
+                    role::updated_by.eq(&auth.actor.did),
+                    role::updated_at.eq(current_date),
                     // Stuff changed
-                    campsite_role::priority.eq(*position),
+                    role::priority.eq(*position),
                 ))
-                .load::<CampsiteRole>(conn)
+                .load::<Role>(conn)
         })
         .map_err(handle_select_first_error)?;
 
@@ -137,10 +137,10 @@ fn make_room_for_role(
     use std::ops::Add;
 
     make_room_for_items!(
-        crate::schema::cds::campsite_role::table,
-        crate::schema::cds::campsite_role::id,
-        crate::schema::cds::campsite_role::priority,
-        cds::campsite_role::campsiteid
+        crate::schema::cds::role::table,
+        crate::schema::cds::role::id,
+        crate::schema::cds::role::priority,
+        cds::role::campsite
             .eq(campsite_id);
         conn,
         position

@@ -23,15 +23,15 @@ pub async fn get_member(
 
     let member = crate::schema::cds::campsite_member::table
         .filter(
-            crate::schema::cds::campsite_member::campsiteid
+            crate::schema::cds::campsite_member::campsite
                 .eq(campsite_id)
-                .and(crate::schema::cds::campsite_member::userid.eq(actor)),
+                .and(crate::schema::cds::campsite_member::actor.eq(actor)),
         )
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_member::userid)),
+                .on(crate::schema::cds::actor::did.eq(campsite_member::actor)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_member::actor)))
         .first::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 

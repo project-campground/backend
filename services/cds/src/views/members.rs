@@ -32,8 +32,8 @@ pub fn member_view_detailed(
     actor: &Actor,
 ) -> MemberViewDetailed {
     return MemberViewDetailed {
-        campsite_id: campsite_member.campsite_id.clone(),
-        used_invite_id: campsite_member.used_invite_id.clone(),
+        campsite_id: campsite_member.campsite.clone(),
+        used_invite_id: campsite_member.used_invite.clone(),
         user: profile_view_detailed(actor, profile),
         nickname: campsite_member.nickname.clone(),
         roles: campsite_member
@@ -88,8 +88,8 @@ pub fn member_ban_view(
 ) -> MemberBanView {
     return MemberBanView {
         user: profile_view_basic(actor, profile),
-        user_id: ban.user_id.clone(),
-        campsite_id: ban.campsite_id.clone(),
+        user_id: ban.target.clone(),
+        campsite_id: ban.campsite.clone(),
         reason: ban.reason.clone(),
         created_at: serialize_datetime(ban.created_at),
         created_by: ban.created_by.clone(),

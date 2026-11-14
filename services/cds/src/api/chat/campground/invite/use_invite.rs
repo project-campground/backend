@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::campsite::CampsiteViewBasic;
 use cds_schema::{
-    models::cds::{Campsite, CampsiteInvite, CampsiteMember, CampsiteRole},
-    schema::cds::{self, campsite, campsite_ban, campsite_invite, campsite_member, campsite_role},
+    models::cds::{Campsite, CampsiteInvite, CampsiteMember, Role},
+    schema::cds::{self, campsite, campsite_invite, campsite_member, member_ban, role},
 };
 use chrono::Utc;
 use diesel::{
@@ -42,17 +42,17 @@ pub async fn use_invite(
 
     let (invite, campsite) = campsite_invite::table
         .filter(campsite_invite::id.eq(uuid))
-        .inner_join(cds::campsite::table.on(cds::campsite::id.eq(campsite_invite::campsiteid)))
+        .inner_join(cds::campsite::table.on(cds::campsite::id.eq(campsite_invite::campsite)))
         .first::<(CampsiteInvite, Campsite)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let current_date = Utc::now().naive_utc();
 
-    if actor.campsites.contains(&Some(invite.campsite_id.clone())) {
+    if actor.campsites.contains(&Some(invite.campsite.clone())) {
         return Err(XRPCError::Forbidden(
             "User already joined this campsite".to_string(),
         ));
-    } else if invite.allowed_amount.map_or(false, |x| x <= invite.used) {
+    } else if invite.allowed_uses.map_or(false, |x| x <= invite.used) {
         return Err(XRPCError::Forbidden(
             "This invite has already hit the allowed use limit".to_string(),
         ));
@@ -62,11 +62,11 @@ pub async fn use_invite(
         ));
     }
 
-    let ban_count = campsite_ban::table
+    let ban_count = member_ban::table
         .filter(
-            campsite_ban::userid
+            member_ban::target
                 .eq(auth.actor_did.clone())
-                .and(campsite_ban::campsiteid.eq(invite.campsite_id.clone())),
+                .and(member_ban::campsite.eq(invite.campsite.clone())),
         )
         .count()
         .first::<i64>(&mut conn)
@@ -78,9 +78,9 @@ pub async fn use_invite(
         ));
     }
 
-    let roles = campsite_role::table
-        .filter(campsite_role::campsiteid.eq(invite.campsite_id.clone()))
-        .load::<CampsiteRole>(&mut conn)
+    let roles = role::table
+        .filter(role::campsite.eq(invite.campsite.clone()))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let auto_roles = roles
@@ -92,11 +92,8 @@ pub async fn use_invite(
     let members = conn
         .transaction(|conn| {
             diesel::update(campsite::table)
-                .filter(campsite::id.eq(invite.campsite_id.clone()))
-                .set(
-                    campsite::memberdids
-                        .eq(campsite::memberdids.concat(vec![auth.actor_did.clone()])),
-                )
+                .filter(campsite::id.eq(invite.campsite.clone()))
+                .set(campsite::members.eq(campsite::members.concat(vec![auth.actor_did.clone()])))
                 .execute(conn)?;
 
             diesel::update(campsite_invite::table)
@@ -108,16 +105,16 @@ pub async fn use_invite(
                 .filter(cds::actor::did.eq(auth.actor_did.clone()))
                 .set(
                     cds::actor::campsites
-                        .eq(cds::actor::campsites.concat(vec![invite.campsite_id.clone()])),
+                        .eq(cds::actor::campsites.concat(vec![invite.campsite.clone()])),
                 )
                 .execute(conn)?;
 
             diesel::insert_into(campsite_member::table)
                 .values(CampsiteMember {
-                    user_id: auth.actor_did,
-                    campsite_id: invite.campsite_id,
+                    actor: auth.actor_did,
+                    campsite: invite.campsite,
                     joined_at: current_date,
-                    used_invite_id: Some(uuid),
+                    used_invite: Some(uuid),
                     nickname: None,
                     roles: auto_roles,
                 })

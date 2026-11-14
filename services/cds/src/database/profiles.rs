@@ -7,7 +7,6 @@ use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::chat::campground::actor::Profile as ProfileRecord;
 use cds_schema::models::cds::Actor;
 use cds_schema::schema::cds;
-use chrono::Utc;
 use reqwest::Client;
 use rsky_lexicon::com::atproto::repo::Blob;
 use serde_json::from_value;
@@ -29,7 +28,7 @@ pub async fn get_profile_from_actor(
     let mut conn = establish_connection().unwrap();
 
     let profile = cds::profile::table
-        .filter(cds::profile::creator.eq(&actor.did))
+        .filter(cds::profile::actor.eq(&actor.did))
         .first::<Profile>(&mut conn);
 
     match profile {
@@ -86,7 +85,7 @@ pub async fn get_profiles(
 
     let mut actors_profiles = cds::actor::table
         .filter(cds::actor::did.eq_any(&did_list))
-        .left_join(cds::profile::table.on(cds::profile::creator.eq(cds::actor::did)))
+        .left_join(cds::profile::table.on(cds::profile::actor.eq(cds::actor::did)))
         .load::<(Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_all_db_errors)?;
 
@@ -180,9 +179,9 @@ pub fn profile_record_to_db_profile(
 ) -> Profile {
     Profile {
         cid: cid.to_string(),
-        creator: actor.did.clone(),
+        actor: actor.did.clone(),
         uri: format!("at://{}/chat.campground.actor.profile/self", &actor.did),
-        display_name: profile_record
+        name: profile_record
             .display_name
             .clone()
             .map(|val| val.truncate_clone(64)),
@@ -190,8 +189,8 @@ pub fn profile_record_to_db_profile(
             .description
             .clone()
             .map(|val| val.truncate_clone(256)),
-        avatar_cid: get_blob_ref(profile_record.avatar.as_ref()),
-        banner_cid: get_blob_ref(profile_record.banner.as_ref()),
+        avatar: get_blob_ref(profile_record.avatar.as_ref()),
+        banner: get_blob_ref(profile_record.banner.as_ref()),
         indexed_at: chrono::Utc::now().naive_utc().to_string(),
         created_at: match profile_record.created_at {
             Some(created_at) => Some(created_at.to_string()),
@@ -205,7 +204,6 @@ pub fn profile_record_to_db_profile(
             .location
             .clone()
             .map(|val| val.truncate_clone(128)),
-        first_seen: Utc::now().to_string(),
     }
 }
 
@@ -281,7 +279,7 @@ pub fn get_profile_and_actor_from_db(
 
     cds::actor::table
         .filter(cds::actor::did.eq(actor).or(cds::actor::handle.eq(actor)))
-        .left_join(cds::profile::table.on(cds::profile::creator.eq(cds::actor::did)))
+        .left_join(cds::profile::table.on(cds::profile::actor.eq(cds::actor::did)))
         .first::<(Actor, Option<Profile>)>(&mut conn)
 }
 

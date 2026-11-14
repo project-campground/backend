@@ -1,8 +1,8 @@
 use std::{collections::HashMap, hash::Hash};
 
 use cds_schema::{
-    models::cds::{CampsiteMember, CampsitePermission, CampsiteRole},
-    schema::cds::campsite_permission,
+    models::cds::{CampsiteMember, Permission, Role},
+    schema::cds::permission,
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, QueryDsl, RunQueryDsl};
 use multimap::MultiMap;
@@ -40,35 +40,35 @@ pub async fn update_ws_permissions<'a>(
 
     // Fetch from database ALWAYS whenever any changes are made to campsite permissions
     // Note the design question above
-    let permissions = campsite_permission::table
+    let permissions = permission::table
         .filter(
-            campsite_permission::bonfireid
+            permission::bonfire
                 .eq_any(updated_bonfires)
                 .and(
-                    campsite_permission::tentid
+                    permission::tent
                         .is_null()
-                        .and(campsite_permission::categoryid.is_null()),
+                        .and(permission::category.is_null()),
                 )
-                .or(campsite_permission::tentid.eq_any(updated_tents))
-                .or(campsite_permission::categoryid.eq_any(updated_categories)),
+                .or(permission::tent.eq_any(updated_tents))
+                .or(permission::category.eq_any(updated_categories)),
         )
-        .load::<CampsitePermission>(&mut conn)
+        .load::<Permission>(&mut conn)
         .map_err(handle_all_db_errors)?;
 
     // Aggregate/index all the permissions for each bonfire, tent category and tent
     let bonfires: HashMap<String, u64> = aggregate_ws_item_permissions(
         permissions
             .iter()
-            .filter(|x| x.tent_id.is_none() && x.category_id.is_none()),
-        |perm| perm.bonfire_id.clone(),
+            .filter(|x| x.tent.is_none() && x.category.is_none()),
+        |perm| perm.bonfire.clone(),
     );
     let categories: HashMap<Uuid, u64> = aggregate_ws_item_permissions(
-        permissions.iter().filter(|x| x.category_id.is_some()),
-        |perm| perm.category_id.unwrap(),
+        permissions.iter().filter(|x| x.category.is_some()),
+        |perm| perm.category.unwrap(),
     );
     let tents: HashMap<Uuid, u64> =
-        aggregate_ws_item_permissions(permissions.iter().filter(|x| x.tent_id.is_some()), |perm| {
-            perm.tent_id.unwrap()
+        aggregate_ws_item_permissions(permissions.iter().filter(|x| x.tent.is_some()), |perm| {
+            perm.tent.unwrap()
         });
 
     let merged_bonfires = &mut current.bonfires.clone();
@@ -102,8 +102,8 @@ pub async fn update_ws_permissions<'a>(
 /// The Design Question only pertains to optimizing the method, rather than consuming it, so if you need to use this method, you can use it without hesitation.
 pub async fn aggregate_ws_permissions<'a>(
     member: &CampsiteMember,
-    roles: &Vec<CampsiteRole>,
-    permissions: &Vec<CampsitePermission>,
+    roles: &Vec<Role>,
+    permissions: &Vec<Permission>,
 ) -> Result<CampsiteMemberPermissions, XRPCError> {
     let member_role_perms = roles
         .iter()
@@ -113,16 +113,16 @@ pub async fn aggregate_ws_permissions<'a>(
     let bonfires: HashMap<String, u64> = aggregate_ws_item_permissions(
         permissions
             .iter()
-            .filter(|x| x.tent_id.is_none() && x.category_id.is_none()),
-        |perm| perm.bonfire_id.clone(),
+            .filter(|x| x.tent.is_none() && x.category.is_none()),
+        |perm| perm.bonfire.clone(),
     );
     let categories: HashMap<Uuid, u64> = aggregate_ws_item_permissions(
-        permissions.iter().filter(|x| x.category_id.is_some()),
-        |perm| perm.category_id.unwrap(),
+        permissions.iter().filter(|x| x.category.is_some()),
+        |perm| perm.category.unwrap(),
     );
     let tents: HashMap<Uuid, u64> =
-        aggregate_ws_item_permissions(permissions.iter().filter(|x| x.tent_id.is_some()), |perm| {
-            perm.tent_id.unwrap()
+        aggregate_ws_item_permissions(permissions.iter().filter(|x| x.tent.is_some()), |perm| {
+            perm.tent.unwrap()
         });
 
     Ok(CampsiteMemberPermissions {
@@ -135,15 +135,15 @@ pub async fn aggregate_ws_permissions<'a>(
 fn aggregate_ws_item_permissions<
     'a,
     K: Clone + Eq + Hash,
-    F: FnMut(&CampsitePermission) -> K,
-    I: Iterator<Item = &'a CampsitePermission>,
+    F: FnMut(&Permission) -> K,
+    I: Iterator<Item = &'a Permission>,
 >(
     permissions: I,
     mut get_key: F,
 ) -> HashMap<K, u64> {
     permissions
         .map(|x| (get_key(x), x))
-        .collect::<MultiMap<K, &CampsitePermission>>()
+        .collect::<MultiMap<K, &Permission>>()
         .iter_all()
         .map(|(key, values)| {
             (

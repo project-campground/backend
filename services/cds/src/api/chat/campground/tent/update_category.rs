@@ -66,7 +66,7 @@ pub async fn update_category(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.category.bonfire_id,
+                &auth.category.bonfire,
                 Some(&auth.category.id),
                 None
             )
@@ -90,8 +90,8 @@ pub async fn update_category(
                 .clone()
                 .unwrap_or(auth.category.description.clone())),
             // Mandatory
-            cds::tent_category::updatedat.eq(current_date),
-            cds::tent_category::updatedby.eq(&auth.actor.did),
+            cds::tent_category::updated_at.eq(current_date),
+            cds::tent_category::updated_by.eq(&auth.actor.did),
         ))
         .load::<TentCategory>(&mut conn)
         .map_err(handle_select_first_error)?;

@@ -75,8 +75,8 @@ pub async fn create_invite(
     let invite = &diesel::insert_into(campsite_invite::table)
         .values(CampsiteInvite {
             id: Uuid::new_v4(),
-            campsite_id: campsite_id.to_string(),
-            allowed_amount: inner_body.allowed_amount,
+            campsite: campsite_id.to_string(),
+            allowed_uses: inner_body.allowed_amount,
             expires_at: inner_body.expires_at,
             created_by: actor.did.clone(),
             created_at: current_date,

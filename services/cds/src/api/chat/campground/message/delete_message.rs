@@ -52,14 +52,14 @@ pub async fn delete_message(
         .filter(
             tent_message::id
                 .eq(msg_id_uuid)
-                .and(tent_message::tentid.eq(auth.tent.id)),
+                .and(tent_message::tent.eq(auth.tent.id)),
         )
-        .left_join(cds::actor::table.on(tent_message::createdby.eq(cds::actor::did)))
-        .left_join(profile::table.on(tent_message::createdby.eq(profile::creator)))
+        .left_join(cds::actor::table.on(tent_message::created_by.eq(cds::actor::did)))
+        .left_join(profile::table.on(tent_message::created_by.eq(profile::actor)))
         .left_join(
-            campsite_member::table.on(tent_message::createdby
-                .eq(campsite_member::userid)
-                .and(tent_message::campsiteid.eq(campsite_member::campsiteid))),
+            campsite_member::table.on(tent_message::created_by
+                .eq(campsite_member::actor)
+                .and(tent_message::campsite.eq(campsite_member::campsite))),
         )
         .first::<(
             TentMessage,
@@ -81,8 +81,8 @@ pub async fn delete_message(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(required_perms))?
@@ -92,7 +92,7 @@ pub async fn delete_message(
         .filter(
             tent_message::id
                 .eq(msg_id_uuid)
-                .and(tent_message::tentid.eq(auth.tent.id)),
+                .and(tent_message::tent.eq(auth.tent.id)),
         )
         .execute(&mut conn)
         .expect("Error deleting message");

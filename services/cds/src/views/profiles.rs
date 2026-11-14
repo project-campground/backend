@@ -2,10 +2,10 @@
 
 use std::str::FromStr;
 
-use cds_schema::models::cds::Actor;
-use cds_schema::models::cds::Profile as SchemaProfile;
 use campground_lexicon::chat::campground::actor::ProfileViewDetailed;
 use campground_lexicon::chat::campground::actor::{Profile, ProfileView, ProfileViewBasic};
+use cds_schema::models::cds::Actor;
+use cds_schema::models::cds::Profile as SchemaProfile;
 use common::get_blob_ref;
 use lexicon_cid::CidGeneric;
 use rsky_lexicon::com::atproto::repo::Blob;
@@ -21,8 +21,8 @@ pub fn profile_view_basic(actor: &Actor, profile: Option<&SchemaProfile>) -> Pro
                 None => "handle.invalid".to_string(),
             },
             tagline: profile.tagline.clone(),
-            display_name: profile.display_name.clone(),
-            avatar: get_blob_ref(&avatar_from_cid(profile.avatar_cid.clone())),
+            display_name: profile.name.clone(),
+            avatar: get_blob_ref(&avatar_from_cid(profile.avatar.clone())),
             created_at: profile.created_at.clone(),
             activity: None,
             status: None,
@@ -57,9 +57,9 @@ pub fn profile_view_detailed(
                 Some(handle) => handle.clone(),
                 None => "handle.invalid".to_string(),
             },
-            display_name: profile.display_name.clone(),
-            avatar: get_blob_ref(&avatar_from_cid(profile.avatar_cid.clone())),
-            banner: get_blob_ref(&avatar_from_cid(profile.banner_cid.clone())),
+            display_name: profile.name.clone(),
+            avatar: get_blob_ref(&avatar_from_cid(profile.avatar.clone())),
+            banner: get_blob_ref(&avatar_from_cid(profile.banner.clone())),
 
             tagline: profile.tagline.clone(),
             description: profile.description.clone(),

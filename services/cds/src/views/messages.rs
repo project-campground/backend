@@ -1,8 +1,8 @@
-use cds_schema::models::cds::{Actor, CampsiteMember, Profile, Tent, TentMessage};
 use campground_lexicon::chat::campground::{
     content::ContentComponent,
     message::{MessageViewBasic, MessageViewWithReplies},
 };
+use cds_schema::models::cds::{Actor, CampsiteMember, Profile, Tent, TentMessage};
 use serde_json::from_value;
 use uuid::Uuid;
 
@@ -17,9 +17,9 @@ pub fn message_view_basic(
 ) -> MessageViewBasic {
     return MessageViewBasic {
         id: message.id,
-        campsite_id: message.campsite_id.clone(),
-        bonfire_id: tent.bonfire_id.clone(),
-        tent_id: message.tent_id,
+        campsite_id: message.campsite.clone(),
+        bonfire_id: tent.bonfire.clone(),
+        tent_id: message.tent,
 
         r#type: match message.r#type {
             1 => Some(campground_lexicon::chat::campground::message::MessageType::System),
@@ -64,9 +64,9 @@ pub fn message_view_with_replies(
 ) -> MessageViewWithReplies {
     return MessageViewWithReplies {
         id: message.id,
-        campsite_id: message.campsite_id.clone(),
-        bonfire_id: tent.bonfire_id.clone(),
-        tent_id: message.tent_id,
+        campsite_id: message.campsite.clone(),
+        bonfire_id: tent.bonfire.clone(),
+        tent_id: message.tent,
         r#type: match message.r#type {
             1 => Some(campground_lexicon::chat::campground::message::MessageType::System),
             _ => None,

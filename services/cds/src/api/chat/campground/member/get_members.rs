@@ -33,14 +33,14 @@ pub async fn get_members_any(
     let mut conn = establish_connection().unwrap();
 
     let members = crate::schema::cds::campsite_member::table
-        .filter(crate::schema::cds::campsite_member::campsiteid.eq(campsite_id))
+        .filter(crate::schema::cds::campsite_member::campsite.eq(campsite_id))
         .limit(limit)
         .offset(offset)
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_member::userid)),
+                .on(crate::schema::cds::actor::did.eq(campsite_member::actor)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_member::actor)))
         .load::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .expect("Error loading members")
         .iter()
@@ -70,15 +70,15 @@ pub async fn get_members_given(
 
     let members = crate::schema::cds::campsite_member::table
         .filter(
-            crate::schema::cds::campsite_member::campsiteid
+            crate::schema::cds::campsite_member::campsite
                 .eq(campsite_id)
-                .and(crate::schema::cds::campsite_member::userid.eq_any(actors)),
+                .and(crate::schema::cds::campsite_member::actor.eq_any(actors)),
         )
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_member::userid)),
+                .on(crate::schema::cds::actor::did.eq(campsite_member::actor)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_member::userid)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_member::actor)))
         .load::<(CampsiteMember, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()

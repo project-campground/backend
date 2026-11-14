@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use cds_schema::models::cds::{Bonfire, Tent, TentCategory};
 use atproto_identity::storage_lru::LruDidDocumentStorage;
+use cds_schema::models::cds::{Bonfire, Tent, TentCategory};
 use reqwest::Client;
 use rocket::State;
 use rsky_common::cbor_to_struct;
@@ -130,7 +130,7 @@ pub fn event_next_bonfire<T>(
 {
     event_next(event_subject, data_type, payload, |binary| {
         ReactiveSubjectData::Bonfire {
-            campsite_id: bonfire.campsite_id.clone(),
+            campsite_id: bonfire.campsite.clone(),
             bonfire_id: bonfire.id.clone(),
             deleted,
             binary,
@@ -148,8 +148,8 @@ pub fn event_next_category<T>(
 {
     event_next(event_subject, data_type, payload, |binary| {
         ReactiveSubjectData::Category {
-            campsite_id: category.campsite_id.clone(),
-            bonfire_id: category.bonfire_id.clone(),
+            campsite_id: category.campsite.clone(),
+            bonfire_id: category.bonfire.clone(),
             category_id: category.id,
             deleted,
             binary,
@@ -167,9 +167,9 @@ pub fn event_next_tent<T>(
 {
     event_next(event_subject, data_type, payload, |binary| {
         ReactiveSubjectData::Tent {
-            campsite_id: tent.campsite_id.clone(),
-            bonfire_id: tent.bonfire_id.clone(),
-            category_id: tent.category_id.clone(),
+            campsite_id: tent.campsite.clone(),
+            bonfire_id: tent.bonfire.clone(),
+            category_id: tent.category.clone(),
             tent_id: tent.id,
             deleted,
             binary,

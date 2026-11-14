@@ -1,15 +1,15 @@
-use cds_schema::models::cds::{Tent, TentCategory};
 use campground_lexicon::chat::campground::tent::{
     TentCategoryViewDetailed, TentType, TentViewBasic, TentViewDetailed,
 };
+use cds_schema::models::cds::{Tent, TentCategory};
 
 use crate::views::util::serialize_datetime;
 
 pub fn tent_category_view(category: &TentCategory) -> TentCategoryViewDetailed {
     return TentCategoryViewDetailed {
         id: category.id.clone(),
-        campsite_id: category.campsite_id.clone(),
-        bonfire_id: category.bonfire_id.clone(),
+        campsite_id: category.campsite.clone(),
+        bonfire_id: category.bonfire.clone(),
         name: category.name.clone(),
         description: category.description.clone(),
         position: category.priority,
@@ -23,9 +23,9 @@ pub fn tent_category_view(category: &TentCategory) -> TentCategoryViewDetailed {
 pub fn tent_view_basic(tent: &Tent) -> TentViewBasic {
     return TentViewBasic {
         id: tent.id.clone(),
-        campsite_id: tent.campsite_id.clone(),
-        bonfire_id: tent.bonfire_id.clone(),
-        category_id: tent.category_id,
+        campsite_id: tent.campsite.clone(),
+        bonfire_id: tent.bonfire.clone(),
+        category_id: tent.category,
         name: tent.name.clone(),
         description: tent.description.clone(),
         r#type: match tent.r#type {
@@ -39,9 +39,9 @@ pub fn tent_view_basic(tent: &Tent) -> TentViewBasic {
 pub fn tent_view_detailed(tent: &Tent) -> TentViewDetailed {
     return TentViewDetailed {
         id: tent.id.clone(),
-        campsite_id: tent.campsite_id.clone(),
-        bonfire_id: tent.bonfire_id.clone(),
-        category_id: tent.category_id,
+        campsite_id: tent.campsite.clone(),
+        bonfire_id: tent.bonfire.clone(),
+        category_id: tent.category,
         name: tent.name.clone(),
         description: tent.description.clone(),
         r#type: match tent.r#type {

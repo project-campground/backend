@@ -12,9 +12,9 @@ pub async fn get_tents(campsite_id: &str, bonfire_id: &str) -> Result<Json<GetTe
 
     let categories = crate::schema::cds::tent_category::table
         .filter(
-            crate::schema::cds::tent_category::campsiteid
+            crate::schema::cds::tent_category::campsite
                 .eq(campsite_id)
-                .and(crate::schema::cds::tent_category::bonfireid.eq(bonfire_id)),
+                .and(crate::schema::cds::tent_category::bonfire.eq(bonfire_id)),
         )
         .load::<TentCategory>(&mut conn)
         .expect("Error loading tent categories")
@@ -29,16 +29,16 @@ pub async fn get_tents(campsite_id: &str, bonfire_id: &str) -> Result<Json<GetTe
         .collect::<Vec<_>>();
     let tents = crate::schema::cds::tent::table
         .filter(
-            crate::schema::cds::tent::campsiteid
+            crate::schema::cds::tent::campsite
                 .eq(campsite_id)
-                .and(crate::schema::cds::tent::bonfireid.eq(bonfire_id)),
+                .and(crate::schema::cds::tent::bonfire.eq(bonfire_id)),
         )
         .load::<Tent>(&mut conn)
         .expect("Error loading tents")
         .iter()
         .map(|tent| TentViewInList {
             id: tent.id.clone(),
-            category_id: tent.category_id,
+            category_id: tent.category,
             name: tent.name.clone(),
             description: tent.description.clone(),
             r#type: TentType::Text,

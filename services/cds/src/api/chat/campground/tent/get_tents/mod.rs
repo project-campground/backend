@@ -2,8 +2,8 @@ use campground_lexicon::chat::campground::tent::{
     GetTentsOutput, TentCategoryViewInList, TentType, TentViewInList,
 };
 use cds_schema::{
-    models::cds::{CampsitePermission, Tent, TentCategory},
-    schema::cds::{campsite_permission, campsite_role, tent, tent_category},
+    models::cds::{Permission, Tent, TentCategory},
+    schema::cds::{permission, role, tent, tent_category},
 };
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, IntoSql, QueryDsl, RunQueryDsl, dsl::not,
@@ -32,7 +32,7 @@ use crate::{
 #[get("/xrpc/chat.campground.tent.getTents?<bonfire_id>")]
 pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<GetTentsOutput>> {
     if auth.campsite.owner == auth.actor.did {
-        return unchecked::get_tents(&auth.bonfire.campsite_id, bonfire_id).await;
+        return unchecked::get_tents(&auth.bonfire.campsite, bonfire_id).await;
     }
 
     let mut conn = establish_connection().unwrap();
@@ -46,15 +46,15 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
 
     let member_has_role_perms = member_has_role_permissions(&mut conn, member_roles)?;
 
-    let permissions = campsite_permission::table
+    let permissions = permission::table
         .filter(
-            campsite_permission::bonfireid.eq(bonfire_id).and(
-                campsite_permission::roleid
+            permission::bonfire.eq(bonfire_id).and(
+                permission::role
                     .eq_any(member_roles)
-                    .or(campsite_permission::userid.eq(&auth.actor.did)),
+                    .or(permission::actor.eq(&auth.actor.did)),
             ),
         )
-        .load::<CampsitePermission>(&mut conn)
+        .load::<Permission>(&mut conn)
         .map_err(handle_all_db_errors)?;
 
     let can_view_bonfire = has_perms_to_view_bonfire(member_has_role_perms, &permissions.iter())?;
@@ -69,8 +69,8 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
     let categories_state = &get_allowed_and_denied_item_ids(
         &mut permissions
             .iter()
-            .filter(|x| x.category_id.is_some())
-            .map(|perm| (perm.category_id.unwrap(), perm.permissions as u64)),
+            .filter(|x| x.category.is_some())
+            .map(|perm| (perm.category.unwrap(), perm.permissions as u64)),
     );
 
     // To reduce allocations, but it also increases memory that will not be needed to be allocated
@@ -82,10 +82,10 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
 
     // To not filter like a dozen times
     for permission in permissions.clone() {
-        if let Some(category_id) = permission.category_id {
-            category_permissions.insert(category_id, permission.clone());
-        } else if let Some(tent_id) = permission.tent_id {
-            tent_permissions.insert(tent_id, permission);
+        if let Some(category) = permission.category {
+            category_permissions.insert(category, permission.clone());
+        } else if let Some(tent) = permission.tent {
+            tent_permissions.insert(tent, permission);
         }
     }
 
@@ -101,9 +101,9 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
     let categories = tent_category::table
         .filter(
             // Scoping
-            tent_category::campsiteid
-                .eq(&auth.bonfire.campsite_id)
-                .and(tent_category::bonfireid.eq(bonfire_id))
+            tent_category::campsite
+                .eq(&auth.bonfire.campsite)
+                .and(tent_category::bonfire.eq(bonfire_id))
                 .and(get_allowed_or_inherited!(
                     id: tent_category::id,
                     allowed: &allowed_categories,
@@ -134,8 +134,8 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
     let tent_states = &get_allowed_and_denied_item_ids(
         &mut permissions
             .iter()
-            .filter(|item| item.tent_id.is_some())
-            .map(|perm| (perm.tent_id.unwrap(), perm.permissions as u64)),
+            .filter(|item| item.tent.is_some())
+            .map(|perm| (perm.tent.unwrap(), perm.permissions as u64)),
     );
     let allowed_tents = tent_states
         .get_vec(&true)
@@ -149,9 +149,9 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
     let tents = tent::table
         .filter(
             // Scoping
-            tent::campsiteid
-                .eq(&auth.bonfire.campsite_id)
-                .and(tent::bonfireid.eq(bonfire_id))
+            tent::campsite
+                .eq(&auth.bonfire.campsite)
+                .and(tent::bonfire.eq(bonfire_id))
                 .and(get_allowed_or_inherited!(
                     id: tent::id,
                     allowed: &allowed_tents,
@@ -165,7 +165,7 @@ pub async fn get_tents(auth: BonfireInfo<'_>, bonfire_id: &str) -> Result<Json<G
         .map(|tent| TentViewInList {
             id: tent.id,
             name: tent.name.clone(),
-            category_id: tent.category_id.clone(),
+            category_id: tent.category.clone(),
             r#type: TentType::Text,
             view_type: 0,
             description: tent.description.to_owned(),
@@ -189,9 +189,9 @@ fn member_has_role_permissions(
     conn: &mut DbConnection,
     member_roles: &Vec<Uuid>,
 ) -> Result<bool, XRPCError> {
-    let role_permissions = &campsite_role::table
-        .filter(campsite_role::id.eq_any(member_roles))
-        .select(campsite_role::permissions)
+    let role_permissions = &role::table
+        .filter(role::id.eq_any(member_roles))
+        .select(role::permissions)
         .load::<i32>(conn)
         .map_err(handle_select_first_error)?;
 
@@ -206,12 +206,12 @@ fn member_has_role_permissions(
 
 fn has_perms_to_view_bonfire<'a, T>(has_role_perm: bool, all_perms: &T) -> Result<bool>
 where
-    T: Iterator<Item = &'a CampsitePermission>,
+    T: Iterator<Item = &'a Permission>,
     T: Clone,
 {
     let bonfire_perms = all_perms
         .clone()
-        .filter(|x| x.category_id.or(x.tent_id).is_none());
+        .filter(|x| x.category.or(x.tent).is_none());
     let perms = bonfire_perms.aggregate_permissions();
 
     Ok(

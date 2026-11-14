@@ -85,8 +85,8 @@ impl<'a> OneOfInfo<'a> {
     pub fn bonfire_id(&self) -> String {
         match self {
             OneOfInfo::Bonfire(auth) => auth.bonfire.id.clone(),
-            OneOfInfo::Category(auth) => auth.category.bonfire_id.clone(),
-            OneOfInfo::Tent(auth) => auth.tent.bonfire_id.clone(),
+            OneOfInfo::Category(auth) => auth.category.bonfire.clone(),
+            OneOfInfo::Tent(auth) => auth.tent.bonfire.clone(),
         }
     }
     pub fn member_roles(&self) -> Vec<Option<Uuid>> {
@@ -137,11 +137,11 @@ where
         let mut conn = establish_connection().unwrap();
         let query = campsite_member::table
             .filter(
-                campsite_member::campsiteid
+                campsite_member::campsite
                     .eq(campsite_id)
-                    .and(campsite_member::userid.eq(auth.actor_did.clone())),
+                    .and(campsite_member::actor.eq(auth.actor_did.clone())),
             )
-            .inner_join(campsite::table.on(campsite::id.eq(campsite_member::campsiteid)))
+            .inner_join(campsite::table.on(campsite::id.eq(campsite_member::campsite)))
             .first::<(CampsiteMember, Campsite)>(&mut conn)
             .map_err(|err| match err {
                 NotFound => Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),
@@ -253,21 +253,19 @@ where
         );
 
         // Not in the campsite to view that. It also confirms existence of campsite
-        if !actor.campsites.contains(&Some(tent.campsite_id.clone())) {
+        if !actor.campsites.contains(&Some(tent.campsite.clone())) {
             return Outcome::Error((Status::Forbidden, CampsiteError::CannotView));
         }
 
         let (campsite, member) = try_outcome!(
-            get_campsite_and_member_from_db(&tent.campsite_id, &actor.did).outcome(
-                |err| match err {
-                    XRPCError::NotFound =>
-                        Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),
-                    _ => Outcome::Error((
-                        Status::InternalServerError,
-                        CampsiteError::InternalServerError
-                    )),
-                }
-            )
+            get_campsite_and_member_from_db(&tent.campsite, &actor.did).outcome(|err| match err {
+                XRPCError::NotFound =>
+                    Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite)),
+                _ => Outcome::Error((
+                    Status::InternalServerError,
+                    CampsiteError::InternalServerError
+                )),
+            })
         );
 
         rocket::outcome::Outcome::Success(TentInfo {
@@ -313,15 +311,12 @@ where
         );
 
         // Not in the campsite to view that. It also confirms existence of campsite
-        if !actor
-            .campsites
-            .contains(&Some(category.campsite_id.clone()))
-        {
+        if !actor.campsites.contains(&Some(category.campsite.clone())) {
             return Outcome::Error((Status::Forbidden, CampsiteError::CannotView));
         }
 
         let (campsite, member) = try_outcome!(
-            get_campsite_and_member_from_db(&category.campsite_id, &actor.did).outcome(|err| {
+            get_campsite_and_member_from_db(&category.campsite, &actor.did).outcome(|err| {
                 match err {
                     XRPCError::NotFound => {
                         Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite))
@@ -384,12 +379,12 @@ where
         );
 
         // Not in the campsite to view that. It also confirms existence of campsite
-        if !actor.campsites.contains(&Some(bonfire.campsite_id.clone())) {
+        if !actor.campsites.contains(&Some(bonfire.campsite.clone())) {
             return Outcome::Error((Status::Forbidden, CampsiteError::CannotView));
         }
 
         let (campsite, member) = try_outcome!(
-            get_campsite_and_member_from_db(&bonfire.campsite_id, &actor.did).outcome(|err| {
+            get_campsite_and_member_from_db(&bonfire.campsite, &actor.did).outcome(|err| {
                 match err {
                     XRPCError::NotFound => {
                         Outcome::Error((Status::NotFound, CampsiteError::NoSuchCampsite))

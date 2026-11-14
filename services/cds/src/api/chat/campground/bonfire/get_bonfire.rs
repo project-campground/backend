@@ -19,7 +19,7 @@ pub async fn get_bonfire(
 
     let bonfire = &crate::schema::cds::bonfire::table
         .filter(
-            crate::schema::cds::bonfire::campsiteid
+            crate::schema::cds::bonfire::campsite
                 .eq(campsite_id)
                 .and(crate::schema::cds::bonfire::id.eq(bonfire_id)),
         )

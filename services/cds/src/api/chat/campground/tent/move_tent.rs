@@ -57,8 +57,8 @@ pub async fn move_tent(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
@@ -105,8 +105,8 @@ async fn move_tent_to_pos(
         set_tent_pos_unchecked(
             &mut conn,
             &auth,
-            &auth.tent.bonfire_id,
-            auth.tent.category_id,
+            &auth.tent.bonfire,
+            auth.tent.category,
             position,
         )?,
     )
@@ -119,7 +119,7 @@ async fn move_tent_to_bonfire(
     position: i32,
 ) -> Result<Json<TentViewBasic>, XRPCError> {
     // Maybe a client had failed checked
-    if bonfire_id == auth.tent.bonfire_id {
+    if bonfire_id == auth.tent.bonfire {
         return Ok(Json(tent_view_basic(&auth.tent)));
     }
 
@@ -149,7 +149,7 @@ async fn move_tent_to_category(
     };
 
     // Maybe a client had failed checked
-    if category_id == auth.tent.category_id {
+    if category_id == auth.tent.category {
         return Ok(Json(tent_view_basic(&auth.tent)));
     }
 
@@ -158,7 +158,7 @@ async fn move_tent_to_category(
     let result = (if let Some(category_id) = category_id {
         move_tent_to_specified_category(&mut conn, &auth, category_id, position)
     } else {
-        set_tent_pos_unchecked(&mut conn, &auth, &auth.tent.bonfire_id, None, position)
+        set_tent_pos_unchecked(&mut conn, &auth, &auth.tent.bonfire, None, position)
     })?;
 
     handle_moved_tents(&auth, event_subject, result)
@@ -183,7 +183,7 @@ fn set_tent_pos_unchecked(
     position: i32,
 ) -> Result<(Vec<Tent>, Vec<(Uuid, i32)>), XRPCError> {
     conn.transaction(|conn| {
-        let also_moved = make_room_for_tent(conn, &auth.tent.bonfire_id, category_id, position)?;
+        let also_moved = make_room_for_tent(conn, &auth.tent.bonfire, category_id, position)?;
 
         let current_date = Utc::now().naive_utc();
 
@@ -193,11 +193,11 @@ fn set_tent_pos_unchecked(
                 .set((
                     // All the new settings
                     cds::tent::priority.eq(position),
-                    cds::tent::categoryid.eq(category_id),
-                    cds::tent::bonfireid.eq(bonfire_id),
+                    cds::tent::category.eq(category_id),
+                    cds::tent::bonfire.eq(bonfire_id),
                     // Mandatory
-                    cds::tent::updatedat.eq(current_date),
-                    cds::tent::updatedby.eq(&auth.actor.did),
+                    cds::tent::updated_at.eq(current_date),
+                    cds::tent::updated_by.eq(&auth.actor.did),
                 ))
                 .load::<Tent>(conn)?,
             also_moved,
@@ -219,15 +219,15 @@ fn make_room_for_tent(
         crate::schema::cds::tent::table,
         crate::schema::cds::tent::id,
         crate::schema::cds::tent::priority,
-        cds::tent::bonfireid
+        cds::tent::bonfire
             .eq(bonfire_id)
             // Only see if there are tents in the same position AND category
             // It doesn't affect how it appears if it's in different category
             .and(
-                cds::tent::categoryid
+                cds::tent::category
                     .is_null()
                     .and::<bool, Bool>(category_id == None)
-                    .or(cds::tent::categoryid.eq(category_id)),
+                    .or(cds::tent::category.eq(category_id)),
             );
         conn,
         position

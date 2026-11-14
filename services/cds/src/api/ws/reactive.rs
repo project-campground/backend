@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use cds_schema::{models::cds::CampsiteMember, schema::cds::campsite_permission};
+use cds_schema::{models::cds::CampsiteMember, schema::cds::permission};
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, NullableExpressionMethods, QueryDsl, RunQueryDsl,
     WindowExpressionMethods, dsl::count,
@@ -20,7 +20,7 @@ use crate::{
         api::handle_all_db_errors,
         permissions::{
             PermissionFlag,
-            fetch::{fetch_all_campsite_permissions, fetch_only_specific_permissions},
+            fetch::{fetch_all_permissions, fetch_only_specific_permissions},
             state::PermissionState,
         },
         ws::CampsiteMemberPermissions,
@@ -111,7 +111,7 @@ pub async fn on_rocket_message(
                                 }
 
                                 let (campsite, campsite_member) = membership.unwrap();
-                                let is_owner = campsite.owner == campsite_member.user_id.clone();
+                                let is_owner = campsite.owner == campsite_member.actor.clone();
 
                                 *current_membership = Some(campsite_member);
 
@@ -124,7 +124,7 @@ pub async fn on_rocket_message(
                                 *permissions = MEMBER_PERMS_DEFAULT.clone();
                                 let roles = try_or_continue!(get_roles_from_db(campsite_id).ok());
                                 let permissions_list = try_or_continue!(
-                                    fetch_all_campsite_permissions(campsite_id, ws_actor).ok()
+                                    fetch_all_permissions(campsite_id, ws_actor).ok()
                                 );
 
                                 let aggregated = aggregate_ws_permissions(
@@ -215,27 +215,27 @@ pub async fn on_reactive_data(
 
             let mut conn = establish_connection().unwrap();
             // Get what to update in terms of permissions, if anything at all
-            let new_permissions_to_update = campsite_permission::table
+            let new_permissions_to_update = permission::table
                 .filter(
-                    campsite_permission::campsiteid
+                    permission::campsite
                         .eq(&campsite_id)
-                        .and(campsite_permission::roleid.eq(role_id)),
+                        .and(permission::role.eq(role_id)),
                 )
                 .select((
                     // How many to update at all (will be used for bonfire update counting)
-                    count(campsite_permission::id),
+                    count(permission::id),
                     // What bonfires to update
-                    array_agg(campsite_permission::bonfireid).window_filter(
-                        campsite_permission::categoryid
+                    array_agg(permission::bonfire).window_filter(
+                        permission::category
                             .is_null()
-                            .and(campsite_permission::tentid.is_null()),
+                            .and(permission::tent.is_null()),
                     ),
                     // What categories to update
-                    array_agg(campsite_permission::categoryid.assume_not_null())
-                        .window_filter(campsite_permission::categoryid.is_not_null()),
+                    array_agg(permission::category.assume_not_null())
+                        .window_filter(permission::category.is_not_null()),
                     // What tents to update
-                    array_agg(campsite_permission::tentid.assume_not_null())
-                        .window_filter(campsite_permission::tentid.is_not_null()),
+                    array_agg(permission::tent.assume_not_null())
+                        .window_filter(permission::tent.is_not_null()),
                 ))
                 .first::<(
                     i64,

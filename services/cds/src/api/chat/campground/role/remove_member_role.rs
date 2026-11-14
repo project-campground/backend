@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::member::ModifyMemberRolesOutput;
 use cds_schema::{
-    models::cds::{CampsiteMember, CampsiteRole},
-    schema::cds::{campsite_member, campsite_role},
+    models::cds::{CampsiteMember, Role},
+    schema::cds::{campsite_member, role},
 };
 use diesel::pg::expression::dsl::array_remove;
 use diesel::{
@@ -62,9 +62,9 @@ pub async fn remove_member_role(
     })?;
 
     // Make sure the role exists
-    let all_roles = campsite_role::table
-        .filter(campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
+    let all_roles = role::table
+        .filter(role::campsite.eq(campsite_id))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let given_role = all_roles.iter().find(|x| x.id == role_id_uuid);
@@ -96,9 +96,9 @@ pub async fn remove_member_role(
 
     let updated_members = diesel::update(campsite_member::table)
         .filter(
-            campsite_member::campsiteid
+            campsite_member::campsite
                 .eq(campsite_id)
-                .and(campsite_member::userid.eq_any(inner_body.member_ids.clone()))
+                .and(campsite_member::actor.eq_any(inner_body.member_ids.clone()))
                 .and(campsite_member::roles.contains(vec![given_role.id])),
         )
         .set((
@@ -110,7 +110,7 @@ pub async fn remove_member_role(
 
     let member_ids = updated_members
         .iter()
-        .map(|x| x.user_id.clone())
+        .map(|x| x.actor.clone())
         .collect::<Vec<String>>();
     let role_view = role_view_basic(given_role);
     let output = ModifyMemberRolesOutput {

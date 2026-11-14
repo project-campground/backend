@@ -48,8 +48,8 @@ pub async fn delete_bonfire(
 
     diesel::delete(cds::bonfire::table)
         .filter(
-            cds::bonfire::campsiteid
-                .eq(&auth.bonfire.campsite_id)
+            cds::bonfire::campsite
+                .eq(&auth.bonfire.campsite)
                 .and(cds::bonfire::id.eq(bonfire_id)),
         )
         .execute(&mut conn)

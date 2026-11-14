@@ -65,20 +65,20 @@ pub async fn move_bonfire(
 
     let bonfires = conn
         .transaction(|conn| {
-            make_room_for_bonfire(conn, &auth.bonfire.campsite_id, *position)?;
+            make_room_for_bonfire(conn, &auth.bonfire.campsite, *position)?;
 
             let current_date = Utc::now().naive_utc();
 
             let bonfires = diesel::update(cds::bonfire::table)
                 .filter(
-                    cds::bonfire::campsiteid
-                        .eq(&auth.bonfire.campsite_id)
+                    cds::bonfire::campsite
+                        .eq(&auth.bonfire.campsite)
                         .and(cds::bonfire::id.eq(bonfire_id)),
                 )
                 .set((
                     cds::bonfire::priority.eq(position),
-                    cds::bonfire::updatedby.eq(&auth.actor.did),
-                    cds::bonfire::updatedat.eq(current_date),
+                    cds::bonfire::updated_by.eq(&auth.actor.did),
+                    cds::bonfire::updated_at.eq(current_date),
                 ))
                 .load::<Bonfire>(conn)?;
 
@@ -101,7 +101,7 @@ fn make_room_for_bonfire(
 ) -> Result<(), diesel::result::Error> {
     let bonfire_exists_there = cds::bonfire::table
         .filter(
-            cds::bonfire::campsiteid
+            cds::bonfire::campsite
                 .eq(campsite_id)
                 .and(cds::bonfire::priority.eq(position)),
         )
@@ -115,7 +115,7 @@ fn make_room_for_bonfire(
     // Make other bonfires go below it (since client is expected to add 1 when putting below a bonfire already)
     diesel::update(crate::schema::cds::bonfire::table)
         .filter(
-            cds::bonfire::campsiteid
+            cds::bonfire::campsite
                 .eq(campsite_id)
                 // Update only bonfires at that position and below
                 .and(cds::bonfire::priority.ge(position))

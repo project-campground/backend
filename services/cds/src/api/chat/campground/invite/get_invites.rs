@@ -51,15 +51,15 @@ pub async fn get_invites(
 
     let mut conn = establish_connection().unwrap();
     let invites = campsite_invite::table
-        .filter(campsite_invite::campsiteid.eq(campsite_id))
-        .order_by(campsite_invite::createdat.desc())
+        .filter(campsite_invite::campsite.eq(campsite_id))
+        .order_by(campsite_invite::created_at.desc())
         .limit(limit)
         .offset(offset)
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_invite::createdby)),
+                .on(crate::schema::cds::actor::did.eq(campsite_invite::created_by)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_invite::created_by)))
         .load::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()

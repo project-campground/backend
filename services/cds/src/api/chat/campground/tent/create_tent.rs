@@ -86,13 +86,13 @@ pub async fn create_tent(
         .filter(
             crate::schema::cds::bonfire::id
                 .eq(bonfire_id)
-                .and(crate::schema::cds::bonfire::campsiteid.eq(campsite_id)),
+                .and(crate::schema::cds::bonfire::campsite.eq(campsite_id)),
         )
         .first::<Bonfire>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let existing_tent_count = crate::schema::cds::tent::table
-        .filter(crate::schema::cds::tent::campsiteid.eq(campsite_id))
+        .filter(crate::schema::cds::tent::campsite.eq(campsite_id))
         .count()
         .first::<i64>(&mut conn)
         .expect("Error loading bonfires");
@@ -121,9 +121,9 @@ pub async fn create_tent(
     let tents = &diesel::insert_into(crate::schema::cds::tent::table)
         .values(Tent {
             id: Uuid::new_v4(),
-            campsite_id: campsite_id.to_string(),
-            bonfire_id: bonfire_id.to_string(),
-            category_id: category_id,
+            campsite: campsite_id.to_string(),
+            bonfire: bonfire_id.to_string(),
+            category: category_id,
             name: inner_body.name.clone(),
             description: inner_body.description.clone(),
             r#type: inner_body.r#type,

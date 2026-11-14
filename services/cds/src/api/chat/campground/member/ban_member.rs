@@ -1,8 +1,8 @@
 use atproto_identity::storage_lru::LruDidDocumentStorage;
 use campground_lexicon::chat::campground::member::MemberBanView;
 use cds_schema::{
-    models::cds::{Actor, Campsite, CampsiteBan, CampsiteMember, CampsiteRole, Profile},
-    schema::cds::{self, campsite_member, campsite_role, profile},
+    models::cds::{Actor, Campsite, CampsiteBan, CampsiteMember, Profile, Role},
+    schema::cds::{self, campsite_member, profile, role},
 };
 use chrono::Utc;
 use diesel::{
@@ -77,9 +77,9 @@ pub async fn ban_member<'a>(
     let mut conn = establish_connection().unwrap();
 
     // Make sure the role exists
-    let all_roles = campsite_role::table
-        .filter(campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
+    let all_roles = role::table
+        .filter(role::campsite.eq(campsite_id))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let target_actor = &get_actor(client, did_document_storage, actor)
@@ -88,11 +88,11 @@ pub async fn ban_member<'a>(
 
     // FIXME handle actors without profiles better. Don't assume campsite members have profiles
     let targets = profile::table
-        .filter(profile::creator.eq(&target_actor.did))
+        .filter(profile::actor.eq(&target_actor.did))
         .left_join(
-            campsite_member::table.on(profile::creator
-                .eq(campsite_member::userid)
-                .and(campsite_member::campsiteid.eq(campsite_id))),
+            campsite_member::table.on(profile::actor
+                .eq(campsite_member::actor)
+                .and(campsite_member::campsite.eq(campsite_id))),
         )
         .load::<(Profile, Option<CampsiteMember>)>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -153,10 +153,10 @@ fn add_ban<'a>(
     let mut conn = establish_connection().unwrap();
 
     let current_date = Utc::now().naive_utc();
-    let ban = &diesel::insert_into(cds::campsite_ban::table)
+    let ban = &diesel::insert_into(cds::member_ban::table)
         .values(CampsiteBan {
-            user_id: actor.did.clone(),
-            campsite_id: campsite.id.clone(),
+            target: actor.did.clone(),
+            campsite: campsite.id.clone(),
             reason: reason.map(str::to_string),
             created_at: current_date,
             created_by: executor.did.clone(),

@@ -21,28 +21,6 @@ pub mod cds {
         Serialize,
         Deserialize,
     )]
-    #[diesel(primary_key(name))]
-    #[diesel(table_name = crate::schema::cds::setting)]
-    #[diesel(check_for_backend(diesel::pg::Pg))]
-    #[serde(rename_all = "camelCase")]
-    pub struct Setting {
-        pub name: String,
-        pub value: Option<String>,
-    }
-
-    #[derive(
-        Queryable,
-        Identifiable,
-        Insertable,
-        AsChangeset,
-        Selectable,
-        Clone,
-        Debug,
-        PartialEq,
-        Default,
-        Serialize,
-        Deserialize,
-    )]
     #[diesel(primary_key(did))]
     #[diesel(table_name = crate::schema::cds::actor)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
@@ -50,9 +28,7 @@ pub mod cds {
     pub struct Actor {
         pub did: String,
         pub handle: Option<String>,
-        #[diesel(column_name = indexedat)]
         pub indexed_at: String,
-        #[diesel(column_name = campsites)]
         pub campsites: Vec<Option<String>>,
     }
 
@@ -76,25 +52,15 @@ pub mod cds {
     pub struct Profile {
         pub uri: String,
         pub cid: String,
-        pub creator: String,
-        #[diesel(column_name = displayname)]
-        pub display_name: Option<String>,
-        #[diesel(column_name = description)]
+        pub actor: String,
+        pub name: Option<String>,
         pub description: Option<String>,
-        #[diesel(column_name = avatarcid)]
-        pub avatar_cid: Option<String>,
-        #[diesel(column_name = bannercid)]
-        pub banner_cid: Option<String>,
-        #[diesel(column_name = indexedat)]
+        pub avatar: Option<String>,
+        pub banner: Option<String>,
         pub indexed_at: String,
-        #[diesel(column_name = tagline)]
-        pub tagline: Option<String>,
-        #[diesel(column_name = location)]
         pub location: Option<String>,
-        #[diesel(column_name = createdat)]
+        pub tagline: Option<String>,
         pub created_at: Option<String>,
-        #[diesel(column_name = firstseen)]
-        pub first_seen: String,
     }
 
     #[derive(
@@ -118,17 +84,13 @@ pub mod cds {
         pub uri: String,
         pub cid: String,
         pub author: String,
-        #[diesel(column_name = parenturi)]
-        pub parent_uri: Option<String>,
+        pub parent: Option<String>,
 
         pub content: String,
         pub replies: Vec<Option<String>>,
 
-        #[diesel(column_name = indexedat)]
         pub indexed_at: String,
-        #[diesel(column_name = createdat)]
         pub created_at: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: Option<String>,
     }
 
@@ -152,28 +114,20 @@ pub mod cds {
     pub struct Campsite {
         pub id: String,
         pub name: String,
-        #[diesel(column_name = vanityurl)]
         pub vanity_url: Option<String>,
         pub description: String,
 
-        #[diesel(column_name = avataruri)]
-        pub avatar_uri: Option<String>,
-        #[diesel(column_name = banneruri)]
-        pub banner_uri: Option<String>,
+        pub avatar: Option<String>,
+        pub banner: Option<String>,
 
         pub tags: Vec<Option<String>>,
-        #[diesel(column_name = memberdids)]
-        pub member_dids: Vec<Option<String>>,
+        pub members: Vec<Option<String>>,
         pub owner: String,
 
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
     }
 
@@ -190,21 +144,17 @@ pub mod cds {
         Serialize,
         Deserialize,
     )]
-    #[diesel(primary_key(userid, campsiteid))]
+    #[diesel(primary_key(actor, campsite))]
     #[diesel(table_name = crate::schema::cds::campsite_member)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteMember {
-        #[diesel(column_name = userid)]
-        pub user_id: String,
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
+        pub actor: String,
+        pub campsite: String,
 
-        #[diesel(column_name = joinedat)]
         pub joined_at: NaiveDateTime,
 
-        #[diesel(column_name = usedinviteid)]
-        pub used_invite_id: Option<Uuid>,
+        pub used_invite: Option<Uuid>,
 
         pub nickname: Option<String>,
 
@@ -224,25 +174,19 @@ pub mod cds {
         Serialize,
         Deserialize,
     )]
-    #[diesel(primary_key(userid, campsiteid))]
-    #[diesel(table_name = crate::schema::cds::campsite_ban)]
+    #[diesel(primary_key(target, campsite))]
+    #[diesel(table_name = crate::schema::cds::member_ban)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteBan {
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
-        #[diesel(column_name = userid)]
-        pub user_id: String,
+        pub campsite: String,
+        pub target: String,
 
         pub reason: Option<String>,
 
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
     }
 
@@ -265,17 +209,12 @@ pub mod cds {
     #[serde(rename_all = "camelCase")]
     pub struct CampsiteInvite {
         pub id: Uuid,
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
+        pub campsite: String,
 
-        #[diesel(column_name = allowedamount)]
-        pub allowed_amount: Option<i32>,
+        pub allowed_uses: Option<i32>,
 
-        #[diesel(column_name = expiresat)]
         pub expires_at: Option<NaiveDateTime>,
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
         pub used: i32,
@@ -295,31 +234,24 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::cds::campsite_role)]
+    #[diesel(table_name = crate::schema::cds::role)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
-    pub struct CampsiteRole {
+    pub struct Role {
         pub id: Uuid,
 
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
+        pub campsite: String,
 
         pub name: String,
-        #[diesel(column_name = displayseparately)]
-        pub display_separately: bool,
-        #[diesel(column_name = mentionable)]
-        pub mentionable: bool,
+        pub hoist: bool,
+        pub pingable: bool,
 
         pub priority: i32,
 
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
 
         pub members: Vec<Option<String>>,
@@ -345,34 +277,24 @@ pub mod cds {
         Deserialize,
     )]
     #[diesel(primary_key(id))]
-    #[diesel(table_name = crate::schema::cds::campsite_permission)]
+    #[diesel(table_name = crate::schema::cds::permission)]
     #[diesel(check_for_backend(diesel::pg::Pg))]
     #[serde(rename_all = "camelCase")]
-    pub struct CampsitePermission {
+    pub struct Permission {
         pub id: Uuid,
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
+        pub campsite: String,
 
-        #[diesel(column_name = roleid)]
-        pub role_id: Option<Uuid>,
-        #[diesel(column_name = userid)]
-        pub user_id: Option<String>,
+        pub role: Option<Uuid>,
+        pub actor: Option<String>,
 
-        #[diesel(column_name = bonfireid)]
-        pub bonfire_id: String,
-        #[diesel(column_name = categoryid)]
-        pub category_id: Option<Uuid>,
-        #[diesel(column_name = tentid)]
-        pub tent_id: Option<Uuid>,
+        pub bonfire: String,
+        pub category: Option<Uuid>,
+        pub tent: Option<Uuid>,
 
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
 
         pub permissions: i64,
@@ -397,26 +319,19 @@ pub mod cds {
     #[serde(rename_all = "camelCase")]
     pub struct Bonfire {
         pub id: String,
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
+        pub campsite: String,
 
         pub name: String,
         pub description: String,
 
-        #[diesel(column_name = avataruri)]
-        pub avatar_uri: Option<String>,
-        #[diesel(column_name = banneruri)]
-        pub banner_uri: Option<String>,
+        pub avatar: Option<String>,
+        pub banner: Option<String>,
 
         pub priority: i32,
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
 
         pub home: bool,
@@ -442,23 +357,17 @@ pub mod cds {
     pub struct TentCategory {
         pub id: Uuid,
 
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
-        #[diesel(column_name = bonfireid)]
-        pub bonfire_id: String,
+        pub campsite: String,
+        pub bonfire: String,
 
         pub name: String,
         pub description: String,
 
         pub priority: i32,
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
     }
 
@@ -482,29 +391,21 @@ pub mod cds {
     pub struct Tent {
         pub id: Uuid,
 
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
-        #[diesel(column_name = bonfireid)]
-        pub bonfire_id: String,
-        #[diesel(column_name = categoryid)]
-        pub category_id: Option<Uuid>,
+        pub campsite: String,
+        pub bonfire: String,
+        pub category: Option<Uuid>,
 
         pub name: String,
         #[diesel(column_name = type_)]
         pub r#type: i16,
-        #[diesel(column_name = viewtype)]
         pub view_type: i16,
         pub description: String,
 
         pub priority: i32,
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
 
-        #[diesel(column_name = updatedby)]
         pub updated_by: String,
-        #[diesel(column_name = updatedat)]
         pub updated_at: NaiveDateTime,
     }
 
@@ -527,20 +428,14 @@ pub mod cds {
     #[serde(rename_all = "camelCase")]
     pub struct TentMessage {
         pub id: Uuid,
-        #[diesel(column_name = campsiteid)]
-        pub campsite_id: String,
-        #[diesel(column_name = tentid)]
-        pub tent_id: Uuid,
+        pub campsite: String,
+        pub tent: Uuid,
 
         pub content: String,
-        #[diesel(column_name = replyingto)]
         pub replying_to: Vec<Option<Uuid>>,
 
-        #[diesel(column_name = createdby)]
         pub created_by: String,
-        #[diesel(column_name = createdat)]
         pub created_at: NaiveDateTime,
-        #[diesel(column_name = updatedat)]
         pub updated_at: Option<NaiveDateTime>,
 
         pub components: Vec<Option<Value>>,

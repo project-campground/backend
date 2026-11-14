@@ -1,5 +1,5 @@
 use campground_lexicon::chat::campground::{campsite::CampsiteViewDetailed, role::RoleViewBasic};
-use cds_schema::models::cds::{Campsite, CampsiteRole};
+use cds_schema::models::cds::{Campsite, Role};
 use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::json::Json;
 
@@ -24,9 +24,9 @@ pub async fn get_campsite(
         .filter(crate::schema::cds::campsite::id.eq(campsite_id))
         .first::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
-    let roles = crate::schema::cds::campsite_role::table
-        .filter(crate::schema::cds::campsite_role::campsiteid.eq(campsite_id))
-        .load::<CampsiteRole>(&mut conn)
+    let roles = crate::schema::cds::role::table
+        .filter(crate::schema::cds::role::campsite.eq(campsite_id))
+        .load::<Role>(&mut conn)
         .map_err(handle_select_first_error)?
         .iter()
         .map(role_view_basic)

@@ -26,14 +26,14 @@ pub async fn get_invite(invite_id: &str) -> Result<Json<CampsiteInviteViewGlobal
         .filter(campsite_invite::id.eq(uuid))
         .inner_join(
             crate::schema::cds::actor::table
-                .on(crate::schema::cds::actor::did.eq(campsite_invite::createdby)),
+                .on(crate::schema::cds::actor::did.eq(campsite_invite::created_by)),
         )
-        .left_join(profile::table.on(profile::creator.eq(campsite_invite::createdby)))
+        .left_join(profile::table.on(profile::actor.eq(campsite_invite::created_by)))
         .first::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let campsite = cds::campsite::table
-        .filter(cds::campsite::id.eq(&invite.campsite_id))
+        .filter(cds::campsite::id.eq(&invite.campsite))
         .first::<Campsite>(&mut conn)
         .map_err(handle_select_first_error)?;
 

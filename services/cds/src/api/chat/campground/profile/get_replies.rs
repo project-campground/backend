@@ -47,9 +47,9 @@ pub async fn get_replies(
     let mut conn = establish_connection().unwrap();
 
     let mut posts = profile_post::table
-        .filter(profile_post::parenturi.eq(resolved_uri.clone()))
+        .filter(profile_post::parent.eq(resolved_uri.clone()))
         // .load(&mut conn)
-        .order_by(profile_post::indexedat.desc())
+        .order_by(profile_post::indexed_at.desc())
         .limit(limit)
         .offset(offset)
         .load::<ProfilePost>(&mut conn)

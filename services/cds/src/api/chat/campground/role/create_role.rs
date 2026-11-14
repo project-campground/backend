@@ -1,5 +1,5 @@
 use campground_lexicon::chat::campground::role::{RoleMotion, RoleViewBasic};
-use cds_schema::models::cds::{Campsite, CampsiteMember, CampsiteRole};
+use cds_schema::models::cds::{Campsite, CampsiteMember, Role};
 use chrono::Utc;
 use diesel::RunQueryDsl;
 use rocket::{State, serde::json::Json};
@@ -81,10 +81,10 @@ pub async fn create_role(
 
     let current_date = Utc::now().naive_utc();
 
-    let role = &diesel::insert_into(crate::schema::cds::campsite_role::table)
-        .values(CampsiteRole {
+    let role = &diesel::insert_into(crate::schema::cds::role::table)
+        .values(Role {
             id: Uuid::new_v4(),
-            campsite_id: campsite_id.to_string(),
+            campsite: campsite_id.to_string(),
             name: name.clone(),
             colors: colors.clone().map_or(vec![], |colors| {
                 colors
@@ -93,8 +93,8 @@ pub async fn create_role(
                     .collect::<Vec<Option<i32>>>()
             }),
             motion: motion.clone().map_or(0, |motion| from_role_motion(motion)),
-            display_separately: raised.clone().unwrap_or(false),
-            mentionable: pingable.clone().unwrap_or(false),
+            hoist: raised.clone().unwrap_or(false),
+            pingable: pingable.clone().unwrap_or(false),
             permissions: *permissions as i32,
             priority: lowest_priority.priority + 1,
             created_by: auth.actor.did.clone(),
@@ -104,7 +104,7 @@ pub async fn create_role(
             flags: 0,
             members: vec![],
         })
-        .get_result::<CampsiteRole>(&mut conn)
+        .get_result::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let view = role_view_basic(role);
@@ -116,10 +116,10 @@ pub async fn create_role(
 pub fn ensure_user_has_manage_role_permission(
     campsite: &Campsite,
     member: &CampsiteMember,
-    roles: &Vec<CampsiteRole>,
+    roles: &Vec<Role>,
     given_permissions: &u32,
 ) -> Result<(), XRPCError> {
-    if campsite.owner == member.user_id {
+    if campsite.owner == member.actor {
         return Ok(());
     }
 

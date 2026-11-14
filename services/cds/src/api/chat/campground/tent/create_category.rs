@@ -57,7 +57,7 @@ pub async fn create_category(
     let mut conn = establish_connection().unwrap();
 
     let existing_category_count = crate::schema::cds::tent_category::table
-        .filter(crate::schema::cds::tent_category::campsiteid.eq(&auth.campsite.id))
+        .filter(crate::schema::cds::tent_category::campsite.eq(&auth.campsite.id))
         .count()
         .first::<i64>(&mut conn)
         .map_err(handle_select_first_error)?;
@@ -86,8 +86,8 @@ pub async fn create_category(
     let category = &diesel::insert_into(crate::schema::cds::tent_category::table)
         .values(TentCategory {
             id: Uuid::new_v4(),
-            campsite_id: auth.campsite.id.clone(),
-            bonfire_id: bonfire_id.to_string(),
+            campsite: auth.campsite.id.clone(),
+            bonfire: bonfire_id.to_string(),
             name: inner_body.name.clone(),
             description: inner_body.description.clone(),
             priority: inner_body.position,

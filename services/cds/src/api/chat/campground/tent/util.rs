@@ -25,7 +25,7 @@ pub fn check_bonfire_existence(
         .filter(
             crate::schema::cds::bonfire::id
                 .eq(moved_bonfire_id)
-                .and(crate::schema::cds::bonfire::campsiteid.eq(&campsite.id)),
+                .and(crate::schema::cds::bonfire::campsite.eq(&campsite.id)),
         )
         .load::<Bonfire>(conn)
         .map_err(handle_select_first_error)?;
@@ -70,7 +70,7 @@ pub fn check_category_existence(
     let tent_category = tent_categories.first().unwrap();
 
     // Can't move tent out of campsite
-    if tent_category.campsite_id != campsite.id {
+    if tent_category.campsite != campsite.id {
         return Err(XRPCError::NotFound);
     }
 
@@ -81,14 +81,14 @@ pub fn check_category_existence(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &campsite.id,
-                &tent_category.bonfire_id,
+                &tent_category.bonfire,
                 Some(&category_id),
                 None
             )
             .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
     );
 
-    return Ok(tent_category.bonfire_id.clone());
+    return Ok(tent_category.bonfire.clone());
 }
 
 #[macro_export]

@@ -16,7 +16,7 @@ pub fn get_authors_from_posts(
             (vec![
                 Some(x.uri.split('/').collect::<Vec<&str>>()[2].to_string()),
                 if collect_parent_authors {
-                    x.parent_uri
+                    x.parent
                         .as_ref()
                         .map(|y| y.split('/').collect::<Vec<&str>>()[2].to_string())
                 } else {

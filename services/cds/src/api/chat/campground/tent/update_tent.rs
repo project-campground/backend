@@ -82,8 +82,8 @@ pub async fn update_tent<'a>(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
@@ -107,10 +107,10 @@ pub async fn update_tent<'a>(
                 .description
                 .clone()
                 .unwrap_or(&auth.tent.description)),
-            cds::tent::viewtype.eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
+            cds::tent::view_type.eq(inner_body.view_type.clone().unwrap_or(auth.tent.view_type)),
             // Mandatory
-            cds::tent::updatedat.eq(current_date),
-            cds::tent::updatedby.eq(&actor.did),
+            cds::tent::updated_at.eq(current_date),
+            cds::tent::updated_by.eq(&actor.did),
         ))
         .load::<Tent>(&mut conn)
         .expect("Error updating tent");
@@ -156,7 +156,7 @@ async fn create_tent_name_update_message(
 
     let update_message = &diesel::insert_into(crate::schema::cds::tent_message::table)
         .values(system_message(
-            &auth_tent.campsite_id,
+            &auth_tent.campsite,
             &updated_tent.id,
             &actor.did,
             current_date,

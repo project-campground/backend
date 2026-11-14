@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::member::MemberBanView;
 use cds_schema::{
     models::cds::{Actor, CampsiteBan, Profile},
-    schema::cds::{self, campsite_ban},
+    schema::cds::{self, member_ban},
 };
 use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -48,22 +48,22 @@ pub async fn delete_member_ban(
 
     let mut conn = establish_connection().unwrap();
 
-    let (member_ban, profile, target_actor) = campsite_ban::table
+    let (member_ban, profile, target_actor) = member_ban::table
         .filter(
-            campsite_ban::campsiteid
+            member_ban::campsite
                 .eq(campsite_id)
-                .and(campsite_ban::userid.eq(actor)),
+                .and(member_ban::target.eq(actor)),
         )
-        .left_join(cds::profile::table.on(cds::profile::creator.eq(campsite_ban::userid)))
-        .inner_join(cds::actor::table.on(cds::actor::did.eq(campsite_ban::userid)))
+        .left_join(cds::profile::table.on(cds::profile::actor.eq(member_ban::target)))
+        .inner_join(cds::actor::table.on(cds::actor::did.eq(member_ban::target)))
         .first::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
         .map_err(handle_select_first_error)?;
 
-    diesel::delete(campsite_ban::table)
+    diesel::delete(member_ban::table)
         .filter(
-            campsite_ban::campsiteid
+            member_ban::campsite
                 .eq(campsite_id)
-                .and(campsite_ban::userid.eq(actor)),
+                .and(member_ban::target.eq(actor)),
         )
         .execute(&mut conn)
         .map_err(handle_select_first_error)?;

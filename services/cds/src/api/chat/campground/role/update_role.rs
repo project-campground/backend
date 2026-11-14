@@ -1,5 +1,5 @@
 use campground_lexicon::chat::campground::role::{RoleMotion, RoleViewBasic};
-use cds_schema::{models::cds::CampsiteRole, schema::cds::campsite_role};
+use cds_schema::{models::cds::Role, schema::cds::role};
 use chrono::Utc;
 use diesel::{ExpressionMethods, RunQueryDsl};
 use rocket::{State, serde::json::Json};
@@ -74,7 +74,7 @@ pub async fn update_role(
     ensure_user_has_manage_role_permission(&auth.campsite, &auth.member, &roles, permissions)?;
 
     ensure_no_higher_role(
-        auth.member.user_id == auth.campsite.owner,
+        auth.member.actor == auth.campsite.owner,
         &mut roles.clone(),
         role.priority,
         auth.member.roles,
@@ -82,28 +82,28 @@ pub async fn update_role(
 
     let current_date = Utc::now().naive_utc();
 
-    let updated_role = &diesel::update(campsite_role::table)
-        .filter(campsite_role::id.eq(role.id))
+    let updated_role = &diesel::update(role::table)
+        .filter(role::id.eq(role.id))
         .set((
             // Mandatory
-            campsite_role::updatedby.eq(&auth.actor.did),
-            campsite_role::updatedat.eq(current_date),
+            role::updated_by.eq(&auth.actor.did),
+            role::updated_at.eq(current_date),
             // Stuff changed
-            campsite_role::name.eq(name.clone().unwrap_or(role.name.clone())),
-            campsite_role::colors.eq(colors.clone().map_or(role.colors.clone(), |colors| {
+            role::name.eq(name.clone().unwrap_or(role.name.clone())),
+            role::colors.eq(colors.clone().map_or(role.colors.clone(), |colors| {
                 colors
                     .iter()
                     .map(|&color| Some(color as i32))
                     .collect::<Vec<Option<i32>>>()
             })),
-            campsite_role::motion.eq(motion
+            role::motion.eq(motion
                 .clone()
                 .map_or(role.motion, |motion| from_role_motion(motion))),
-            campsite_role::displayseparately.eq(raised.unwrap_or(role.display_separately)),
-            campsite_role::mentionable.eq(pingable.unwrap_or(role.mentionable)),
-            campsite_role::permissions.eq(*permissions as i32),
+            role::hoist.eq(raised.unwrap_or(role.hoist)),
+            role::pingable.eq(pingable.unwrap_or(role.pingable)),
+            role::permissions.eq(*permissions as i32),
         ))
-        .get_result::<CampsiteRole>(&mut conn)
+        .get_result::<Role>(&mut conn)
         .map_err(handle_select_first_error)?;
 
     let view = role_view_basic(updated_role);

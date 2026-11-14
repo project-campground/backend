@@ -70,7 +70,7 @@ pub async fn update_message(
         .filter(
             tent_message::id
                 .eq(msg_id_uuid)
-                .and(tent_message::tentid.eq(auth.tent.id)),
+                .and(tent_message::tent.eq(auth.tent.id)),
         )
         .first::<TentMessage>(&mut conn)
         .map_err(|x| match x {
@@ -100,8 +100,8 @@ pub async fn update_message(
             .skip_if_owner(|permission| scoped_permission(
                 permission.fetch_roles(),
                 &auth.campsite.id,
-                &auth.tent.bonfire_id,
-                auth.tent.category_id.as_ref(),
+                &auth.tent.bonfire,
+                auth.tent.category.as_ref(),
                 Some(&auth.tent.id)
             )
             .has_permissions(PermissionFlag::CREATE_CONTENT))?
@@ -113,11 +113,11 @@ pub async fn update_message(
         .filter(
             tent_message::id
                 .eq(msg_id_uuid)
-                .and(tent_message::tentid.eq(auth.tent.id)),
+                .and(tent_message::tent.eq(auth.tent.id)),
         )
         .set((
             tent_message::content.eq(&body.content),
-            tent_message::updatedat.eq(updated_at),
+            tent_message::updated_at.eq(updated_at),
         ))
         .load::<TentMessage>(&mut conn)
         .expect("Error updating message");

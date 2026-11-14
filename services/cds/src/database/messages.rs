@@ -1,5 +1,5 @@
-use cds_schema::models::cds::TentMessage;
 use campground_lexicon::chat::campground::{content::ContentComponent, message::MessageType};
+use cds_schema::models::cds::TentMessage;
 use chrono::NaiveDateTime;
 use uuid::Uuid;
 
@@ -12,8 +12,8 @@ pub fn system_message(
 ) -> TentMessage {
     TentMessage {
         id: Uuid::new_v4(),
-        campsite_id: campsite_id.to_string(),
-        tent_id: tent_id.clone(),
+        campsite: campsite_id.to_string(),
+        tent: tent_id.clone(),
 
         r#type: MessageType::System as i16,
 

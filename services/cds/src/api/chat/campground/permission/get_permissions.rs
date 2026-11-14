@@ -1,7 +1,7 @@
 use campground_lexicon::chat::campground::permission::PermissionViewDetailed;
 use cds_schema::{
-    models::cds::{Actor, CampsiteMember, CampsitePermission, CampsiteRole, Profile},
-    schema::cds::{actor, campsite_member, campsite_permission, campsite_role, profile},
+    models::cds::{Actor, CampsiteMember, Permission, Profile, Role},
+    schema::cds::{actor, campsite_member, permission, profile, role},
 };
 use diesel::{
     BoolExpressionMethods, ExpressionMethods, JoinOnDsl, NullableExpressionMethods,
@@ -52,47 +52,47 @@ macro_rules! get_scoped_permissions {
         );
         let mut conn = establish_connection().unwrap();
 
-        let permissions = campsite_permission::table
+        let permissions = permission::table
             .filter(
-                campsite_permission::campsiteid
+                permission::campsite
                     .eq(&$campsite.id)
-                    .and(campsite_permission::bonfireid.eq($bonfire))
-                    .and(campsite_permission::categoryid.is_not_distinct_from($category))
-                    .and(campsite_permission::tentid.is_not_distinct_from($tent))
+                    .and(permission::bonfire.eq($bonfire))
+                    .and(permission::category.is_not_distinct_from($category))
+                    .and(permission::tent.is_not_distinct_from($tent))
                     .and(
-                        campsite_permission::roleid
+                        permission::role
                             .is_null()
-                            .and(campsite_permission::userid.ne(&$member.user_id))
+                            .and(permission::actor.ne(&$member.actor))
                             .or::<bool, Bool>(!$non_self),
                     ),
             )
             // Generally for more details
             .left_join(
-                campsite_role::table.on(campsite_permission::roleid
+                role::table.on(permission::role
                     .is_not_null()
-                    .and(campsite_role::id.eq(campsite_permission::roleid.assume_not_null()))),
+                    .and(role::id.eq(permission::role.assume_not_null()))),
             )
             // All 3 tables for members
             .left_join(
-                campsite_member::table.on(campsite_permission::userid.is_not_null().and(
-                    campsite_member::userid.eq(campsite_permission::userid.assume_not_null()),
-                )),
+                campsite_member::table.on(permission::actor
+                    .is_not_null()
+                    .and(campsite_member::actor.eq(permission::actor.assume_not_null()))),
             )
             .left_join(
-                profile::table.on(campsite_permission::userid.is_not_null().and(
-                    profile::creator
-                        .eq(campsite_permission::userid.assume_not_null())
+                profile::table.on(permission::actor.is_not_null().and(
+                    profile::actor
+                        .eq(permission::actor.assume_not_null())
                         .assume_not_null(),
                 )),
             )
             .left_join(
-                actor::table.on(campsite_permission::userid
+                actor::table.on(permission::actor
                     .is_not_null()
-                    .and(actor::did.eq(campsite_permission::userid.assume_not_null()))),
+                    .and(actor::did.eq(permission::actor.assume_not_null()))),
             )
             .load::<(
-                CampsitePermission,
-                Option<CampsiteRole>,
+                Permission,
+                Option<Role>,
                 Option<CampsiteMember>,
                 Option<Profile>,
                 Option<Actor>,
@@ -125,8 +125,8 @@ pub async fn get_permissions(
         OneOfInfo::Tent(auth) => {
             get_scoped_permissions!(
                 campsite: auth.campsite,
-                bonfire: &auth.tent.bonfire_id,
-                category: auth.tent.category_id.as_ref(),
+                bonfire: &auth.tent.bonfire,
+                category: auth.tent.category.as_ref(),
                 tent: Some(&auth.tent.id),
                 member: auth.member,
                 non_self: non_self
@@ -135,7 +135,7 @@ pub async fn get_permissions(
         OneOfInfo::Category(auth) => {
             get_scoped_permissions!(
                 campsite: auth.campsite,
-                bonfire: &auth.category.bonfire_id,
+                bonfire: &auth.category.bonfire,
                 category: Some(&auth.category.id),
                 tent: Option::<&Uuid>::None,
                 member: auth.member,

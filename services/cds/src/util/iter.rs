@@ -1,4 +1,4 @@
-use cds_schema::models::cds::{CampsitePermission, CampsiteRole};
+use cds_schema::models::cds::{Permission, Role};
 use uuid::Uuid;
 
 pub trait HasPermissionOverrides {
@@ -11,7 +11,7 @@ pub trait AggregatePermissions<T> {
 
 impl<'a, T> AggregatePermissions<u32> for T
 where
-    T: Iterator<Item = &'a CampsiteRole> + Clone,
+    T: Iterator<Item = &'a Role> + Clone,
 {
     fn aggregate_permissions(&self) -> u32 {
         self.clone().fold(0u32, |a, b| a | b.permissions as u32)
@@ -27,7 +27,7 @@ where
         self.clone().fold(0u64, |a, b| a | b.get_permissions())
     }
 }
-impl HasPermissionOverrides for CampsitePermission {
+impl HasPermissionOverrides for Permission {
     fn get_permissions(&self) -> u64 {
         self.permissions as u64
     }
