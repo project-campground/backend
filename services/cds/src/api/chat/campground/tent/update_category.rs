@@ -1,0 +1,111 @@
+use campground_lexicon::chat::campground::tent::TentCategoryViewDetailed;
+use cds_schema::{models::cds::TentCategory, schema::cds};
+use chrono::Utc;
+use diesel::{ExpressionMethods, RunQueryDsl};
+use rocket::{State, serde::json::Json};
+use serde::Deserialize;
+
+use crate::{
+    database::establish_connection,
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable, scoped_permission},
+        },
+        ws::event_next_category,
+    },
+    realtime::data::ReactiveSubject,
+    views::tents::tent_category_view,
+    xrpc::{
+        campsite::CategoryInfo,
+        error::{Result, XRPCError},
+    },
+};
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "camelCase")]
+pub struct UpdateCategoryBody {
+    name: Option<String>,
+    description: Option<String>,
+}
+
+#[allow(unused_variables)]
+#[post(
+    "/xrpc/chat.campground.tent.updateCategory?<category_id>",
+    data = "<body>"
+)]
+pub async fn update_category(
+    auth: CategoryInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    category_id: &str,
+    body: Json<UpdateCategoryBody>,
+) -> Result<Json<TentCategoryViewDetailed>> {
+    let inner_body = &body.into_inner();
+    if inner_body
+        .name
+        .clone()
+        .map_or(false, |x| x.len() < 3 || x.len() > 48)
+    {
+        return Err(XRPCError::BadRequest(
+            "Expected 'name' property to have a string of length 3 to 48 characters".to_string(),
+        ));
+    } else if inner_body
+        .description
+        .clone()
+        .map_or(false, |x| x.len() > 200)
+    {
+        return Err(XRPCError::BadRequest(
+            "Expected 'description' property to have a string of up to 200 characters".to_string(),
+        ));
+    }
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| scoped_permission(
+                permission.fetch_roles(),
+                &auth.campsite.id,
+                &auth.category.bonfire,
+                Some(&auth.category.id),
+                None
+            )
+            .has_permissions(PermissionFlag::VIEW_CONTENT | PermissionFlag::MANAGE_TENTS))?
+    );
+
+    let mut conn = establish_connection().unwrap();
+
+    let current_date = Utc::now().naive_utc();
+
+    let updated_category = diesel::update(crate::schema::cds::tent_category::table)
+        .filter(cds::tent_category::id.eq(auth.category.id))
+        .set((
+            // All the new settings
+            cds::tent_category::name.eq(inner_body
+                .name
+                .clone()
+                .unwrap_or(auth.category.name.clone())),
+            cds::tent_category::description.eq(inner_body
+                .description
+                .clone()
+                .unwrap_or(auth.category.description.clone())),
+            // Mandatory
+            cds::tent_category::updated_at.eq(current_date),
+            cds::tent_category::updated_by.eq(&auth.actor.did),
+        ))
+        .load::<TentCategory>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    let updated_category = updated_category.first().unwrap();
+
+    let view = tent_category_view(updated_category);
+    event_next_category(
+        event_subject,
+        &updated_category,
+        false,
+        "CategoryMoved",
+        &view,
+    );
+
+    return Ok(Json(view));
+}

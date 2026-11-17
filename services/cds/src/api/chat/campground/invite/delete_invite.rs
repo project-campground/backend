@@ -1,0 +1,80 @@
+use campground_lexicon::chat::campground::invite::CampsiteInviteViewCampsite;
+use cds_schema::{
+    models::cds::{Actor, CampsiteInvite, Profile},
+    schema::cds::{campsite_invite, profile},
+};
+use diesel::{ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use rocket::{State, serde::json::Json};
+use uuid::Uuid;
+
+use crate::{
+    database::establish_connection,
+    expect_permission,
+    helpers::{
+        api::{handle_all_db_errors, handle_select_first_error},
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
+        ws::event_next_campsite,
+    },
+    realtime::data::ReactiveSubject,
+    views::invites::campsite_invite_view_campsite,
+    xrpc::{
+        campsite::CampsiteInfo,
+        error::{Result, XRPCError},
+    },
+};
+
+#[post("/xrpc/chat.campground.invite.deleteInvite?<campsite_id>&<invite_id>")]
+pub async fn delete_invite(
+    auth: CampsiteInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    campsite_id: &str,
+    invite_id: &str,
+) -> Result<Json<CampsiteInviteViewCampsite>> {
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionFlag::MANAGE_INVITES))?
+    );
+
+    let mut conn = establish_connection().unwrap();
+
+    let uuid = Uuid::try_parse(invite_id).map_err(|_| {
+        XRPCError::BadRequest("Invalid 'invite_id' format. Expected UUID".to_string())
+    })?;
+
+    let invite = &campsite_invite::table
+        .filter(campsite_invite::id.eq(uuid))
+        .inner_join(
+            crate::schema::cds::actor::table
+                .on(crate::schema::cds::actor::did.eq(campsite_invite::created_by)),
+        )
+        .left_join(profile::table.on(profile::actor.eq(campsite_invite::created_by)))
+        .first::<(CampsiteInvite, Actor, Option<Profile>)>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    if invite.0.campsite != campsite_id {
+        return Err(XRPCError::NotFound);
+    }
+
+    diesel::delete(campsite_invite::table)
+        .filter(campsite_invite::id.eq(invite.0.id.clone()))
+        .execute(&mut conn)
+        .map_err(handle_all_db_errors)?;
+
+    let view = campsite_invite_view_campsite(&invite.0, invite.2.as_ref(), &invite.1);
+
+    event_next_campsite(
+        event_subject,
+        &auth.campsite.id,
+        PermissionFlag::MANAGE_INVITES,
+        "InviteDeleted",
+        &view,
+    );
+
+    return Ok(Json(view));
+}

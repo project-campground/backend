@@ -1,0 +1,55 @@
+use campground_lexicon::chat::campground::member::MemberBanView;
+use cds_schema::{
+    models::cds::{Actor, CampsiteBan, Profile},
+    schema::cds::{self, member_ban},
+};
+use diesel::{BoolExpressionMethods, ExpressionMethods, JoinOnDsl, QueryDsl, RunQueryDsl};
+use rocket::serde::json::Json;
+
+use crate::{
+    database::establish_connection,
+    expect_permission,
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{
+            PermissionFlag,
+            check::{PermissionCheck, PermissionCheckTestable},
+        },
+    },
+    views::members::member_ban_view,
+    xrpc::{campsite::CampsiteInfo, error::Result},
+};
+
+#[get("/xrpc/chat.campground.member.getMemberBan?<campsite_id>&<actor>")]
+pub async fn get_member_ban(
+    auth: CampsiteInfo<'_>,
+    campsite_id: &str,
+    actor: &str,
+) -> Result<Json<MemberBanView>> {
+    expect_permission!(
+        PermissionCheck::member(&auth.member)
+            .is_owner(&auth.campsite)
+            .skip_if_owner(|permission| permission
+                .fetch_roles()
+                .has_permissions(PermissionFlag::BAN_MEMBERS))?
+    );
+
+    let mut conn = establish_connection().unwrap();
+
+    let member_ban = member_ban::table
+        .filter(
+            member_ban::campsite
+                .eq(campsite_id)
+                .and(member_ban::target.eq(actor)),
+        )
+        .left_join(cds::profile::table.on(cds::profile::actor.eq(member_ban::target)))
+        .inner_join(cds::actor::table.on(cds::actor::did.eq(member_ban::target)))
+        .first::<(CampsiteBan, Option<Profile>, Actor)>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    Ok(Json(member_ban_view(
+        &member_ban.0,
+        member_ban.1.as_ref(),
+        &member_ban.2,
+    )))
+}

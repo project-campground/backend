@@ -1,0 +1,46 @@
+use campground_lexicon::chat::campground::{
+    campsite::{CampsiteViewBasic, CampsiteViewDetailed},
+    member::MemberViewBasic,
+    role::RoleViewBasic,
+};
+use cds_schema::models::cds::Campsite;
+
+use crate::views::util::serialize_datetime;
+
+pub fn campsite_view_basic(campsite: &Campsite) -> CampsiteViewBasic {
+    return CampsiteViewBasic {
+        id: campsite.id.clone(),
+        name: campsite.name.clone(),
+        vanity_url: campsite.vanity_url.clone(),
+        description: campsite.description.clone(),
+        avatar_uri: campsite.avatar.clone(),
+        banner_uri: campsite.banner.clone(),
+        tags: campsite.tags.iter().filter_map(|x| x.clone()).collect(),
+        member_count: campsite.members.len(),
+        owner: campsite.owner.clone(),
+    };
+}
+
+pub fn campsite_view_detailed(
+    campsite: &Campsite,
+    roles: Vec<RoleViewBasic>,
+    member: MemberViewBasic,
+) -> CampsiteViewDetailed {
+    return CampsiteViewDetailed {
+        id: campsite.id.clone(),
+        name: campsite.name.clone(),
+        vanity_url: campsite.vanity_url.clone(),
+        description: campsite.description.clone(),
+        avatar_uri: campsite.avatar.clone(),
+        banner_uri: campsite.banner.clone(),
+        tags: campsite.tags.iter().filter_map(|x| x.clone()).collect(),
+        member_count: campsite.members.len(),
+        owner: campsite.owner.clone(),
+        created_by: campsite.created_by.clone(),
+        created_at: serialize_datetime(campsite.created_at),
+        updated_by: campsite.updated_by.clone(),
+        updated_at: serialize_datetime(campsite.updated_at),
+        roles: roles,
+        me: member,
+    };
+}

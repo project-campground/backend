@@ -1,0 +1,1 @@
+ALTER SCHEMA appview RENAME TO cds;

@@ -1,0 +1,144 @@
+use campground_lexicon::chat::campground::role::{RoleMotion, RoleViewBasic};
+use cds_schema::models::cds::{Campsite, CampsiteMember, Role};
+use chrono::Utc;
+use diesel::RunQueryDsl;
+use rocket::{State, serde::json::Json};
+use serde::Deserialize;
+use uuid::Uuid;
+
+use crate::{
+    database::{campsites::get_roles_from_db, establish_connection},
+    helpers::{
+        api::handle_select_first_error,
+        permissions::{PermissionFlag, check::PermissionCheck},
+        ws::event_next_campsite,
+    },
+    realtime::data::ReactiveSubject,
+    views::roles::{from_role_motion, role_view_basic},
+    xrpc::{
+        campsite::CampsiteInfo,
+        error::{Result, XRPCError},
+    },
+};
+
+#[derive(Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "camelCase")]
+pub struct CreateRoleBody {
+    name: String,
+    motion: Option<RoleMotion>,
+    colors: Option<Vec<u32>>,
+    raised: Option<bool>,
+    pingable: Option<bool>,
+    permissions: u32,
+}
+
+#[post("/xrpc/chat.campground.role.createRole?<campsite_id>", data = "<body>")]
+pub async fn create_role(
+    auth: CampsiteInfo<'_>,
+    event_subject: &State<ReactiveSubject>,
+    campsite_id: &str,
+    body: Json<CreateRoleBody>,
+) -> Result<Json<RoleViewBasic>> {
+    let CreateRoleBody {
+        name,
+        motion,
+        colors,
+        raised,
+        pingable,
+        permissions,
+    } = &body.into_inner();
+    if name.len() == 0 || name.len() > 64 {
+        return Err(XRPCError::BadRequest(
+            "Expected 'name' property to have a string of length 1 to 64 characters".to_string(),
+        ));
+    } else if colors.clone().map_or(false, |colors| colors.len() > 5) {
+        return Err(XRPCError::BadRequest(
+            "Expected 'colors' property to be an array with max length of 5".to_string(),
+        ));
+    }
+
+    let mut conn = establish_connection().unwrap();
+
+    let existing_roles = get_roles_from_db(&auth.campsite.id)?;
+
+    if existing_roles.len() >= 100 {
+        return Err(XRPCError::Forbidden(
+            "Cannot create more than 100 roles in a campsite".to_string(),
+        ));
+    }
+
+    ensure_user_has_manage_role_permission(
+        &auth.campsite,
+        &auth.member,
+        &existing_roles,
+        permissions,
+    )?;
+
+    let lowest_priority = existing_roles
+        .iter()
+        .max_by(|x, y| x.priority.cmp(&y.priority))
+        .unwrap();
+
+    let current_date = Utc::now().naive_utc();
+
+    let role = &diesel::insert_into(crate::schema::cds::role::table)
+        .values(Role {
+            id: Uuid::new_v4(),
+            campsite: campsite_id.to_string(),
+            name: name.clone(),
+            colors: colors.clone().map_or(vec![], |colors| {
+                colors
+                    .iter()
+                    .map(|&color| Some(color as i32))
+                    .collect::<Vec<Option<i32>>>()
+            }),
+            motion: motion.clone().map_or(0, |motion| from_role_motion(motion)),
+            hoist: raised.clone().unwrap_or(false),
+            pingable: pingable.clone().unwrap_or(false),
+            permissions: *permissions as i32,
+            priority: lowest_priority.priority + 1,
+            created_by: auth.actor.did.clone(),
+            created_at: current_date,
+            updated_by: auth.actor.did,
+            updated_at: current_date,
+            flags: 0,
+            members: vec![],
+        })
+        .get_result::<Role>(&mut conn)
+        .map_err(handle_select_first_error)?;
+
+    let view = role_view_basic(role);
+    event_next_campsite(event_subject, &auth.campsite.id, 0, "RoleCreated", &view);
+
+    return Ok(Json(view));
+}
+
+pub fn ensure_user_has_manage_role_permission(
+    campsite: &Campsite,
+    member: &CampsiteMember,
+    roles: &Vec<Role>,
+    given_permissions: &u32,
+) -> Result<(), XRPCError> {
+    if campsite.owner == member.actor {
+        return Ok(());
+    }
+
+    let member_permissions = PermissionCheck::member(&member)
+        .never_owner()
+        .with_roles(roles)
+        .role_permissions;
+
+    // The user might not even have the permission to manage roles
+    if member_permissions & PermissionFlag::MANAGE_ROLES == 0 {
+        return Err(XRPCError::Forbidden(
+            "No given permission to do that".to_string(),
+        ));
+    } else if member_permissions & given_permissions != *given_permissions {
+        // Ensure user does not give themselves Manage Tent permission if they have Give Role & Manage Roles combo
+        return Err(XRPCError::Forbidden(
+            "Cannot give role permissions that the member does not have".to_string(),
+        ));
+    }
+
+    Ok(())
+}
