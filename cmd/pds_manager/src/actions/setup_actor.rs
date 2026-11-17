@@ -213,7 +213,6 @@ pub async fn setup_actor(
             tagline: Some(tagline.clone()),
             indexed_at: account_created_at.clone(),
             created_at: Some(account_created_at.clone()),
-            first_seen: account_created_at.clone(),
         })
         .execute(&mut conn)
         .map_err(|x| format!("Error while inserting profile into DB: {}", x))?;
